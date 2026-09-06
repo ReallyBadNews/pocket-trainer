@@ -1,3 +1,4 @@
+import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -100,7 +101,7 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
       <View style={ui.row}><Chip label="English" selected={language === 'en'} onPress={() => changeLanguage('en')} /><Chip label="日本語 · Japanese" selected={language === 'ja'} onPress={() => changeLanguage('ja')} /></View>
       <View style={s.capture}>
         <View style={[s.corner, { top: 16, left: 16, borderTopWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { top: 16, right: 16, borderTopWidth: 3, borderRightWidth: 3 }]} /><View style={[s.corner, { bottom: 16, left: 16, borderBottomWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { bottom: 16, right: 16, borderBottomWidth: 3, borderRightWidth: 3 }]} />
-        {photo ? <Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" /> : <><Image source={require('../../assets/crafted/pokeball.png')} style={{ height: 130, width: 140 }} contentFit="contain" /><Txt style={{ color: '#D6E3CB', fontWeight: '700', fontSize: 14 }}>Center one whole card</Txt><Txt style={{ color: '#A0B296', fontSize: 12, textAlign: 'center' }}>In a binder or on a table. Keep the bottom number sharp and tilt away from glare.</Txt></>}
+        {photo ? <ZoomablePhoto label="Your card photo" renderPhoto={(width, height) => <Image source={photo} style={{ width, height }} contentFit="contain" />}><Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" /></ZoomablePhoto> : <><Image source={require('../../assets/crafted/pokeball.png')} style={{ height: 130, width: 140 }} contentFit="contain" /><Txt style={{ color: '#D6E3CB', fontWeight: '700', fontSize: 14 }}>Center one whole card</Txt><Txt style={{ color: '#A0B296', fontSize: 12, textAlign: 'center' }}>In a binder or on a table. Keep the bottom number sharp and tilt away from glare.</Txt></>}
         {busy && <View style={s.reading}><ActivityIndicator color="white" /><Txt style={{ color: 'white' }}>Reading the name and number…</Txt></View>}
       </View>
       <View style={ui.row}><Button title={photo ? 'Retake photo' : 'Take a photo'} icon="camera" onPress={() => takePhoto()} busy={busy} style={{ flex: 1 }} /><Button title="Choose photo" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy} style={{ flex: 1 }} /></View>
