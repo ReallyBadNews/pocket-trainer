@@ -4,7 +4,7 @@ A classic red Pokédex and physical Pokémon card binder for iPhone and iPad, bu
 
 **Private preview:** https://kenny-mini.grayling-vibe.ts.net:8443/
 
-**Install on the registered iPhone:** https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/1af63f45-4d5f-4e0c-aee7-7d0c458be472
+**Install on the registered iPhone:** https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/920075f6-847e-40c2-8921-97dff868f5d6
 
 The browser preview supports catalog search, card review, collecting, favorites, duplicates, trainer profiles, badges and backups. The signed iOS preview includes automatic photo matching through a local Apple Vision module and runs without a development server. Automatic matching is not available in the browser or Expo Go.
 
@@ -38,7 +38,9 @@ pnpm export:ios
 
 `pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, English/Japanese searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
 
-The current signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
+The earlier signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
+
+Build 7 adds card deletion and zoomable artwork/scan photos. Its EAS build and IPA signature verification passed, and its provisioning profile includes the registered iPhone under the individual Apple team. Type checking, all 39 tests and both platform exports passed. Browser checks covered phone-width layout, zoom/reset and deletion confirmation/cancellation; physical iPhone gesture validation remains pending.
 
 ## Data, photos and offline use
 

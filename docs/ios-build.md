@@ -6,7 +6,13 @@ The user approved uploading the project source to Expo EAS and storing its gener
 
 The registered test iPhone is named Kenny iPhone, UDID `00008150-0008046E2EF0401C`, and is recorded in EAS under the individual team. Apple portal registration occurs when the device is selected for provisioning.
 
-## Build status — September 6, 2026
+## Latest preview — build 7
+
+https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/920075f6-847e-40c2-8921-97dff868f5d6
+
+Build 7 completed successfully with card deletion and pinch-to-zoom artwork/scan photos. The downloaded IPA passed `codesign --verify --deep --strict`; its profile contains the individual team and registered iPhone above. Version 1.0.0, build 7 and the standalone JavaScript bundle were verified. Type checking, all 39 tests and iOS/web exports passed. Phone-width browser checks covered the viewer, zoom/reset and multi-copy deletion confirmation/cancellation. Physical iPhone pinch testing remains pending.
+
+## Earlier build status — September 6, 2026
 
 Initial attempts authenticated successfully as Kenneth Elshoff but failed while registering `com.reallybadnews.pockettrainer`. Apple returned HTTP 403:
 
@@ -14,7 +20,7 @@ Initial attempts authenticated successfully as Kenneth Elshoff but failed while 
 
 The account holder confirmed a paid individual membership active through September 6, 2027. A later retry with both the team and provider explicitly selected succeeded. Apple registered the bundle ID and generated a distribution certificate and active ad hoc provisioning profile for the specified iPhone.
 
-The current preview, build 5, completed successfully at 20:20 UTC on September 6, 2026: https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/1af63f45-4d5f-4e0c-aee7-7d0c458be472.
+The earlier preview, build 5, completed successfully at 20:20 UTC on September 6, 2026: https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/1af63f45-4d5f-4e0c-aee7-7d0c458be472.
 
 The downloaded IPA passed `codesign --verify --deep --strict`. Its embedded provisioning profile identifies Kenneth Elshoff's team and includes the specified iPhone. The app is version 1.0.0, build 5, requires iOS 16.4 or later, includes the standalone JavaScript bundle and camera permission description, and contains the compiled `CardScannerModule`, `CardArtwork`, perspective-correction code and manual-crop validation. Release optimization removes the helper struct name, so retained code markers were used to confirm its inclusion. Expo Doctor passed all 21 checks on the cloud builder.
 
