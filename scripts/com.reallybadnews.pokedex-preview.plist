@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>KeepAlive</key>
+	<true/>
+	<key>Label</key>
+	<string>com.reallybadnews.pokedex-preview</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>/opt/homebrew/bin/python3</string>
+		<string>/Users/clawd/github.com/ReallyBadNews/pokedex/scripts/serve-preview.py</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>/private/tmp/pokedex-preview.error.log</string>
+	<key>StandardOutPath</key>
+	<string>/private/tmp/pokedex-preview.log</string>
+	<key>WorkingDirectory</key>
+	<string>/Users/clawd/github.com/ReallyBadNews/pokedex</string>
+</dict>
+</plist>

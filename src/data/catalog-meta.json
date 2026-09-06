@@ -1,0 +1,11 @@
+{
+  "updatedAt": "2026-09-06T13:11:38.764962+00:00",
+  "counts": {
+    "en": 21068,
+    "ja": 12781
+  },
+  "sources": [
+    "https://tcgdex.dev",
+    "https://raw.githubusercontent.com/PokeAPI/pokeapi/master/data/v2/csv/pokemon_species_names.csv"
+  ]
+}

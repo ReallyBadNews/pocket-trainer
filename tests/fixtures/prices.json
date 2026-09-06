@@ -1,0 +1,218 @@
+[
+  {
+    "language": "en",
+    "url": "https://api.tcgdex.net/v2/en/cards/base1-58",
+    "data": {
+      "id": "base1-58",
+      "name": "Pikachu",
+      "variants": {
+        "firstEdition": true,
+        "holo": false,
+        "normal": true,
+        "reverse": false,
+        "wPromo": false
+      },
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-09-06T15:09:28.416Z",
+          "unit": "EUR",
+          "idProduct": 273753,
+          "avg": 6.27,
+          "low": 0.2,
+          "trend": 13.12,
+          "avg1": 6.34,
+          "avg7": 13.29,
+          "avg30": 10.28,
+          "avg-holo": null,
+          "low-holo": null,
+          "trend-holo": 36.37,
+          "avg1-holo": 1,
+          "avg7-holo": 42.86,
+          "avg30-holo": 22.72
+        },
+        "tcgplayer": {
+          "unit": "USD",
+          "updated": "2026-09-06T15:09:24.320Z",
+          "normal": {
+            "productId": 42402,
+            "lowPrice": 4.78,
+            "midPrice": 13.27,
+            "highPrice": 1000,
+            "marketPrice": 16.1,
+            "directLowPrice": 7.08
+          }
+        }
+      }
+    }
+  },
+  {
+    "language": "en",
+    "url": "https://api.tcgdex.net/v2/en/cards/sm12-221",
+    "data": {
+      "id": "sm12-221",
+      "name": "Arceus & Dialga & Palkia GX",
+      "variants": {
+        "firstEdition": false,
+        "holo": false,
+        "normal": true,
+        "reverse": false,
+        "wPromo": false
+      },
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-09-06T15:09:28.416Z",
+          "unit": "EUR",
+          "idProduct": 408699,
+          "avg": 386.12,
+          "low": 99.99,
+          "trend": 404.12,
+          "avg1": 549.99,
+          "avg7": 396.12,
+          "avg30": 450.01,
+          "avg-holo": null,
+          "low-holo": null,
+          "trend-holo": 101.45,
+          "avg1-holo": 100,
+          "avg7-holo": 94.18,
+          "avg30-holo": 89.91
+        },
+        "tcgplayer": {
+          "unit": "USD",
+          "updated": "2026-09-06T15:09:40.904Z",
+          "holofoil": {
+            "productId": 201338,
+            "lowPrice": 473.99,
+            "midPrice": 702.49,
+            "highPrice": 4155.05,
+            "marketPrice": 568.04,
+            "directLowPrice": 969.69
+          }
+        }
+      }
+    }
+  },
+  {
+    "language": "en",
+    "url": "https://api.tcgdex.net/v2/en/cards/sm9-156",
+    "data": {
+      "id": "sm9-156",
+      "name": "Viridian Forest",
+      "variants": {
+        "firstEdition": false,
+        "holo": false,
+        "normal": true,
+        "reverse": false,
+        "wPromo": false
+      },
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-09-06T15:09:28.416Z",
+          "unit": "EUR",
+          "idProduct": 369081,
+          "avg": 0.24,
+          "low": 0.02,
+          "trend": 0.23,
+          "avg1": 0.22,
+          "avg7": 0.27,
+          "avg30": 0.26,
+          "avg-holo": 0.54,
+          "low-holo": 0.1,
+          "trend-holo": 0.59,
+          "avg1-holo": 0.5,
+          "avg7-holo": 0.51,
+          "avg30-holo": 0.61
+        },
+        "tcgplayer": {
+          "unit": "USD",
+          "updated": "2026-09-06T15:09:40.125Z",
+          "normal": {
+            "productId": 183960,
+            "lowPrice": 0.15,
+            "midPrice": 0.36,
+            "highPrice": 19.98,
+            "marketPrice": 0.34,
+            "directLowPrice": null
+          },
+          "reverse-holofoil": {
+            "productId": 183960,
+            "lowPrice": 0.27,
+            "midPrice": 0.64,
+            "highPrice": 19.98,
+            "marketPrice": 0.63,
+            "directLowPrice": null
+          }
+        }
+      }
+    }
+  },
+  {
+    "language": "ja",
+    "url": "https://api.tcgdex.net/v2/ja/cards/SV5K-025",
+    "data": {
+      "id": "SV5K-025",
+      "name": "ウミトリオex",
+      "variants": {
+        "firstEdition": false,
+        "holo": true,
+        "normal": false,
+        "reverse": false,
+        "wPromo": false
+      },
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-09-06T15:09:28.416Z",
+          "unit": "EUR",
+          "idProduct": 752790,
+          "avg": 0.29,
+          "low": 0.05,
+          "trend": 0.29,
+          "avg1": 0.25,
+          "avg7": 0.28,
+          "avg30": 0.28,
+          "avg-holo": null,
+          "low-holo": null,
+          "trend-holo": 0,
+          "avg1-holo": null,
+          "avg7-holo": null,
+          "avg30-holo": null
+        },
+        "tcgplayer": null
+      }
+    }
+  },
+  {
+    "language": "ja",
+    "url": "https://api.tcgdex.net/v2/ja/cards/SV1S-001",
+    "data": {
+      "id": "SV1S-001",
+      "name": "サボネア",
+      "variants": {
+        "firstEdition": false,
+        "holo": false,
+        "normal": true,
+        "reverse": false,
+        "wPromo": false
+      },
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-09-06T15:09:28.416Z",
+          "unit": "EUR",
+          "idProduct": 692967,
+          "avg": 0.04,
+          "low": 0.02,
+          "trend": 0.07,
+          "avg1": 0.03,
+          "avg7": 0.06,
+          "avg30": 0.06,
+          "avg-holo": null,
+          "low-holo": null,
+          "trend-holo": 0,
+          "avg1-holo": null,
+          "avg7-holo": null,
+          "avg30-holo": null
+        },
+        "tcgplayer": null
+      }
+    }
+  }
+]

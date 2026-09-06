@@ -1,42 +1,59 @@
 {
   "expo": {
-    "name": "pokedex",
+    "name": "Pocket Trainer",
     "slug": "pokedex",
     "version": "1.0.0",
-    "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "orientation": "default",
+    "icon": "./assets/crafted/app-icon.png",
     "scheme": "pokedex",
-    "userInterfaceStyle": "automatic",
+    "userInterfaceStyle": "light",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/crafted/app-icon.png",
+      "supportsTablet": true,
+      "bundleIdentifier": "com.reallybadnews.pockettrainer",
+      "buildNumber": "6",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
-      "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
-      },
       "predictiveBackGestureEnabled": false
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/crafted/favicon.png"
     },
     "plugins": [
       "expo-router",
+      "expo-sharing",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "Allow Pocket Trainer to photograph your Pokémon cards.",
+          "photosPermission": "Choose a card photo for your Pokédex.",
+          "microphonePermission": false
+        }
+      ],
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#C93240",
+          "image": "./assets/crafted/pokeball.png",
+          "imageWidth": 150
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "3117e7c1-f742-49bd-afc2-6fa9f790b0c7"
+      }
+    },
+    "owner": "reallybadnews"
   }
 }

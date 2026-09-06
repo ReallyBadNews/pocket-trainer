@@ -1,56 +1,75 @@
-# Welcome to your Expo app 👋
+# Pocket Trainer
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A classic red Pokédex and physical Pokémon card binder for iPhone and iPad, built with Expo SDK 57.
 
-## Get started
+**Private preview:** https://kenny-mini.grayling-vibe.ts.net:8443/
 
-1. Install dependencies
+**Install on the registered iPhone:** https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/1af63f45-4d5f-4e0c-aee7-7d0c458be472
 
-   ```bash
-   npm install
-   ```
+The browser preview supports catalog search, card review, collecting, favorites, duplicates, trainer profiles, badges and backups. The signed iOS preview includes automatic photo matching through a local Apple Vision module and runs without a development server. Automatic matching is not available in the browser or Expo Go.
 
-2. Start the app
+## First version
 
-   ```bash
-   npx expo start
-   ```
+- Separate trainer profiles saved on each device; no account or recurring backend bill.
+- English and Japanese physical card catalog: 33,849 entries in the bundled snapshot.
+- Search Japanese cards using an English Pokémon name, a Japanese name, or collector number.
+- Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it.
+- Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
+- Favorites, extra-copy counts, six collection milestones and discovery animations.
+- Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
+- Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
+- Export/import the family's collections as JSON. Imports add independent profile copies and preserve existing data.
+- Original Blender device, Poké Ball, badges and app icon, with editable `.blend` files and reproducible scripts.
 
-In the output, you'll find options to open the app in a
+Family sync, trading and animated Pokémon characters are deferred.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Run and check
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```sh
+pnpm install
+pnpm web
+pnpm typecheck
+pnpm test
+pnpm export:web
+pnpm export:ios
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+`pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, English/Japanese searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
 
-### Other setup steps
+The current signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+## Data, photos and offline use
 
-## Learn more
+The app bundles compact card indexes and Pokémon species names. New card details and artwork are fetched from TCGdex when first opened. Added card metadata is saved locally; on native devices, the app also attempts to save its card artwork in app documents. A failed image download does not block saving the collection. Search and saved collection metadata work offline. Uncached artwork and previously unseen card details require internet access.
 
-To learn more about developing your project with Expo, look at the following resources:
+Photo recognition uses Apple's on-device Vision models and deterministic catalog-ranking rules, with no LLM or photo uploads. Automatic suggestions always require review, and foil/edition choices are manual. The scanner isolates cards when edges are detectable and publishes suggestions after two OCR passes. Clear matches skip additional work; uncertain matches get extra text reading and optional local picture comparison while suggestions remain usable. Crop adjustment and language changes rerun recognition; card-type filters reuse the recognized text. The shared native core and ranking tests correctly matched public reference cards and the supplied Wugtrio binder screenshot; physical iPhone validation remains necessary. See [how scanning works](docs/scanning.md) and [performance measurements](docs/scan-performance.md) for the pipeline and limits.
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+Web preview collections live in that browser's local storage. They are separate from native app data and other browsers. Export a backup before clearing browser/app storage or moving devices. Backups contain card metadata, counts and favorites; artwork is reloaded from the public catalog after import. Backups are not live sync.
 
-## Join the community
+Refresh the public catalog with:
 
-Join our community of developers creating universal apps.
+```sh
+pnpm catalog:refresh
+```
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+TCGdex language coverage varies; some cards have no artwork or incomplete metadata. Physical cards are filtered separately from Pokémon TCG Pocket. Current sources and snapshot counts are recorded in `src/data/catalog-meta.json`.
+
+## Estimated collection value
+
+[TCGdex](https://tcgdex.dev/markets-prices) supplies TCGplayer USD market prices and Cardmarket EUR trends. [Frankfurter](https://frankfurter.dev/) supplies EUR/USD reference rates for converted estimates, including Japanese cards where same-card EUR pricing is available. The UI shows the source and dates; it never substitutes an English printing's value for a Japanese one. No API key, subscription or backend is required. Quotes are cached separately from the collection for a day and refresh without blocking scanning. See [pricing rules and validation](docs/pricing.md), including missing prices, special printings, condition limits and how the total is calculated.
+
+## Blender
+
+See [Blender setup](docs/blender-setup.md). Blender 5.2.1 LTS and the pinned `blender-mcp` 1.9.1 integration are installed on Kenny Mini. The actual MCP connection, tool listing and scene inspection were verified. Interactive MCP use requires Blender to remain open.
+
+## Remote preview
+
+Port 8443 is reserved for this preview on Kenny Mini. The existing Community Creators proxy on 443 and the service on 4096 are preserved. The stable web export is served on loopback port 8877 by `scripts/serve-preview.py` and forwarded with Tailscale Serve. No public Funnel is enabled.
+
+After changes, run `pnpm export:web`, then refresh the HTTPS preview. To inspect routing: `tailscale serve status`. To remove only this preview's route: `tailscale serve --https=8443 off`.
+
+The preview's user LaunchAgent is `com.reallybadnews.pokedex-preview`; it runs the static server with KeepAlive. It logs to `/private/tmp/pokedex-preview.log` and `/private/tmp/pokedex-preview.error.log`.
+
+## Credits
+
+Card metadata and images: [TCGdex](https://tcgdex.dev/). Pokémon names and artwork: [PokéAPI](https://pokeapi.co/). Pokémon is owned by its respective rights holders. This is an unofficial family fan project.

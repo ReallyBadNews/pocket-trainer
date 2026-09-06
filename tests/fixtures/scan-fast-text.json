@@ -1,0 +1,112 @@
+[
+  {
+    "label": "binder-screenshot",
+    "language": "ja",
+    "expected": "SV5K-025",
+    "scan": {
+      "text": "6-20\n250々\nウミトリオ\nテラスタル\nこのポケモンは、ペンチにいるかぎり、ワザ◎ダメージを受けない。\nトリコロポンプ\n自分の戦からエネルギーを3枚までトラッシュし、その数✕60\nダメージを、相手のポケモン1日に与える。「ベンチは毎日・旅抗分\nをお節しないし）\n④⑤\nしびれホールド\n120\n次の相手の器、このワザを受けたポケモンは、にげられない。\nQx2\nにじる*\neXルール\nTH SSE\n025/071R線",
+      "topText": "6-20\n6 -20\n6-20\n250々\n1250々\n250k\nウミトリオ\nウミリオ\nミトリオ\n",
+      "bottomText": "COVIEI\n1Z0\n2\nexж-N\nseSt\n025/071\nしびれホールド\n120\n次の相手の器、このワザを受けたポケモンは、にげられない。\nQx2\nにじる*\neXルール\nTH SSE\n025/071R線\n"
+    }
+  },
+  {
+    "label": "mega-charizard",
+    "language": "en",
+    "expected": "xy2-69",
+    "scan": {
+      "text": "MEGA\nMCharizard EX\nHP230 C\nEvolves from Charizard-EX\nMega Evolution rule\nWhen 1 of your Pokémon\nbecomes a Mega Evolution Pokémon, your turn ends.\n300\nWild Blaze\nDiscard the top 5 cards of your deck.\nPokémon-EX rule\nresistance\nweakness\nWhen a Pokémon-EX has been Knocked Out,\nyour opponent takes 2 Prize cards.\n* E\nretreat\n69/106*\nMus. 5ban Graphics\n©2014 Pokemon",
+      "topText": "MEGA\nMEG\nMEA\nMCharizard EX\nMCharizardEX\nCharizard EX\nHP230 C\nHP230 G\nHP230\nEvolves from Charizard-EX\nEvolves from CharizardEX\nEvolve from Charizard-EX\n",
+      "bottomText": "weakness\nPokémon-EX rule\nresistance\nx2\nWhen a Pokemon- EX has been Knocked Out,\nyour opponent takes 2 Prize cards.\nretreat\n69/106 *\nIlus. 5ban Graphics\n2014 Pokemon\nPokémon-EX rule\nresistance\nweakness\nWhen a Pokémon-EX has been Knocked Out,\nyour opponent takes 2 Prize cards.\n* E\nretreat\n69/106*\nMus. 5ban Graphics\n©2014 Pokemon\n"
+    }
+  },
+  {
+    "label": "en-base1-94",
+    "language": "en",
+    "expected": "base1-94",
+    "scan": {
+      "text": "TRAINER\nPotion\nRemove up to 2 damage counters\nfrom I of your Pokémon.\nIllus. Keiji Kinebuchi.© 1995,96,98,99 Nintenda Creatures, GAMEFREAK: © 1999Wzards 94/102 •",
+      "topText": "TRAINER\nTRAINE\nTRAINR\nPotion\nPotio\nPoton\n",
+      "bottomText": "Nlo\n1\n•\n99 Nincendo Creatures, GAMEFREAK, © 1999Wizards 94/102\nIllus. Keiji Kinebuchi © 1995,%6\nIllus. Keiji Kinebuchi.© 1995,96,98,99 Nintenda Creatures, GAMEFREAK: © 1999Wzards 94/102 •\n"
+    }
+  },
+  {
+    "label": "en-base1-99",
+    "language": "en",
+    "expected": "base1-99",
+    "scan": {
+      "text": "\"Ö= …\nENERGY\nIllus. Keiji Kinebuchi © 1995,96,98,99 Nintenda Greatures GAMEFREAK © 1999Wzards 99/102",
+      "topText": "\"Ö= …\n\"Ö=…\n\"Ớ=…\nENERGY\nNENERGY\nLENERGY\n",
+      "bottomText": "Illus. Keiji Kinebuchi © 1995,96,98,99 Nintenda Creatures GAMEFREAK 1999Wzards 99/102\nIllus. Keiji Kinebuchi © 1995,96,98,99 Nintenda Greatures GAMEFREAK © 1999Wzards 99/102\n"
+    }
+  },
+  {
+    "label": "en-sm9-156",
+    "language": "en",
+    "expected": "sm9-156",
+    "scan": {
+      "text": "TRAINER\nStadium\nViridian Forest\nOnce during each player's turn, that player may\ndiscard a card from their hand. If they do, that player\nsearches their deck for a basic Energy card, reveals\nit, and puts it into their hand. Then, that player\nshuffles their deck.\nThis card stays in play when you play it. Discard this card if\nanother Stadium card comes into play. If another card with\nIllus. 5ban Graphics\nthe same name is in play, you can't play this card.\n• 156/181 •\n©2019 Pokémon",
+      "topText": "TRAINER\nTRAINE\nRAINER\nStadium\nStadum\nStadiu\nViridian Forest\nViridian Fores\nViridia Forest\n",
+      "bottomText": "shuffles their deck.\nThis card stays in play when you play it. Discard this card if\nanother Stadium card comes into play. If another card with\nIllus. 5ban Graphics\nthe same name is in play, you can't play this card.\n156/181\n©2019 Pokémon\nshuffles their deck.\nThis card stays in play when you play it. Discard this card if\nanother Stadium card comes into play. If another card with\nIllus. 5ban Graphics\nthe same name is in play, you can't play this card.\n• 156/181 •\n©2019 Pokémon\n"
+    }
+  },
+  {
+    "label": "en-sm9-33",
+    "language": "en",
+    "expected": "sm9-33",
+    "scan": {
+      "text": "Basıc Pikachu &Zekrom C×\nHP 240 1\nTAG TEAM\nFull Blitz\n150\nSearch your deck for up to 3 4 Energy cards and attach\nthem to I of your Pokémon. Then, shuffle your deck.\n4\n200\n4 + Tag Bolt GX\nIf this Pokémon has at least 3 extra 4 Energy attached to it (in\naddition to this attacks cost, this attack does Uv damage to of your\nopponents Benched Pokémon. (Don't apply Weakness and Resistance\nfor Benched Pokémon. (You can use more than I X attackin a game.)\nweakness\nretreat\n× 2\nresistance -20\nTAG TEAM rule\nIllus. Mitsuhiro Arita\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\n33/181\n©2019 Pokémon",
+      "topText": "Basıc Pikachu &Zekrom C×\nBAsıc Pikachu &Zekrom C×\nbasıc Pikachu &Zekrom C×\nHP 240 1\nHP 240 Y\nHP 240 4\nTAG TEAM\nTAG TEA\nTAGTEAM\n",
+      "bottomText": "wae noacue uas as usasb e CAUa v\naddition to this attack's cost), this attack does 170 damage to I of your\nopponent's Benched Pokémon. (Donit apply Weakness and Resistance\nfor Benched Pokémon) (You canfuuse more than 1 GX atackin a game)\nretreat\nweakness\nresistance\n3-20\nx2\nTAG TEAM rule\nIllus. Mitsuhiro Arita\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\n33/181\n©2019 Pokémon\nIf this Pokémon has at least 3 extra 4 Energy attached to it (in\naddition to this attacks cost, this attack does Uv damage to of your\nopponents Benched Pokémon. (Don't apply Weakness and Resistance\nfor Benched Pokémon. (You can use more than I X attackin a game.)\nweakness\nretreat\n× 2\nresistance -20\nTAG TEAM rule\nIllus. Mitsuhiro Arita\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\n33/181\n©2019 Pokémon\n"
+    }
+  },
+  {
+    "label": "en-sm12-221",
+    "language": "en",
+    "expected": "sm12-221",
+    "scan": {
+      "text": "Arceus&\nBASIC\nHP 2800\nDialga&Palkiar\nTAG TEAM\n150\nUltimate Ray\nSearch\nyour deck for up to 3 basic Energy cards and\nattach them to your Pokémon in any way you like. Then,\nshuffle your deck.\n+\nAltered Creation GX\nFor the rest of chis games your Pokémon's attacks do 80 more damage to your\nopponent's Active Pokémon (before applying Weakness and Resistance), If this\nPokémon has at least I extra 6 Energy attached to it (in addition to this attack:\ncost), when your opponent's Active Pokémon is Knocked Out by damage from\nthose attacks, take I more Prize card. (You can'tuse more than I X attackin a game.)\nweakness\nresistance\nretreat\n× 2\nTAG TEAM rule\nIllus. Kouki Saitou\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\n2 221/236 *\n©2019 Pokemon",
+      "topText": "Arceus&\nArces&\nArcus&\nBASIC\nBASI\nASIC\nHP 2800\nMP 2800\nHP 280O\nDialga&Palkiar\nDialga&PalkiaR\nDialga&Palkian\nTAG TEAM\nTAG TEA\nTAGTEAM\n",
+      "bottomText": "pponents Active Pokémon (before applying Weakness and Resistance). If thi\nokémon has at least l extra Energy attached to it (in addition to this attack\ncost), when your opponent's Active Pokémon is Knocked Out by damage from\nthose attacks, take I more Prize card. (tou can tuse morethan I GX atacklna game.)\nresistance\nretreat\nweakness\nx2\nTAG TEAM rule\nIllus. Kouki Saitou\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\nĐN 221/236 *\n02019 Pokémon\nopponent's Active Pokémon (before applying Weakness and Resistance), If this\nPokémon has at least I extra 6 Energy attached to it (in addition to this attack:\ncost), when your opponent's Active Pokémon is Knocked Out by damage from\nthose attacks, take I more Prize card. (You can'tuse more than I X attackin a game.)\nweakness\nresistance\nretreat\n× 2\nTAG TEAM rule\nIllus. Kouki Saitou\nWhen your TAG TEAM is\nKnocked Out, your opponent takes 3 Prize cards.\n2 221/236 *\n©2019 Pokemon\n"
+    }
+  },
+  {
+    "label": "en-sm12-234",
+    "language": "en",
+    "expected": "sm12-234",
+    "scan": {
+      "text": "TRAINER\nSupporter\nRed & Blue\nTAG TEAM\nSearch your deck for a Pokémon-GX that evolves from\nI of your Pokémon and put it onto that Pokémon to\nevelve te. Then, shuffle your deck. You cant use this card\nduring your first turnor on a Pokémon that was put into play\nthis turn.)\nWhen you play this card, you may discard 2 other cards\nfrom your hand. If you do, search your deck for up to\n2 basic Energy cards and attach them to the Pokemon\nyou evolved in this way.\nYou may play only | Supporter card during your\nIllus. Hitoshi Ariga\nturn (before your attack).\nL234/236 *\n©2019 Pokemon",
+      "topText": "TRAINER\nTRAINE\nRAINER\nSupporter\nSupporte\nSupportr\nRed & Blue\nRed & Blue\nRed& Blue\nTAG TEAM\nTAG TEA\nTA TEAM\n",
+      "bottomText": "trom your hand. It you do, search your deck for up to\n2 basie Energy cards and attach them to the Pokémon\nyou evolved in this way.\nYou may play only I Supporter card during your\nMus. Hitoshi Ariga\nturn (before your attack).\n) 234/236 *\n@2019 Pokemon\nfrom your hand. If you do, search your deck for up to\n2 basic Energy cards and attach them to the Pokemon\nyou evolved in this way.\nYou may play only | Supporter card during your\nIllus. Hitoshi Ariga\nturn (before your attack).\nL234/236 *\n©2019 Pokemon\n"
+    }
+  },
+  {
+    "label": "ja-SV5a-056",
+    "language": "ja",
+    "expected": "SV5a-056",
+    "scan": {
+      "text": "トレーナーズ\nグッズ\nポケモンいれかえ\n自分のバトルポケモンをベンチポケモンと入れ替える。\nなんまい\nグッズは、皆券の箸に特製でも選える。\nHllus. Studio Bora Inc.\nSv5a\nG\n056/066 U\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "トレーナーズ\nトーナーズ\nトレーナズ\nグッズ\nッズ\nグズ\nポケモンいれかえ\nポケモンれかえ\nポケモンいかえ\n",
+      "bottomText": "tahaus\nlah\nL3ih\nIllus. Studio Bora Inc.\nsv5a\n056/066 U\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\nなんまい\nグッズは、皆券の箸に特製でも選える。\nHllus. Studio Bora Inc.\nSv5a\nG\n056/066 U\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\n"
+    }
+  },
+  {
+    "label": "ja-SVK-041",
+    "language": "ja",
+    "expected": "SVK-041",
+    "scan": {
+      "text": "トレーナーズ\nスタジアム\nボウルタウン\nおたがいのプレイヤーは、自分の審ごとに1、皆分の世親から\nたねポケモン（「ルールを持つポケモン」をのぞく）を1枚選び、\nベンチに出してよい。そして出乳を切る。\nスタジアムは、皆券の髭に1穀、バトル場の横に出せる。\nHllus. Oswaldo KATO\n別のスタジアが場に出たなら、このカードをトラッシュ\nなまえ\n同じ名前のスタジアムは場に出せない。\nする。\nG\n041/044\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "トレーナーズ\nトーナーズ\nトレーナズ\nスタジアム\nスタジア\nスジアム\nボウルタウン\nボウルウン\nボウルタン\n",
+      "bottomText": "Illus. Oswaldo KATO\nSVK\nG\n041/044\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\nスタジアムは、皆券の髭に1穀、バトル場の横に出せる。\nHllus. Oswaldo KATO\n別のスタジアが場に出たなら、このカードをトラッシュ\nなまえ\n同じ名前のスタジアムは場に出せない。\nする。\nG\n041/044\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\n"
+    }
+  },
+  {
+    "label": "ja-SVK-042",
+    "language": "ja",
+    "expected": "SVK-042",
+    "scan": {
+      "text": "特殊エネルギー\nエネルギー\nジェットエネルギー\nこのカードは、ポケモンについているかぎり、＊エネルギー1個ぶん\nとしてはたらく。\nこのカードを手札からベンチポケモンにつけたとき、このカードを\nつけたポケモンを、バトルポケモンと入れ替える。\nG\n042/044\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "特殊エネルギー\n特殊エネルギ\n特殊エネルー\nエネルギー\nエネルギ\nエネルー\nジェットエネルギー\nジェットネルギー\nジェトエネルギー\n",
+      "bottomText": "ŁUCldt5<\nCBME\nЭeЖ5£>·./NL*5£>ŁŸnŘž⅔•\nSvK\nG\n042/044\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\nとしてはたらく。\nこのカードを手札からベンチポケモンにつけたとき、このカードを\nつけたポケモンを、バトルポケモンと入れ替える。\nG\n042/044\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\n"
+    }
+  }
+]
