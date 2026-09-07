@@ -113,3 +113,19 @@ test('actual shared Apple Vision outputs rank the screenshot and Mega/ex referen
     assert.equal(rankScanCandidates(fixture.scan, fixture.language)[0]?.id, fixture.expected, fixture.label);
   }
 });
+
+test('deleting all copies preserves other printings and survives a saved collection round-trip', () => {
+  const collection = freshCollection();
+  const original = addCard(addCard(collection.trainers[0], card, 'normal', 5), card, 'reverse', 2);
+  const next = updateQuantity(original, entryKey(card, 'normal'), 0);
+  assert.equal(totalCards(original), 7);
+  assert.equal(totalCards(next), 2);
+  assert.equal(duplicateCards(next), 1);
+  assert.deepEqual([...discoveredIds(next)], [25]);
+  assert.equal(next.entries[0].finish, 'reverse');
+  collection.trainers[0] = next;
+  assert.deepEqual(parseCollection(JSON.stringify(collection)).trainers[0], next);
+  const empty = updateQuantity(next, entryKey(card, 'reverse'), 0);
+  assert.equal(totalCards(empty), 0);
+  assert.equal(discoveredIds(empty).size, 0);
+});

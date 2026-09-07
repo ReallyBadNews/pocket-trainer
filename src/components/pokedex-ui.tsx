@@ -43,7 +43,7 @@ export function Chip({ label, selected, onPress }: { label: string; selected?: b
 export function CardArt({ card, style, high = false }: { card: CardBrief | Card; style?: StyleProp<ViewStyle>; high?: boolean }) {
   const local = 'localImage' in card ? card.localImage : undefined;
   const base = cardImage(card, high)?.replace(/\/(?:low|high)\.webp$/, '');
-  const sources = [...new Set([local, cardImage(card, high), base ? `${base}/${high ? 'low' : 'high'}.webp` : undefined, base ? `${base}/high.png` : undefined].filter((uri): uri is string => !!uri))];
+  const sources = [...new Set([...(high ? [cardImage(card, true), local] : [local, cardImage(card)]), base ? `${base}/${high ? 'low' : 'high'}.webp` : undefined, base ? `${base}/high.png` : undefined].filter((uri): uri is string => !!uri))];
   return <CardArtImage key={`${card.language}:${card.id}:${sources.join('|')}`} name={card.name} sources={sources} style={style} />;
 }
 function CardArtImage({ name, sources, style }: { name: string; sources: string[]; style?: StyleProp<ViewStyle> }) {

@@ -4,7 +4,7 @@ A classic red Pokédex and physical Pokémon card binder for iPhone and iPad, bu
 
 **Private preview:** https://kenny-mini.grayling-vibe.ts.net:8443/
 
-**Install on the registered iPhone:** https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/1af63f45-4d5f-4e0c-aee7-7d0c458be472
+**Install on the registered iPhone:** https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/749bd3cb-806c-4158-bf09-5764448d2854
 
 The browser preview supports catalog search, card review, collecting, favorites, duplicates, trainer profiles, badges and backups. The signed iOS preview includes automatic photo matching through a local Apple Vision module and runs without a development server. Automatic matching is not available in the browser or Expo Go.
 
@@ -15,6 +15,8 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Search Japanese cards using an English Pokémon name, a Japanese name, or collector number.
 - Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it.
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
+- Delete a saved printing and all its copies with confirmation from card details.
+- Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.
 - Favorites, extra-copy counts, six collection milestones and discovery animations.
 - Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
 - Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
@@ -36,7 +38,9 @@ pnpm export:ios
 
 `pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, English/Japanese searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
 
-The current signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
+The earlier signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
+
+Build 8 includes card deletion, fitted-image pan limits and the cleaned-up Pokédex-themed photo viewer without the bottom control bar. Its EAS build and IPA signature verification passed, and its provisioning profile includes the registered iPhone under the individual Apple team. Type checking, all 43 tests and both platform exports passed. Browser checks covered the updated phone-width viewer layout and close action, plus earlier deletion confirmation/cancellation; physical iPhone gesture validation remains pending.
 
 ## Data, photos and offline use
 
