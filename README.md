@@ -16,7 +16,7 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it.
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
 - Delete a saved printing and all its copies with confirmation from card details.
-- Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning and accessible zoom/reset controls.
+- Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.
 - Favorites, extra-copy counts, six collection milestones and discovery animations.
 - Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
 - Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
