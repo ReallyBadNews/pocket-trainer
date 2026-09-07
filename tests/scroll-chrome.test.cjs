@@ -30,3 +30,9 @@ test('short content and filtered results restore controls and keep navigation re
   assert.equal(step(.4, 20, 40, 800, 600, 820, 140).progress, 0);
   assert.equal(step(1, 50, 0, 4000, 820, 820, 140).progress, 0);
 });
+
+test('near the top, collapse cannot expose unscrolled header spacing', () => {
+  assert.equal(step(1, 50, 60, 4000, 820, 820, 84).progress, 60 / 84);
+  assert.equal(snap(.75, 63, 84), 0);
+  assert.equal(snap(.75, 500, 84), 1);
+});

@@ -11,15 +11,16 @@ type ScrollChrome = {
   progress: SharedValue<number>;
   viewportHeight: SharedValue<number>;
   distance: number;
+  bottomInset: number;
   paused: SharedValue<boolean>;
 };
 export const ScrollChromeContext = createContext<ScrollChrome | null>(null);
 
-export function useScrollChromeController(distance: number) {
+export function useScrollChromeController(distance: number, bottomInset: number) {
   const progress = useSharedValue(0);
   const viewportHeight = useSharedValue(0);
   const paused = useSharedValue(false);
-  return useMemo(() => ({ progress, viewportHeight, distance, paused }), [progress, viewportHeight, distance, paused]);
+  return useMemo(() => ({ progress, viewportHeight, distance, bottomInset, paused }), [progress, viewportHeight, distance, bottomInset, paused]);
 }
 
 /** Each vertical scroller owns its drag/momentum state; horizontal chips do not participate. */
@@ -27,14 +28,13 @@ export function useChromeScroll() {
   const insets = useSafeAreaInsets();
   const chrome = useContext(ScrollChromeContext);
   if (!chrome) throw new Error('Main scrollers require ScrollChromeContext');
-  const { progress, viewportHeight, distance, paused } = chrome;
+  const { progress, viewportHeight, distance, bottomInset, paused } = chrome;
   const offset = useSharedValue(0);
   const contentHeight = useSharedValue(0);
   const dragging = useSharedValue(false);
   const momentum = useSharedValue(false);
   const idle = useSharedValue(0);
   const snapping = useSharedValue(false);
-  const lastViewport = useSharedValue(0);
   const web = Platform.OS === 'web';
 
   useEffect(() => {
@@ -59,7 +59,7 @@ export function useChromeScroll() {
     if (paused.value) return;
     cancelAnimation(idle);
     snapping.value = true;
-    progress.value = withTiming(scrollChromeSnap(progress.value), { duration: 180 }, () => {
+    progress.value = withTiming(scrollChromeSnap(progress.value, offset.value, distance), { duration: 220 }, () => {
       snapping.value = false;
     });
   };
@@ -91,13 +91,9 @@ export function useChromeScroll() {
       if (paused.value) return;
       const height = event.contentSize.height;
       const viewport = event.layoutMeasurement.height;
-      const resized = Math.abs(viewport - lastViewport.value) > 1;
-      lastViewport.value = viewport;
       const next = scrollChromeStep(progress.value, offset.value, event.contentOffset.y,
         height, viewport, viewportHeight.value, distance);
       offset.value = next.offset;
-      // Layout corrections during a snap are not a new upward gesture.
-      if (snapping.value && resized) return;
       if (snapping.value) { cancelAnimation(progress); snapping.value = false; }
       progress.value = next.progress;
       if (!dragging.value && !momentum.value) settleSoon();
@@ -115,7 +111,8 @@ export function useChromeScroll() {
     onTouchCancel: web ? endDrag : undefined,
     // Prevent browser anchoring from treating responsive reflow as user scrolling.
     style: web ? { overflowAnchor: 'none' } as ViewStyle : undefined,
-    contentContainerStyle: { paddingBottom: Math.max(40, insets.bottom + 16) },
+    // Reserve space for the overlays without resizing the list or reflowing its rows.
+    contentContainerStyle: { paddingTop: 20 + distance, paddingBottom: Math.max(40, insets.bottom + 16) + bottomInset },
     contentInsetAdjustmentBehavior: 'never' as const,
     automaticallyAdjustContentInsets: false,
     onContentSizeChange: (_width: number, height: number) => {

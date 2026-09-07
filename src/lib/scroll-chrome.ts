@@ -18,11 +18,12 @@ export function scrollChromeStep(
   const delta = nextOffset - Math.max(0, Math.min(previousOffset, maxOffset));
   return {
     offset: nextOffset,
-    progress: Math.max(0, Math.min(1, progress + delta / Math.max(1, collapseDistance))),
+    progress: Math.max(0, Math.min(1, nextOffset / Math.max(1, collapseDistance), progress + delta / Math.max(1, collapseDistance))),
   };
 }
 
-export function scrollChromeSnap(progress: number) {
+export function scrollChromeSnap(progress: number, offset = Infinity, collapseDistance = 0) {
   'worklet';
-  return progress < 0.5 ? 0 : 1;
+  // Near the top, hiding past the leading spacer would leave a gap below the header.
+  return offset < collapseDistance || progress < 0.5 ? 0 : 1;
 }
