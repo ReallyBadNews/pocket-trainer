@@ -10,7 +10,9 @@ The registered test iPhone is named Kenny iPhone, UDID `00008150-0008046E2EF0401
 
 https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/920075f6-847e-40c2-8921-97dff868f5d6
 
-Build 7 completed successfully with card deletion and pinch-to-zoom artwork/scan photos. The downloaded IPA passed `codesign --verify --deep --strict`; its profile contains the individual team and registered iPhone above. Version 1.0.0, build 7 and the standalone JavaScript bundle were verified. Type checking, all 39 tests and iOS/web exports passed. Phone-width browser checks covered the viewer, zoom/reset and multi-copy deletion confirmation/cancellation. Physical iPhone pinch testing remains pending.
+Build 7 completed successfully with card deletion and pinch-to-zoom artwork/scan photos. The downloaded IPA passed `codesign --verify --deep --strict`; its profile contains the individual team and registered iPhone above. Version 1.0.0, build 7 and the standalone JavaScript bundle were verified. Historical validation for build 7 passed type checking, the then-current 39 tests and iOS/web exports. Phone-width browser checks covered the viewer, zoom/reset and multi-copy deletion confirmation/cancellation. Physical iPhone pinch testing remains pending.
+
+Build 7 predates and does not validate the fitted-dimension panning fix in `fitPhoto` and `boundPhotoOffset`. The current `package.json` test command, `tsc -p tsconfig.test.json && node --test tests/*.test.cjs` (`pnpm test`), covers 43 test declarations, including four geometry tests added with that fix. Those four tests were not part of build 7’s validation.
 
 ## Earlier build status — September 6, 2026
 
