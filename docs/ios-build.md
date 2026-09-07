@@ -6,7 +6,13 @@ The user approved uploading the project source to Expo EAS and storing its gener
 
 The registered test iPhone is named Kenny iPhone, UDID `00008150-0008046E2EF0401C`, and is recorded in EAS under the individual team. Apple portal registration occurs when the device is selected for provisioning.
 
-## Latest preview — build 7
+## Latest preview — build 8
+
+https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/749bd3cb-806c-4158-bf09-5764448d2854
+
+Build 8 includes the fitted-dimension panning fix and the cleaner photo viewer: red Pokédex shell, pale green screen, compact header and no bottom control bar. Pinch zoom and bounded panning remain. Type checking and all 43 tests passed; iOS/web exports and phone-width browser layout/close checks passed before upload. The finished IPA passed `codesign --verify --deep --strict`; version 1.0.0, build 8, the standalone JavaScript bundle, individual Apple team and registered iPhone were verified. Physical iPhone gesture validation remains pending.
+
+## Earlier preview — build 7
 
 https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/920075f6-847e-40c2-8921-97dff868f5d6
 
