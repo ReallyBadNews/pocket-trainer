@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useMemo } from 'react';
-import { Platform, type LayoutChangeEvent, type ViewStyle } from 'react-native';
+import { Platform, type ViewStyle } from 'react-native';
 import {
-  cancelAnimation, useAnimatedScrollHandler, useSharedValue, withDelay, withTiming,
+  cancelAnimation, useAnimatedReaction, useAnimatedScrollHandler, useSharedValue, withDelay, withTiming,
   type SharedValue,
 } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { scrollChromeSnap, scrollChromeStep } from '@/lib/scroll-chrome';
 
 type ScrollChrome = {
@@ -23,6 +24,7 @@ export function useScrollChromeController(distance: number) {
 
 /** Each vertical scroller owns its drag/momentum state; horizontal chips do not participate. */
 export function useChromeScroll() {
+  const insets = useSafeAreaInsets();
   const chrome = useContext(ScrollChromeContext);
   if (!chrome) throw new Error('Main scrollers require ScrollChromeContext');
   const { progress, viewportHeight, distance, paused } = chrome;
@@ -40,6 +42,18 @@ export function useChromeScroll() {
     return () => { cancelAnimation(idle); cancelAnimation(progress); };
   }, [idle, progress]);
 
+  // This depends on the full viewport, not the list height changing every frame.
+  // Keep the short-page check on the UI thread instead of sending layout events to JS.
+  useAnimatedReaction(
+    () => !paused.value && contentHeight.value > 0 && contentHeight.value <= viewportHeight.value + 1,
+    short => {
+      if (short) {
+        cancelAnimation(idle);
+        progress.value = withTiming(0, { duration: 180 });
+      }
+    },
+  );
+
   const settle = () => {
     'worklet';
     if (paused.value) return;
@@ -52,6 +66,7 @@ export function useChromeScroll() {
   const settleSoon = () => {
     'worklet';
     cancelAnimation(idle);
+    if (progress.value === 0 || progress.value === 1) return;
     idle.value = 0;
     // Web has no drag/momentum callbacks; wait until wheel/touch scrolling is idle.
     idle.value = withDelay(160, withTiming(1, { duration: 0 }, finished => {
@@ -100,18 +115,11 @@ export function useChromeScroll() {
     onTouchCancel: web ? endDrag : undefined,
     // Prevent browser anchoring from treating responsive reflow as user scrolling.
     style: web ? { overflowAnchor: 'none' } as ViewStyle : undefined,
+    contentContainerStyle: { paddingBottom: Math.max(40, insets.bottom + 16) },
+    contentInsetAdjustmentBehavior: 'never' as const,
+    automaticallyAdjustContentInsets: false,
     onContentSizeChange: (_width: number, height: number) => {
       contentHeight.value = height;
-      if (!paused.value && height <= viewportHeight.value + 1) {
-        cancelAnimation(idle);
-        progress.value = withTiming(0, { duration: 180 });
-      }
-    },
-    onLayout: (_event: LayoutChangeEvent) => {
-      if (!paused.value && contentHeight.value > 0 && contentHeight.value <= viewportHeight.value + 1) {
-        cancelAnimation(idle);
-        progress.value = 0;
-      }
     },
   };
 }

@@ -94,12 +94,12 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
     } catch (e) { if (alive.current && generation.current === id) setError(e instanceof Error ? e.message : 'The photo could not be read. Try again or search below.'); }
     finally { if (alive.current && generation.current === id) { busyRef.current = false; setBusy(false); setImproving('done'); } }
   }
-  if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={s.list}>
+  if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={[s.list, scroll.contentContainerStyle]}>
     <CardCrop photo={original} initial={crop} onDrag={setDragging} onCancel={() => { setEditing(false); setDragging(false); }} onConfirm={selection => {
       setEditing(false); setDragging(false); setManualCrop(selection); void runScan(original.uri, language, selection);
     }} />
   </Animated.ScrollView>;
-  return <Animated.FlatList {...scroll} data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={s.list} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+  return <Animated.FlatList {...scroll} data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>
       <View style={ui.row}><Chip label="English" selected={language === 'en'} onPress={() => changeLanguage('en')} /><Chip label="日本語 · Japanese" selected={language === 'ja'} onPress={() => changeLanguage('ja')} /></View>

@@ -21,7 +21,7 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
   const columns = width >= 900 ? 5 : width >= 650 ? 4 : 2;
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!query || normalize(`${s.en}${s.ja}${s.id}`).includes(normalize(query)))), [query, filter, discovered]);
-  return <Animated.FlatList {...scroll} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={s.list} columnWrapperStyle={{ gap: 10 }} initialNumToRender={15} maxToRenderPerBatch={20}
+  return <Animated.FlatList {...scroll} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} columnWrapperStyle={{ gap: 10 }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your Pokédex</Txt><Txt muted>Every card starts a discovery.</Txt></View><View style={s.counter}><Txt style={s.counterNumber}>{String(discovered.size).padStart(3, '0')}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>discovered</Txt></View></View>
       <View style={s.adventure}>
@@ -63,7 +63,7 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
   const entries = sortBinderEntries(filtered, sort, client.snapshots, client.fx);
   const priceSort = sort === 'priceHigh' || sort === 'priceLow';
   function clearFilters() { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(false); }
-  return <Animated.FlatList {...scroll} data={entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={s.list} showsVerticalScrollIndicator={false}
+  return <Animated.FlatList {...scroll} data={entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your card binder</Txt><Txt muted>{totalCards(trainer)} cards · {trainer.entries.length} printings · {duplicateCards(trainer)} {duplicateCards(trainer) === 1 ? 'extra' : 'extras'}</Txt></View><Pressable accessibilityRole="button" accessibilityLabel="Add a card" onPress={onScan} style={s.addButton}><Icon name="plus" color="white" /></Pressable></View>
       <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(true); }} />
@@ -96,7 +96,7 @@ export function BadgesScreen() {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
   const earned = BADGES.filter(b => badgeProgress(trainer, b) >= b.target).length;
-  return <Animated.ScrollView {...scroll} contentContainerStyle={s.list} showsVerticalScrollIndicator={false}><View style={s.header}><Txt style={ui.title}>Little wins. Big adventures.</Txt><Txt muted>{earned} of {BADGES.length} badges earned. Every discovery counts.</Txt></View>{BADGES.map(b => {
+  return <Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}><View style={s.header}><Txt style={ui.title}>Little wins. Big adventures.</Txt><Txt muted>{earned} of {BADGES.length} badges earned. Every discovery counts.</Txt></View>{BADGES.map(b => {
     const progress = badgeProgress(trainer, b); const unlocked = progress >= b.target;
     return <View key={b.id} style={[s.badgeRow, unlocked && { backgroundColor: '#F7ECCC', borderColor: '#DBC786' }]}><Image source={require('../../assets/crafted/badge.png')} style={{ width: 90, height: 100, opacity: unlocked ? 1 : .3 }} contentFit="contain" /><View style={{ flex: 1, gap: 4 }}><Txt style={{ fontWeight: '800', fontSize: 17 }}>{b.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19 }}>{b.description}</Txt><View style={{ marginVertical: 5 }}><Progress value={progress} total={b.target} color={unlocked ? '#A98428' : C.muted} /></View><Txt muted style={{ fontSize: 11 }}>{unlocked ? 'Badge earned!' : `${progress} / ${b.target}`}</Txt></View>{unlocked && <Icon name="check" color="#9B7828" size={20} />}</View>;
   })}</Animated.ScrollView>;
