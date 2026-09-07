@@ -3,10 +3,11 @@ import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { boundPhotoOffset as bound, fitPhoto } from '@/lib/photo-geometry';
 import { Button, IconButton, Txt } from './pokedex-ui';
 
-export function ZoomablePhoto({ label, children, renderPhoto }: {
-  label: string; children: ReactNode; renderPhoto: (width: number, height: number) => ReactNode;
+export function ZoomablePhoto({ label, children, aspectRatio, renderPhoto }: {
+  label: string; children: ReactNode; aspectRatio: number; renderPhoto: (width: number, height: number) => ReactNode;
 }) {
   const [open, setOpen] = useState(false);
   return <>
@@ -15,13 +16,13 @@ export function ZoomablePhoto({ label, children, renderPhoto }: {
       <Txt style={{ fontSize: 12, color: '#526B50', marginTop: 6 }}>Tap to zoom</Txt>
     </Pressable>
     <Modal visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
-      {open && <PhotoViewer label={label} onClose={() => setOpen(false)} renderPhoto={renderPhoto} />}
+      {open && <PhotoViewer key={aspectRatio} aspectRatio={aspectRatio} label={label} onClose={() => setOpen(false)} renderPhoto={renderPhoto} />}
     </Modal>
   </>;
 }
 
-function PhotoViewer({ label, onClose, renderPhoto }: {
-  label: string; onClose: () => void; renderPhoto: (width: number, height: number) => ReactNode;
+function PhotoViewer({ label, onClose, aspectRatio, renderPhoto }: {
+  label: string; onClose: () => void; aspectRatio: number; renderPhoto: (width: number, height: number) => ReactNode;
 }) {
   const insets = useSafeAreaInsets();
   const [size, setSize] = useState({ width: 0, height: 0 });
@@ -34,11 +35,7 @@ function PhotoViewer({ label, onClose, renderPhoto }: {
   const pinching = useSharedValue(false);
   const width = size.width;
   const height = size.height;
-  function bound(value: number, extent: number, zoom: number) {
-    'worklet';
-    const limit = extent * (zoom - 1) / 2;
-    return Math.max(-limit, Math.min(limit, value));
-  }
+  const fitted = fitPhoto(width, height, aspectRatio);
   const pinch = Gesture.Pinch().onStart(e => {
     pinching.value = true;
     startScale.value = scale.value;
@@ -46,26 +43,26 @@ function PhotoViewer({ label, onClose, renderPhoto }: {
     anchorY.value = (e.focalY - height / 2 - y.value) / scale.value;
   }).onUpdate(e => {
     scale.value = Math.max(1, Math.min(5, startScale.value * e.scale));
-    x.value = bound(e.focalX - width / 2 - anchorX.value * scale.value, width, scale.value);
-    y.value = bound(e.focalY - height / 2 - anchorY.value * scale.value, height, scale.value);
+    x.value = bound(e.focalX - width / 2 - anchorX.value * scale.value, fitted.width, width, scale.value);
+    y.value = bound(e.focalY - height / 2 - anchorY.value * scale.value, fitted.height, height, scale.value);
   }).onFinalize(() => { pinching.value = false; });
   const pan = Gesture.Pan().maxPointers(1).onChange(e => {
     if (pinching.value) return;
-    x.value = bound(x.value + e.changeX, width, scale.value);
-    y.value = bound(y.value + e.changeY, height, scale.value);
+    x.value = bound(x.value + e.changeX, fitted.width, width, scale.value);
+    y.value = bound(y.value + e.changeY, fitted.height, height, scale.value);
   });
   const animated = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }] }));
   function zoom(factor: number) {
     scale.value = Math.max(1, Math.min(5, scale.value * factor));
-    x.value = bound(x.value, width, scale.value);
-    y.value = bound(y.value, height, scale.value);
+    x.value = bound(x.value, fitted.width, width, scale.value);
+    y.value = bound(y.value, fitted.height, height, scale.value);
   }
   function reset() { scale.value = 1; x.value = 0; y.value = 0; }
   return <GestureHandlerRootView style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 12) }]}>
     <View style={styles.header}><Txt numberOfLines={2} style={{ color: 'white', flex: 1 }}>{label}</Txt><IconButton icon="close" label="Close photo viewer" color="white" onPress={onClose} /></View>
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
       <View collapsable={false} style={styles.viewport} onLayout={e => { setSize(e.nativeEvent.layout); reset(); }}>
-        {width > 0 && height > 0 && <Animated.View style={[{ width, height, alignItems: 'center', justifyContent: 'center' }, animated]}>{renderPhoto(width, height)}</Animated.View>}
+        {width > 0 && height > 0 && <Animated.View style={[{ width, height, alignItems: 'center', justifyContent: 'center' }, animated]}>{renderPhoto(fitted.width || width, fitted.height || height)}</Animated.View>}
       </View>
     </GestureDetector>
     <Txt style={styles.hint}>Pinch to zoom · Drag to explore</Txt>

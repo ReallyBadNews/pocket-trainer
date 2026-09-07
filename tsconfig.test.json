@@ -4,5 +4,5 @@
     "resolveJsonModule": true, "esModuleInterop": true, "strict": true, "skipLibCheck": true,
     "rootDir": "src", "outDir": ".test-build", "types": [], "lib": ["ES2022", "DOM"]
   },
-  "include": ["src/lib/model.ts", "src/lib/catalog.ts", "src/lib/scan-types.ts", "src/lib/scan-pipeline.ts", "src/lib/price-client.ts", "src/lib/binder-order.ts"]
+  "include": ["src/lib/model.ts", "src/lib/catalog.ts", "src/lib/scan-types.ts", "src/lib/scan-pipeline.ts", "src/lib/price-client.ts", "src/lib/binder-order.ts", "src/lib/photo-geometry.ts"]
 }
