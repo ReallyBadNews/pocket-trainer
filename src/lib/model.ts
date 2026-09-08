@@ -8,14 +8,36 @@ export type Card = CardBrief & {
   hp?: number; description?: string; finishes: Finish[]; localImage?: string;
 };
 export type Entry = { key: string; card: Card; finish: Finish; quantity: number; favorite: boolean; addedAt: string };
-export type Trainer = { id: string; name: string; color: string; entries: Entry[] };
+export const TRAINER_SKIN_TONES = ['porcelain', 'peach', 'golden', 'brown', 'deep'] as const;
+export const TRAINER_HAIR_STYLES = ['short', 'spiky', 'bob', 'ponytail'] as const;
+export const TRAINER_HAIR_COLORS = ['ink', 'chestnut', 'auburn', 'gold', 'blue'] as const;
+export const TRAINER_OUTFITS = ['red', 'blue', 'green', 'violet', 'gold'] as const;
+export const TRAINER_HEADWEAR = ['none', 'cap', 'headband'] as const;
+export type TrainerAppearance = {
+  skinTone: typeof TRAINER_SKIN_TONES[number];
+  hairStyle: typeof TRAINER_HAIR_STYLES[number];
+  hairColor: typeof TRAINER_HAIR_COLORS[number];
+  outfit: typeof TRAINER_OUTFITS[number];
+  headwear: typeof TRAINER_HEADWEAR[number];
+};
+export const TRAINER_OUTFIT_COLORS: Record<TrainerAppearance['outfit'], string> = {
+  red: '#C93240', blue: '#377DD1', green: '#519269', violet: '#8561A8', gold: '#CB8437',
+};
+export const trainerAppearanceFor = (index: number): TrainerAppearance => ({
+  skinTone: TRAINER_SKIN_TONES[index % TRAINER_SKIN_TONES.length],
+  hairStyle: TRAINER_HAIR_STYLES[index % TRAINER_HAIR_STYLES.length],
+  hairColor: TRAINER_HAIR_COLORS[index % TRAINER_HAIR_COLORS.length],
+  outfit: TRAINER_OUTFITS[index % TRAINER_OUTFITS.length],
+  headwear: index % 3 === 0 ? 'cap' : index % 3 === 1 ? 'none' : 'headband',
+});
+export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[] };
 export type Collection = { version: 1; activeId: string; trainers: Trainer[] };
 
 export const FINISH_LABELS: Record<Finish, string> = {
   normal: 'Regular', holo: 'Holo', reverse: 'Reverse holo', firstEdition: '1st edition', firstEditionHolo: '1st edition holo', firstEditionReverse: '1st edition reverse', wPromo: 'W promo', unsure: 'Not sure yet',
 };
-export const TRAINER_COLORS = ['#C93240', '#377DD1', '#519269', '#9A69B4', '#CB8437'];
-export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], entries: [] }] });
+export const TRAINER_COLORS = TRAINER_OUTFITS.map(outfit => TRAINER_OUTFIT_COLORS[outfit]);
+export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [] }] });
 export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:${card.id}:${finish}`;
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap(e => pokemonIds(e.card)));
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);
@@ -72,8 +94,25 @@ export function parseCollection(raw: string): Collection {
   const data: unknown = JSON.parse(raw);
   const invalid = () => { throw new Error('This file is not a valid Pocket Trainer backup.'); };
   if (!isRecord(data) || data.version !== 1 || !Array.isArray(data.trainers) || !data.trainers.length || data.trainers.length > 20 || !str(data.activeId)) return invalid();
-  const trainers: Trainer[] = data.trainers.map((t: unknown) => {
+  const trainers: Trainer[] = data.trainers.map((t: unknown, trainerIndex) => {
     if (!isRecord(t) || !str(t.id, 100) || !str(t.name, 32) || !str(t.color, 7) || !/^#[0-9a-f]{6}$/i.test(t.color) || !Array.isArray(t.entries) || t.entries.length > 20000) return invalid();
+    const fallbackAppearance = trainerAppearanceFor(trainerIndex);
+    let appearance = fallbackAppearance;
+    if (t.appearance !== undefined) {
+      if (!isRecord(t.appearance)
+        || !TRAINER_SKIN_TONES.includes(t.appearance.skinTone as TrainerAppearance['skinTone'])
+        || !TRAINER_HAIR_STYLES.includes(t.appearance.hairStyle as TrainerAppearance['hairStyle'])
+        || !TRAINER_HAIR_COLORS.includes(t.appearance.hairColor as TrainerAppearance['hairColor'])
+        || !TRAINER_OUTFITS.includes(t.appearance.outfit as TrainerAppearance['outfit'])
+        || !TRAINER_HEADWEAR.includes(t.appearance.headwear as TrainerAppearance['headwear'])) return invalid();
+      appearance = {
+        skinTone: t.appearance.skinTone as TrainerAppearance['skinTone'],
+        hairStyle: t.appearance.hairStyle as TrainerAppearance['hairStyle'],
+        hairColor: t.appearance.hairColor as TrainerAppearance['hairColor'],
+        outfit: t.appearance.outfit as TrainerAppearance['outfit'],
+        headwear: t.appearance.headwear as TrainerAppearance['headwear'],
+      };
+    }
     const entries: Entry[] = t.entries.map((e: unknown) => {
       if (!isRecord(e) || !isRecord(e.card) || !str(e.finish) || !Object.hasOwn(FINISH_LABELS, e.finish) || typeof e.quantity !== 'number' || !Number.isInteger(e.quantity) || e.quantity < 1 || e.quantity > 999 || typeof e.favorite !== 'boolean' || !str(e.addedAt) || !Number.isFinite(Date.parse(e.addedAt))) return invalid();
       const c = e.card;
@@ -95,7 +134,7 @@ export function parseCollection(raw: string): Collection {
       return { key: e.key as string, card, finish, quantity: e.quantity, favorite: e.favorite, addedAt: e.addedAt };
     });
     if (new Set(entries.map(e => e.key)).size !== entries.length) return invalid();
-    return { id: t.id, name: t.name, color: t.color, entries };
+    return { id: t.id, name: t.name, color: t.color, appearance, entries };
   });
   if (new Set(trainers.map(t => t.id)).size !== trainers.length || !trainers.some(t => t.id === data.activeId)) return invalid();
   return { version: 1, activeId: data.activeId as string, trainers };

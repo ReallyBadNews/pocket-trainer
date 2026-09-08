@@ -39,6 +39,17 @@ test('backup round-trip preserves collection and excludes device-local paths', (
   assert.notEqual(merged.trainers[0].id, merged.trainers[1].id);
   assert.equal(totalCards(c.trainers[0]), 600);
 });
+test('trainer appearances survive backups and older backups receive a safe default', () => {
+  const collection = freshCollection();
+  collection.trainers[0].appearance = { skinTone: 'deep', hairStyle: 'ponytail', hairColor: 'blue', outfit: 'green', headwear: 'headband' };
+  assert.deepEqual(parseCollection(JSON.stringify(collection)).trainers[0].appearance, collection.trainers[0].appearance);
+  const legacy = structuredClone(collection);
+  delete legacy.trainers[0].appearance;
+  assert.ok(parseCollection(JSON.stringify(legacy)).trainers[0].appearance);
+  const invalid = structuredClone(collection);
+  invalid.trainers[0].appearance.skinTone = 'neon';
+  assert.throws(() => parseCollection(JSON.stringify(invalid)));
+});
 test('malformed or future backups cannot be imported', () => {
   assert.throws(() => parseCollection('{')); assert.throws(() => parseCollection('{"version":2}'));
   const c = freshCollection(); c.trainers[0] = addCard(c.trainers[0], card, 'normal', 1);

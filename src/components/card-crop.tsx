@@ -30,11 +30,11 @@ export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
     <View style={s.stage} onLayout={event => setAvailable(Math.max(80, event.nativeEvent.layout.width - 44))}>
       <View style={{ width, height }}>
         <Image source={photo.uri} style={{ width, height }} contentFit="fill" accessibilityLabel="Original photo with adjustable card selection" />
-        <View pointerEvents="none" style={[s.shade, { top: 0, left: 0, right: 0, height: y * height }]} />
-        <View pointerEvents="none" style={[s.shade, { top: (y + h) * height, left: 0, right: 0, bottom: 0 }]} />
-        <View pointerEvents="none" style={[s.shade, { top: y * height, left: 0, width: x * width, height: h * height }]} />
-        <View pointerEvents="none" style={[s.shade, { top: y * height, left: (x + w) * width, right: 0, height: h * height }]} />
-        <View pointerEvents="none" style={{ position: 'absolute', left: x * width, top: y * height, width: w * width, height: h * height, borderWidth: 2, borderColor: C.gold }} />
+        <View style={[s.shade, { pointerEvents: 'none', top: 0, left: 0, right: 0, height: y * height }]} />
+        <View style={[s.shade, { pointerEvents: 'none', top: (y + h) * height, left: 0, right: 0, bottom: 0 }]} />
+        <View style={[s.shade, { pointerEvents: 'none', top: y * height, left: 0, width: x * width, height: h * height }]} />
+        <View style={[s.shade, { pointerEvents: 'none', top: y * height, left: (x + w) * width, right: 0, height: h * height }]} />
+        <View style={{ pointerEvents: 'none', position: 'absolute', left: x * width, top: y * height, width: w * width, height: h * height, borderWidth: 2, borderColor: C.gold }} />
         {responders.map((responder, i) => <View key={i} {...responder.panHandlers} accessibilityLabel={`Crop ${i < 2 ? 'top' : 'bottom'} ${i % 2 ? 'right' : 'left'} corner`} style={[s.handle, { left: (x + (i % 2 ? w : 0)) * width - 22, top: (y + (i > 1 ? h : 0)) * height - 22 }]}><View style={s.dot} /></View>)}
       </View>
     </View>

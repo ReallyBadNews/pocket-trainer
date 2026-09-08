@@ -8,9 +8,10 @@ import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, Txt, mono, ui 
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
 import { fetchCard, speciesById, speciesImage } from '@/lib/catalog';
-import { addCard, changePrinting, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_COLORS, updateQuantity, type Card, type CardBrief, type Entry, type Finish } from '@/lib/model';
+import { addCard, changePrinting, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
 import { exportFile, importFile, keepCardArt } from '@/lib/files';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
+import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLORS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
 
@@ -95,10 +96,22 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry }: { id: number
   </ScrollView></Sheet>;
 }
 
+function TrainerChoiceRow({ title, options, value, labels, colors, onChange }: { title: string; options: readonly string[]; value: string; labels: Record<string, string>; colors?: Record<string, string>; onChange: (value: string) => void }) {
+  return <View style={m.builderGroup}><Txt style={{ fontWeight: '800' }}>{title}</Txt><View style={m.builderChoices}>{options.map(option => {
+    const selected = value === option;
+    return <Pressable key={option} accessibilityRole="button" accessibilityLabel={`${title}: ${labels[option]}`} accessibilityState={{ selected }} onPress={() => onChange(option)} style={({ pressed }) => [m.builderChoice, selected && m.builderChoiceSelected, pressed && { opacity: .65 }]}>
+      {colors && <View style={[m.builderSwatch, { backgroundColor: colors[option] }, selected && { borderColor: C.ink }]} />}
+      <Txt style={[m.builderChoiceText, selected && { color: C.paper }]}>{labels[option]}</Txt>
+    </Pressable>;
+  })}</View></View>;
+}
+
 export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; onBusyChange: (busy: boolean) => void }) {
   const { collection, trainer, transact, updateTrainer } = useCollection();
   const [name, setName] = useState(trainer.name);
   const [newName, setNewName] = useState('');
+  const [building, setBuilding] = useState(false);
+  const [draft, setDraft] = useState<TrainerAppearance>(trainer.appearance);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
   const [error, setError] = useState<string | null>(null);
@@ -109,10 +122,33 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'The change could not be saved.'); }
     finally { guard.current = false; setBusy(false); onBusyChange(false); }
   }
-  return <Sheet title="Your trainer family" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled"><Txt muted>Each trainer has their own Pokédex and binder on this device.</Txt>
-    {collection.trainers.map(t => <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.name}`} key={t.id} disabled={busy} onPress={() => run(async () => { await transact(c => ({ ...c, activeId: t.id })); setName(t.name); })} style={[m.profile, t.id === trainer.id && { borderColor: C.ink, backgroundColor: '#DEE7D2' }]}><View style={[m.avatar, { backgroundColor: t.color }]}><Txt style={{ color: 'white', fontSize: 22, fontWeight: '800' }}>{t.name.slice(0, 1).toUpperCase()}</Txt></View><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{t.name}</Txt><Txt muted style={{ fontSize: 12 }}>{totalCards(t)} cards · {discoveredIds(t).size} Pokémon</Txt></View>{t.id === trainer.id && <Icon name="check" size={21} />}</Pressable>)}
+  function choose(part: keyof TrainerAppearance, value: string) {
+    setDraft(current => ({ ...current, [part]: value } as TrainerAppearance));
+    Haptics.selectionAsync().catch(() => {});
+  }
+  if (building) return <Sheet title="Build your trainer" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content}>
+    <View style={[m.trainerCard, { borderColor: TRAINER_OUTFIT_COLORS[draft.outfit] }]}>
+      <View style={m.trainerCardHeader}><Txt style={{ fontWeight: '900' }}>Field research permit</Txt><Txt style={{ fontFamily: mono, fontSize: 11 }}>PT-{trainer.id.replace(/\D/g, '').slice(-4).padStart(4, '0')}</Txt></View>
+      <TrainerAvatar appearance={draft} size={190} />
+      <Txt style={[ui.title, { textAlign: 'center' }]}>{trainer.name}</Txt>
+      <View style={m.trainerStats}><View><Txt style={m.trainerStatNumber}>{discoveredIds(trainer).size}</Txt><Txt muted style={m.trainerStatLabel}>Pokémon</Txt></View><View style={m.trainerStatRule} /><View><Txt style={m.trainerStatNumber}>{totalCards(trainer)}</Txt><Txt muted style={m.trainerStatLabel}>cards</Txt></View></View>
+    </View>
+    <Txt muted style={{ textAlign: 'center', fontSize: 13 }}>Choose the field look that appears on this trainer’s Pokédex.</Txt>
+    <TrainerChoiceRow title="Skin tone" options={TRAINER_SKIN_TONES} value={draft.skinTone} labels={TRAINER_APPEARANCE_LABELS.skinTone} colors={TRAINER_SKIN_COLORS} onChange={value => choose('skinTone', value)} />
+    <TrainerChoiceRow title="Hair style" options={TRAINER_HAIR_STYLES} value={draft.hairStyle} labels={TRAINER_APPEARANCE_LABELS.hairStyle} onChange={value => choose('hairStyle', value)} />
+    <TrainerChoiceRow title="Hair color" options={TRAINER_HAIR_COLORS} value={draft.hairColor} labels={TRAINER_APPEARANCE_LABELS.hairColor} colors={TRAINER_HAIR_COLOR_VALUES} onChange={value => choose('hairColor', value)} />
+    <TrainerChoiceRow title="Field jacket" options={TRAINER_OUTFITS} value={draft.outfit} labels={TRAINER_APPEARANCE_LABELS.outfit} colors={TRAINER_OUTFIT_COLORS} onChange={value => choose('outfit', value)} />
+    <TrainerChoiceRow title="Headwear" options={TRAINER_HEADWEAR} value={draft.headwear} labels={TRAINER_APPEARANCE_LABELS.headwear} onChange={value => choose('headwear', value)} />
+    <ErrorNotice text={error} />
+    <Button title="Save trainer" icon="check" busy={busy} onPress={() => run(async () => { await updateTrainer(t => ({ ...t, appearance: draft, color: TRAINER_OUTFIT_COLORS[draft.outfit] })); setBuilding(false); setNote('Trainer look saved.'); })} />
+    <Button title="Back to trainer family" secondary disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(false); }} />
+  </ScrollView></Sheet>;
+
+  return <Sheet title="Your trainer family" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled"><Txt muted>Each trainer has their own Pokédex, binder, and field identity on this device.</Txt>
+    {collection.trainers.map(t => <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.name}`} key={t.id} disabled={busy} onPress={() => run(async () => { await transact(c => ({ ...c, activeId: t.id })); setName(t.name); setDraft(t.appearance); })} style={[m.profile, t.id === trainer.id && { borderColor: C.ink, backgroundColor: '#DEE7D2' }]}><TrainerAvatar appearance={t.appearance} size={48} /><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{t.name}</Txt><Txt muted style={{ fontSize: 12 }}>{totalCards(t)} cards · {discoveredIds(t).size} Pokémon</Txt></View>{t.id === trainer.id && <Icon name="check" size={21} />}</Pressable>)}
+    <Pressable accessibilityRole="button" accessibilityLabel={`Open trainer builder for ${trainer.name}`} disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(true); }} style={({ pressed }) => [m.builderInvite, { borderColor: trainer.color }, pressed && { opacity: .7 }]}><TrainerAvatar appearance={trainer.appearance} size={82} /><View style={{ flex: 1, gap: 3 }}><Txt style={ui.subtitle}>Build {trainer.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 18 }}>Choose their hair, skin tone, field jacket, and headwear.</Txt><Txt style={{ color: C.redDark, fontWeight: '800', fontSize: 13 }}>Open trainer builder</Txt></View><Icon name="arrow" size={20} color={C.redDark} /></Pressable>
     <Txt style={ui.subtitle}>Trainer name</Txt><TextInput accessibilityLabel="Trainer name" value={name} onChangeText={setName} maxLength={32} style={m.input} editable={!busy} /><Button title="Save name" secondary disabled={!name.trim() || name.trim() === trainer.name} busy={busy} onPress={() => run(async () => { await updateTrainer(t => ({ ...t, name: name.trim() })); setNote('Trainer name saved.'); })} />
-    <Txt style={ui.subtitle}>Add another trainer</Txt><TextInput accessibilityLabel="New trainer name" placeholder="Choose a trainer name" placeholderTextColor={C.muted} value={newName} onChangeText={setNewName} maxLength={32} style={m.input} editable={!busy} /><Button title="Add trainer" icon="plus" disabled={!newName.trim() || collection.trainers.length >= 20} busy={busy} onPress={() => run(async () => { await transact(c => { if (c.trainers.length >= 20) throw new Error('This device already has 20 trainers.'); return { ...c, trainers: [...c.trainers, { id: `trainer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: newName.trim(), color: TRAINER_COLORS[c.trainers.length % TRAINER_COLORS.length], entries: [] }] }; }); setNewName(''); setNote('New trainer added. Tap their name to start collecting.'); })} />
+    <Txt style={ui.subtitle}>Add another trainer</Txt><TextInput accessibilityLabel="New trainer name" placeholder="Choose a trainer name" placeholderTextColor={C.muted} value={newName} onChangeText={setNewName} maxLength={32} style={m.input} editable={!busy} /><Button title="Add trainer" icon="plus" disabled={!newName.trim() || collection.trainers.length >= 20} busy={busy} onPress={() => run(async () => { await transact(c => { if (c.trainers.length >= 20) throw new Error('This device already has 20 trainers.'); const appearance = trainerAppearanceFor(c.trainers.length); return { ...c, trainers: [...c.trainers, { id: `trainer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: newName.trim(), color: TRAINER_OUTFIT_COLORS[appearance.outfit], appearance, entries: [] }] }; }); setNewName(''); setNote('New trainer added. Tap their name to start collecting.'); })} />
     <View style={m.divider} /><Txt style={ui.subtitle}>Keep your collection safe</Txt><Txt muted style={{ fontSize: 13 }}>Save a family backup to Files or share it to another device. Importing adds copies of the trainers and keeps your current collections.</Txt>
     <Button title="Export family backup" icon="download" secondary busy={busy} onPress={() => run(() => exportFile(portableBackup(collection)))} />
     <Button title="Import a backup" icon="upload" secondary busy={busy} onPress={() => run(async () => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); setNote(`Imported ${incoming.trainers.length} trainer profile${incoming.trainers.length === 1 ? '' : 's'}.`); })} />
@@ -150,7 +186,20 @@ const m = StyleSheet.create({
   cardMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 25, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.line }, small: { fontSize: 11, lineHeight: 17 },
   stepper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCE6D0', borderRadius: 12 }, stepperNumber: { fontFamily: mono, fontSize: 19, fontWeight: '700', minWidth: 27, textAlign: 'center' },
   removeBox: { padding: 14, backgroundColor: '#F3DADB', borderRadius: 14, gap: 10 }, note: { padding: 14, backgroundColor: '#DBE7CD', borderRadius: 12 },
-  profile: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: C.line }, avatar: { width: 44, height: 44, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  profile: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: C.line },
+  builderInvite: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 14, borderRadius: 18, borderWidth: 2, backgroundColor: '#F8FAF3' },
+  trainerCard: { alignItems: 'center', padding: 16, borderWidth: 3, borderRadius: 22, backgroundColor: '#DCE8D2', overflow: 'hidden' },
+  trainerCardHeader: { width: '100%', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 4 },
+  trainerStats: { flexDirection: 'row', alignItems: 'center', gap: 22, marginTop: 8 },
+  trainerStatNumber: { textAlign: 'center', fontFamily: mono, fontSize: 19, lineHeight: 23, fontWeight: '800' },
+  trainerStatLabel: { textAlign: 'center', fontSize: 11, lineHeight: 15 },
+  trainerStatRule: { width: 1, height: 30, backgroundColor: '#AEBEA4' },
+  builderGroup: { gap: 8 },
+  builderChoices: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  builderChoice: { minHeight: 44, minWidth: 72, flexGrow: 1, flexBasis: 92, paddingHorizontal: 10, paddingVertical: 7, borderRadius: 12, borderWidth: 1, borderColor: '#B8C6AC', backgroundColor: '#F8FAF3', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  builderChoiceSelected: { backgroundColor: C.ink, borderColor: C.ink },
+  builderChoiceText: { fontSize: 12, lineHeight: 16, fontWeight: '700', textAlign: 'center' },
+  builderSwatch: { width: 22, height: 22, borderRadius: 12, borderWidth: 2, borderColor: '#FFFFFF' },
   input: { minHeight: 50, paddingHorizontal: 14, borderWidth: 1, borderColor: '#B8C6AC', borderRadius: 12, backgroundColor: '#FCFDF9', color: C.ink, fontSize: 16 }, divider: { height: 1, backgroundColor: C.line, marginVertical: 4 },
   discoveryStage: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 290 }, discoveryRing: { position: 'absolute', width: 265, height: 265, borderRadius: 140, backgroundColor: '#D6E7BD', borderWidth: 16, borderColor: '#E3EDCD' },
 });
