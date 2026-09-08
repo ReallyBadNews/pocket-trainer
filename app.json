@@ -11,7 +11,7 @@
       "icon": "./assets/crafted/app-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.reallybadnews.pockettrainer",
-      "buildNumber": "8",
+      "buildNumber": "10",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }

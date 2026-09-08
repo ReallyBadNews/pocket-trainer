@@ -1,8 +1,10 @@
+import Animated from 'react-native-reanimated';
+import { useChromeScroll } from '@/components/scroll-chrome';
 import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, SearchBox, Txt, ui } from '@/components/pokedex-ui';
 import { scanCandidates, searchCards, setForCard, ENERGY_SEARCHES, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/lib/scanner';
@@ -15,6 +17,7 @@ import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
 
 export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardBrief) => void; initialQuery?: string }) {
+  const scroll = useChromeScroll();
   const [language, setLanguage] = useState<Language>('en');
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
   const [improving, setImproving] = useState<ScanStage>('done');
@@ -91,12 +94,12 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
     } catch (e) { if (alive.current && generation.current === id) setError(e instanceof Error ? e.message : 'The photo could not be read. Try again or search below.'); }
     finally { if (alive.current && generation.current === id) { busyRef.current = false; setBusy(false); setImproving('done'); } }
   }
-  if (editing && original) return <ScrollView scrollEnabled={!dragging} contentContainerStyle={s.list}>
+  if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={[s.list, scroll.contentContainerStyle]}>
     <CardCrop photo={original} initial={crop} onDrag={setDragging} onCancel={() => { setEditing(false); setDragging(false); }} onConfirm={selection => {
       setEditing(false); setDragging(false); setManualCrop(selection); void runScan(original.uri, language, selection);
     }} />
-  </ScrollView>;
-  return <FlatList data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={s.list} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+  </Animated.ScrollView>;
+  return <Animated.FlatList {...scroll} data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>
       <View style={ui.row}><Chip label="English" selected={language === 'en'} onPress={() => changeLanguage('en')} /><Chip label="日本語 · Japanese" selected={language === 'ja'} onPress={() => changeLanguage('ja')} /></View>
