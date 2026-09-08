@@ -6,7 +6,17 @@ The user approved uploading the project source to Expo EAS and storing its gener
 
 The registered test iPhone is named Kenny iPhone, UDID `00008150-0008046E2EF0401C`, and is recorded in EAS under the individual team. Apple portal registration occurs when the device is selected for provisioning.
 
-## Latest preview — build 8
+## Latest preview — build 11
+
+https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/5c5befee-4dcc-4c64-a761-0609548e2db1
+
+Build 11 adds the persistent trainer builder and replaces its flat portraits with modular Blender-rendered 3D avatars. The app composites aligned face/hair, textured field-jacket and stitched headwear renders, preserving all 1,500 choices while adding roughly 1 MB of runtime imagery. It also contains the refined Poké Ball, Pokédex device and discovery badge renders plus PR 2's collapsible shell.
+
+Type checking, all 50 tests, Expo Doctor's 21 checks, iOS/web exports and phone-width browser walkthroughs passed before upload. The finished IPA passed strict code-signature verification; version 1.0.0, build 11, the individual Apple team, Kenny iPhone UDID and all 115 trainer WebP assets were verified. Physical iPhone validation remains pending.
+
+The continuously running web build remains available through Tailscale at https://kenny-mini.grayling-vibe.ts.net:8443/.
+
+## Earlier preview — build 8
 
 https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/749bd3cb-806c-4158-bf09-5764448d2854
 
