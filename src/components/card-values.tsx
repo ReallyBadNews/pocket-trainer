@@ -9,7 +9,7 @@ import { FINISH_LABELS, type CardBrief, type Entry, type Finish } from '@/lib/mo
 const dateLabel = (value: string) => new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 function PriceAmount({ value, small = false }: { value: { low: number; high: number }; small?: boolean }) {
-  return <View accessibilityRole="text" accessibilityLabel={`${quoteLabel(value)} USD`} style={s.amountRow}>
+  return <View accessible accessibilityRole="text" accessibilityLabel={`${quoteLabel(value)} USD`} style={s.amountRow}>
     <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[s.amount, small && s.tagAmount]}>{usd(value.low)}</Txt>
     {value.high !== value.low && <View style={s.rangeEnd}><Txt style={[s.rangeDash, small && s.tagAmount]}>–</Txt><Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75} style={[s.amount, small && s.tagAmount]}>{usd(value.high)}</Txt></View>}
   </View>;
