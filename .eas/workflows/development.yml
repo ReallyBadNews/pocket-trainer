@@ -1,0 +1,28 @@
+name: iOS development build
+
+on:
+  push:
+    branches: ['dev']
+
+defaults:
+  image: sdk-57
+  tools:
+    node: '24.14.0'
+    pnpm: '11.18.0'
+
+jobs:
+  checks:
+    name: Typecheck and test
+    steps:
+      - uses: eas/checkout
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+
+  build_ios:
+    name: Build iOS development client
+    needs: [checks]
+    type: build
+    params:
+      platform: ios
+      profile: development
