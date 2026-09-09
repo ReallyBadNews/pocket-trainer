@@ -1,5 +1,7 @@
 # Pocket Trainer
 
+App Store Connect and installed app name: **Pocket Pokédex**. See [automated iOS builds and TestFlight setup](docs/automated-builds.md) for the `dev`/`main` workflows and remaining account setup.
+
 A classic red Pokédex and physical Pokémon card binder for iPhone and iPad, built with Expo SDK 57.
 
 **Private preview:** https://kenny-mini.grayling-vibe.ts.net:8443/

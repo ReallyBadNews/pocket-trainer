@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Pocket Trainer",
+    "name": "Pocket Pokédex",
     "slug": "pokedex",
     "version": "1.0.0",
     "orientation": "default",
@@ -11,7 +11,6 @@
       "icon": "./assets/crafted/app-icon.png",
       "supportsTablet": true,
       "bundleIdentifier": "com.reallybadnews.pockettrainer",
-      "buildNumber": "11",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
       }
@@ -30,7 +29,7 @@
       [
         "expo-image-picker",
         {
-          "cameraPermission": "Allow Pocket Trainer to photograph your Pokémon cards.",
+          "cameraPermission": "Allow Pocket Pokédex to photograph your Pokémon cards.",
           "photosPermission": "Choose a card photo for your Pokédex.",
           "microphonePermission": false
         }
