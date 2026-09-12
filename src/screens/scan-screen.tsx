@@ -120,7 +120,7 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
       {results.length > 0 && <Txt muted style={{ fontSize: 12 }}>{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} ${results.length === 1 ? 'result' : 'results'} — tap the card that matches yours` : 'Suggested matches — choose your exact card'}</Txt>}
     </View>}
     ListEmptyComponent={query.trim() ? <View style={s.note}><Txt style={{ fontWeight: '700' }}>No matching cards</Txt><Txt muted style={{ fontSize: 13 }}>Check the language above, or try just the Pokémon name or collector number.</Txt></View> : null}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(item); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} style={{ width: 65 }} /><View style={{ flex: 1, gap: 2 }}><Txt style={{ fontWeight: '800' }}>{item.name}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{setForCard(item)?.name ?? item.id}</Txt><Txt muted style={{ fontSize: 11 }}>{cardKindLabel(item)}</Txt><Txt muted style={{ fontSize: 12 }}>#{item.localId} · {item.language === 'ja' ? 'Japanese' : 'English'}</Txt>{!query && <Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></Pressable>} />;
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(item); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, gap: 2 }}><Txt style={{ fontWeight: '800' }}>{item.name}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{setForCard(item)?.name ?? item.id}</Txt><Txt muted style={{ fontSize: 11 }}>{cardKindLabel(item)}</Txt><Txt muted style={{ fontSize: 12 }}>#{item.localId} · {item.language === 'ja' ? 'Japanese' : 'English'}</Txt>{!query && <Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />;
 }
 const s = StyleSheet.create({
   list: { padding: 20, paddingBottom: 40 },
@@ -129,5 +129,7 @@ const s = StyleSheet.create({
   reading: { position: 'absolute', inset: 0, backgroundColor: '#20392BE8', justifyContent: 'center', alignItems: 'center', gap: 10 },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   note: { padding: 14, backgroundColor: '#DEE8D1', borderRadius: 12, gap: 3 },
-  result: { flexDirection: 'row', alignItems: 'center', gap: 15, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: 12, borderRadius: 13, marginBottom: 10 },
+  resultArt: { width: 200, maxWidth: '100%', alignSelf: 'center' },
+  resultDetails: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  result: { gap: 15, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: 12, borderRadius: 13, marginBottom: 10 },
 });
