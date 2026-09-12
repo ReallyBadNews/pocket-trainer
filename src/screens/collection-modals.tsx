@@ -14,6 +14,7 @@ import { CardPriceTag, CardValuePanel } from '@/components/card-values';
 import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLORS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
+import { AboutScreen } from './about-screen';
 
 export function Sheet({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
   const insets = useSafeAreaInsets();
@@ -111,6 +112,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
   const [name, setName] = useState(trainer.name);
   const [newName, setNewName] = useState('');
   const [building, setBuilding] = useState(false);
+  const [aboutOpen, setAboutOpen] = useState(false);
   const [draft, setDraft] = useState<TrainerAppearance>(trainer.appearance);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
@@ -126,6 +128,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     setDraft(current => ({ ...current, [part]: value } as TrainerAppearance));
     Haptics.selectionAsync().catch(() => {});
   }
+  if (aboutOpen) return <Sheet title="About" onClose={onClose}><AboutScreen onBack={() => setAboutOpen(false)} /></Sheet>;
   if (building) return <Sheet title="Build your trainer" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content}>
     <View style={[m.trainerCard, { borderColor: TRAINER_OUTFIT_COLORS[draft.outfit] }]}>
       <View style={m.trainerCardHeader}><Txt style={{ fontWeight: '900' }}>Field research permit</Txt><Txt style={{ fontFamily: mono, fontSize: 11 }}>PT-{trainer.id.replace(/\D/g, '').slice(-4).padStart(4, '0')}</Txt></View>
@@ -144,7 +147,9 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     <Button title="Back to trainer family" secondary disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(false); }} />
   </ScrollView></Sheet>;
 
-  return <Sheet title="Your trainer family" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled"><Txt muted>Each trainer has their own Pokédex, binder, and field identity on this device.</Txt>
+  return <Sheet title="Settings" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+    <Button title="About" secondary disabled={busy} onPress={() => setAboutOpen(true)} />
+    <Txt style={ui.subtitle}>Your trainer family</Txt><Txt muted>Each trainer has their own Pokédex, binder, and field identity on this device.</Txt>
     {collection.trainers.map(t => <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.name}`} key={t.id} disabled={busy} onPress={() => run(async () => { await transact(c => ({ ...c, activeId: t.id })); setName(t.name); setDraft(t.appearance); })} style={[m.profile, t.id === trainer.id && { borderColor: C.ink, backgroundColor: '#DEE7D2' }]}><TrainerAvatar appearance={t.appearance} size={48} /><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{t.name}</Txt><Txt muted style={{ fontSize: 12 }}>{totalCards(t)} cards · {discoveredIds(t).size} Pokémon</Txt></View>{t.id === trainer.id && <Icon name="check" size={21} />}</Pressable>)}
     <Pressable accessibilityRole="button" accessibilityLabel={`Open trainer builder for ${trainer.name}`} disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(true); }} style={({ pressed }) => [m.builderInvite, { borderColor: trainer.color }, pressed && { opacity: .7 }]}><TrainerAvatar appearance={trainer.appearance} size={82} /><View style={{ flex: 1, gap: 3 }}><Txt style={ui.subtitle}>Build {trainer.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 18 }}>Choose their hair, skin tone, field jacket, and headwear.</Txt><Txt style={{ color: C.redDark, fontWeight: '800', fontSize: 13 }}>Open trainer builder</Txt></View><Icon name="arrow" size={20} color={C.redDark} /></Pressable>
     <Txt style={ui.subtitle}>Trainer name</Txt><TextInput accessibilityLabel="Trainer name" value={name} onChangeText={setName} maxLength={32} style={m.input} editable={!busy} /><Button title="Save name" secondary disabled={!name.trim() || name.trim() === trainer.name} busy={busy} onPress={() => run(async () => { await updateTrainer(t => ({ ...t, name: name.trim() })); setNote('Trainer name saved.'); })} />
