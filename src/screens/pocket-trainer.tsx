@@ -26,6 +26,7 @@ export default function PocketTrainer() {
   const [speciesId, setSpeciesId] = useState<number | null>(null);
   const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number } | null>(null);
   const [scanQuery, setScanQuery] = useState('');
+  const [scanSession, setScanSession] = useState(0);
   const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(84);
   const [navHeight, setNavHeight] = useState(83);
@@ -55,13 +56,16 @@ export default function PocketTrainer() {
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
-        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={brief => setSelection({ brief })} />}
+        {tab === 'scan' && <ScanScreen sessionId={scanSession} initialQuery={scanQuery} onCard={brief => setSelection({ brief })} />}
         {tab === 'badge' && <BadgesScreen />}
       </View></ScrollChromeContext.Provider>}
     </View>
     <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); } }}>
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
-    {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={(card, newIds, quantity) => { setSelection(null); setDiscovery({ card, newIds, quantity }); }} />}
+    {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={(card, newIds, quantity) => {
+      setSelection(null); setScanQuery(''); setScanSession(session => session + 1);
+      setDiscovery({ card, newIds, quantity });
+    }} />}
     {speciesId !== null && <SpeciesModal id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
     {discovery && <DiscoveryModal {...discovery} onClose={() => setDiscovery(null)} />}
     </Modal>

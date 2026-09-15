@@ -16,9 +16,16 @@ import { CARD_FILTERS, cardKindLabel, scanTypeHint, type CardFilter } from '@/li
 import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
 
-export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardBrief) => void; initialQuery?: string }) {
-  const scroll = useChromeScroll();
+type ScanScreenProps = { onCard: (card: CardBrief) => void; initialQuery?: string; sessionId: number };
+
+export function ScanScreen({ sessionId, ...props }: ScanScreenProps) {
   const [language, setLanguage] = useState<Language>('en');
+  // Keep the language between cards; a completed save resets everything in the session.
+  return <ScanSession key={sessionId} {...props} language={language} onLanguageChange={setLanguage} />;
+}
+
+function ScanSession({ onCard, initialQuery = '', language, onLanguageChange }: Omit<ScanScreenProps, 'sessionId'> & { language: Language; onLanguageChange: (language: Language) => void }) {
+  const scroll = useChromeScroll();
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
   const [improving, setImproving] = useState<ScanStage>('done');
   const generation = useRef(0);
@@ -72,7 +79,7 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
   }
   function changeLanguage(next: Language) {
     if (busyRef.current || language === next) return;
-    setLanguage(next); setSuggested([]); setNote(null);
+    onLanguageChange(next); setSuggested([]); setNote(null);
     if (original) void runScan(original.uri, next, manualCrop);
   }
   async function takePhoto(library = false) {
