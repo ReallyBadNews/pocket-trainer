@@ -1,50 +1,61 @@
 import { cardCategory, isTagTeam, matchesCardFilter, scanTypeHint, trainerType, type CardFilter } from './card-kind';
 import english from '../data/cards-en.json';
 import japanese from '../data/cards-ja.json';
+import simplified from '../data/cards-zh-cn.json';
+import traditional from '../data/cards-zh-tw.json';
 import englishSets from '../data/sets-en.json';
 import japaneseSets from '../data/sets-ja.json';
+import simplifiedSets from '../data/sets-zh-cn.json';
+import traditionalSets from '../data/sets-zh-tw.json';
+import { LANGUAGES } from './languages';
 import speciesData from '../data/species.json';
 import imageOverrides from '../data/image-overrides.json';
-const artOverrides = imageOverrides as Record<Language, Record<string, string>>;
+const artOverrides = imageOverrides as Partial<Record<Language, Record<string, string>>>;
 import type { Card, CardBrief, Finish, Language } from './model';
-import { fetchCardData } from './card-api';
+import { fetchCardData, supplementalCards } from './card-api';
 import { DAY, parseCardPricing } from './pricing';
 
-export const species = speciesData as { id: number; en: string; ja: string; genus: string }[];
+export const species = speciesData as ({ id: number; genus: string } & Record<Language, string>)[];
 export const speciesById = new Map(species.map(s => [s.id, s]));
-export const allCards: CardBrief[] = [
-  ...english.map(c => ({ ...c, image: c.image ?? artOverrides.en[c.id], language: 'en' as const })),
-  ...japanese.map(c => ({ ...c, image: c.image ?? artOverrides.ja[c.id], language: 'ja' as const })),
-];
+const catalogs: Record<Language, Omit<CardBrief, 'language'>[]> = { en: english, ja: japanese, 'zh-cn': simplified, 'zh-tw': traditional };
+export const allCards: CardBrief[] = LANGUAGES.flatMap(language => {
+  const cards: CardBrief[] = catalogs[language].map(c => ({ ...c, image: c.image ?? artOverrides[language]?.[c.id], language }));
+  for (const extra of Object.values(supplementalCards[language] ?? {})) {
+    if (!cards.some(c => c.id === extra.id)) cards.push({ id: extra.id, localId: extra.localId, name: extra.name, category: extra.category, language });
+  }
+  return cards;
+});
 type SetBrief = { id: string; name: string; cardCount: { official: number; total: number } };
 const setMaps = {
   en: new Map((englishSets as SetBrief[]).map(s => [s.id, s])),
   ja: new Map((japaneseSets as SetBrief[]).map(s => [s.id, s])),
+  'zh-cn': new Map((simplifiedSets as SetBrief[]).map(s => [s.id, s])),
+  'zh-tw': new Map((traditionalSets as SetBrief[]).map(s => [s.id, s])),
 };
 export const setForCard = (card: CardBrief) => setMaps[card.language].get(card.id.slice(0, card.id.lastIndexOf('-')));
 export const cardImage = (card: CardBrief, high = false) => {
-  const base = card.image ?? artOverrides[card.language][card.id];
+  const base = card.image ?? artOverrides[card.language]?.[card.id];
   return base ? `${base}/${high ? 'high' : 'low'}.webp` : undefined;
 };
 export const speciesImage = (id: number) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 export const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
-const searchable = allCards.map(card => ({ card, name: normalize(card.name), id: normalize(card.id), number: normalize(card.localId), set: normalize(setForCard(card)?.name ?? '') }));
+const searchable = allCards.map(card => ({ card, name: normalize(card.name), id: normalize(card.id), number: normalize(card.localId), collector: normalize(`${card.localId}/${String(setForCard(card)?.cardCount.official ?? '').padStart(card.localId.includes(' ') ? 2 : 1, '0')}`), set: normalize(setForCard(card)?.name ?? '') }));
 
 export function searchCards(query: string, language: Language, limit = 80, filter: CardFilter = 'all'): CardBrief[] {
   const term = normalize(query);
   if (!term) return filter === 'all' ? [] : allCards.filter(c => c.language === language && matchesCardFilter(c, filter)).sort((a, b) => Number(!!b.image) - Number(!!a.image)).slice(0, limit);
   const tokens = query.trim().split(/\s+/).map(normalize).filter(Boolean);
-  const tokenAliases = tokens.map(token => species.filter(s => normalize(s.en).includes(token) || normalize(s.ja).includes(token)).map(s => normalize(language === 'ja' ? s.ja : s.en)));
-  return searchable.filter(c => c.card.language === language && matchesCardFilter(c.card, filter) && tokens.every((token, i) => c.name.includes(token) || (token === 'mega' && /^(?:M\s|Mega|メガ)/.test(c.card.name)) || c.id.includes(token) || c.set.includes(token) || tokenAliases[i].some(alias => c.name.includes(alias))))
+  const tokenAliases = tokens.map(token => species.filter(s => LANGUAGES.some(lang => normalize(s[lang] ?? '').includes(token))).map(s => normalize(s[language] ?? '')));
+  return searchable.filter(c => c.card.language === language && matchesCardFilter(c.card, filter) && tokens.every((token, i) => c.name.includes(token) || (token === 'mega' && /^(?:M\s|Mega|メガ)/.test(c.card.name)) || c.id.includes(token) || c.collector.includes(token) || c.set.includes(token) || tokenAliases[i].some(alias => alias && c.name.includes(alias))))
     .sort((a, b) => Number(b.name === term) - Number(a.name === term) || Number(b.number === term) - Number(a.number === term) || Number(!!b.card.image) - Number(!!a.card.image))
     .slice(0, limit).map(c => c.card);
 }
 
 export type ScanText = { text: string; topText: string; bottomText: string };
 export type ScanCandidate = { card: CardBrief; score: number; evidence: string; exactPrinting: boolean };
-const scanWords = { en: [...new Set(english.map(c => c.name))], ja: [...new Set(japanese.map(c => c.name))] };
+const scanWords = Object.fromEntries(LANGUAGES.map(language => [language, [...new Set(allCards.filter(c => c.language === language).map(c => c.name))]])) as Record<Language, string[]>;
 export const recognitionWords = (language: Language) => scanWords[language];
-const canonicalNumber = (s: string) => s.toLowerCase().replace(/^0+(?=\d)/, '');
+const canonicalNumber = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/^0+(?=\d)/, '');
 const numberFromOCR = (s: string) => {
   // Keep subset prefixes (TG/GG/SV); repair letter-shaped digits only in the numeric part.
   const match = s.match(/^([a-z]{0,3}?)([0-9oilsbz]+)$/i);
@@ -64,7 +75,7 @@ function editDistance(a: string, b: string, max: number): number {
   return row[b.length];
 }
 function fuzzyHeader(name: string, lines: string[], language: Language): boolean {
-  if (name.length < (language === 'ja' ? 4 : 5) || name.length > 35) return false;
+  if (name.length < (language === 'en' ? 5 : 4) || name.length > 35) return false;
   const max = name.length >= 9 ? 2 : 1;
   return lines.some(line => {
     if ([...name].filter(c => !line.includes(c)).length > max) return false;
@@ -81,7 +92,7 @@ function fuzzyHeader(name: string, lines: string[], language: Language): boolean
 export function scanCandidates(scan: ScanText, language: Language, limit = 12, filter: CardFilter = 'all'): ScanCandidate[] {
   const full = normalize(scan.text);
   const hint = scanTypeHint(scan.topText);
-  const meaningfulLines = scan.topText.split(/\n/).map(normalize).filter(l => !/^(?:energy|basicenergy|specialenergy|エネルギー|基本エネルギー|特殊エネルギー|trainer|trainers|supporter|item|stadium|tagteam|グッズ|スタジアム|サポート|トレーナーズ)$/.test(l));
+  const meaningfulLines = scan.topText.split(/\n/).map(normalize).filter(l => !/^(?:energy|basicenergy|specialenergy|エネルギー|基本エネルギー|特殊エネルギー|trainer|trainers|supporter|item|stadium|tagteam|グッズ|スタジアム|サポート|トレーナーズ|能量|基本能量|特殊能量|训练家|訓練家|物品|道具|支援者|支持者|竞技场|競技場)$/.test(l));
   const top = meaningfulLines.join('');
   const headerLines = [...new Set(meaningfulLines.filter(l => l.length > 0 && l.length <= 45))].slice(0, 30);
   const fuzzyCache = new Map<string, boolean>();
@@ -90,18 +101,26 @@ export function scanCandidates(scan: ScanText, language: Language, limit = 12, f
     return fuzzyCache.get(name)!;
   };
   const bottom = scan.bottomText.normalize('NFKC');
+  const minNameLength = language.startsWith('zh-') ? 2 : 3;
   const fractions = [...`${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(/([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})\s*[/／]\s*([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})/gi)]
     .map(f => [numberFromOCR(f[1]), numberFromOCR(f[2])]);
+  // Gem Packs print a card group followed by a variant fraction: 17 07/07.
+  // OCR can join the group and variant (1707/07), which the normal parser retains.
+  if (language === 'zh-cn') {
+    for (const f of `${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(/\b(\d{2})[ \t]+([0-9OIlSBZ]{2})\s*[/／]\s*([0-9OIlSBZ]{2})\b/gi)) {
+      fractions.push([canonicalNumber(f[1] + numberFromOCR(f[2]).padStart(2, '0')), numberFromOCR(f[3])]);
+    }
+  }
   const nameScores = new Map<string, number>();
   for (const name of scanWords[language]) {
     const n = normalize(name), base = baseName(n, name);
-    let score = n.length >= 3 && top.includes(n) ? 110 + Math.min(n.length, 20) : 0;
-    if (!score && base.length >= 3 && top.includes(base)) score = 90;
+    let score = n.length >= minNameLength && top.includes(n) ? 110 + Math.min(n.length, 20) : 0;
+    if (!score && base.length >= minNameLength && top.includes(base)) score = 90;
     const partners = name.split(/[&＆]/).map(part => baseName(normalize(part), part));
     if (!score && partners.length > 1 && partners.every(part => part.length >= 2 && top.includes(part))) score = 130;
     if (!score && fuzzy(n)) score = 70;
     if (!score && base !== n && fuzzy(base)) score = 60;
-    if (!score && n.length >= 3 && full.includes(n)) score = 25;
+    if (!score && n.length >= minNameLength && full.includes(n)) score = 25;
     if (score >= 60 && /(?:mega|メガ)/i.test(scan.topText)) score += /^(?:M\s|Mega|メガ)/.test(name) ? 45 : -35;
     nameScores.set(n, score);
   }
@@ -144,15 +163,15 @@ export function rerankByArtwork(candidates: ScanCandidate[], distances: Map<stri
 }
 
 export const ENERGY_SEARCHES = [
-  { label: 'Grass', en: 'Grass Energy', ja: '草エネルギー' },
-  { label: 'Fire', en: 'Fire Energy', ja: '炎エネルギー' },
-  { label: 'Water', en: 'Water Energy', ja: '水エネルギー' },
-  { label: 'Lightning', en: 'Lightning Energy', ja: '雷エネルギー' },
-  { label: 'Psychic', en: 'Psychic Energy', ja: '超エネルギー' },
-  { label: 'Fighting', en: 'Fighting Energy', ja: '闘エネルギー' },
-  { label: 'Darkness', en: 'Darkness Energy', ja: '悪エネルギー' },
-  { label: 'Metal', en: 'Metal Energy', ja: '鋼エネルギー' },
-  { label: 'Fairy', en: 'Fairy Energy', ja: 'フェアリーエネルギー' },
+  { label: 'Grass', en: 'Grass Energy', ja: '草エネルギー', 'zh-cn': '草', 'zh-tw': '草' },
+  { label: 'Fire', en: 'Fire Energy', ja: '炎エネルギー', 'zh-cn': '火', 'zh-tw': '火' },
+  { label: 'Water', en: 'Water Energy', ja: '水エネルギー', 'zh-cn': '水', 'zh-tw': '水' },
+  { label: 'Lightning', en: 'Lightning Energy', ja: '雷エネルギー', 'zh-cn': '雷', 'zh-tw': '雷' },
+  { label: 'Psychic', en: 'Psychic Energy', ja: '超エネルギー', 'zh-cn': '超', 'zh-tw': '超' },
+  { label: 'Fighting', en: 'Fighting Energy', ja: '闘エネルギー', 'zh-cn': '斗', 'zh-tw': '鬥' },
+  { label: 'Darkness', en: 'Darkness Energy', ja: '悪エネルギー', 'zh-cn': '恶', 'zh-tw': '惡' },
+  { label: 'Metal', en: 'Metal Energy', ja: '鋼エネルギー', 'zh-cn': '钢', 'zh-tw': '鋼' },
+  { label: 'Fairy', en: 'Fairy Energy', ja: 'フェアリーエネルギー', 'zh-cn': '妖精', 'zh-tw': '妖精' },
 ];
 export function needsScanRefinement(candidates: ScanCandidate[]): boolean {
   const best = candidates[0];
@@ -163,7 +182,7 @@ const detailCache = new Map<string, { card: Card; at: number }>();
 export async function fetchCard(brief: CardBrief): Promise<Card> {
   const key = `${brief.language}:${brief.id}`;
   const cached = detailCache.get(key);
-  if (cached && Date.now() - cached.at < DAY) return cached.card;
+  if (cached && Date.now() - cached.at < DAY) return { ...cached.card, ...(brief.localImage ? { localImage: brief.localImage } : {}) };
   const data = await fetchCardData(brief);
   if (typeof data.id !== 'string' || !data.set || !Array.isArray(data.dexId ?? [])) throw new Error('This card has incomplete catalog data. Please try another printing.');
   const available = (['normal', 'holo', 'reverse'] as Finish[]).filter(f => data.variants?.[f] === true);
@@ -176,7 +195,7 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
   for (const finish of parseCardPricing(brief, data).finishes) if (!available.includes(finish)) available.push(finish);
   const card: Card = {
     ...brief, id: data.id, name: data.name, localId: data.localId,
-    image: typeof data.image === 'string' && data.image.startsWith('https://assets.tcgdex.net/') ? data.image : brief.image ?? artOverrides[brief.language][brief.id],
+    image: typeof data.image === 'string' && data.image.startsWith('https://assets.tcgdex.net/') ? data.image : brief.image ?? artOverrides[brief.language]?.[brief.id],
     set: { id: data.set.id, name: data.set.name, total: data.set.cardCount?.official ?? 0 },
     dexIds: (data.category === 'Pokemon' ? data.dexId ?? [] : []).filter((id: unknown) => Number.isInteger(id) && Number(id) > 0),
     types: data.types ?? [], category: data.category ?? cardCategory(brief),
@@ -184,6 +203,7 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
     tagTeam: data.suffix === 'TAG TEAM-GX' || isTagTeam(brief), rarity: data.rarity ?? 'Unknown',
     hp: data.hp, description: data.description ?? data.effect, finishes: [...available, 'unsure'],
   };
-  detailCache.set(key, { card, at: Date.now() });
+  const { localImage, ...metadata } = card;
+  detailCache.set(key, { card: metadata, at: Date.now() });
   return card;
 }

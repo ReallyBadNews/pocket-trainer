@@ -22,7 +22,7 @@ export default function PocketTrainer() {
   const [tab, setTab] = useState<Tab>('dex');
   const [modalBusy, setModalBusy] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
-  const [selection, setSelection] = useState<{ brief: CardBrief; entry?: Entry } | null>(null);
+  const [selection, setSelection] = useState<{ brief: CardBrief; draft?: Card; entry?: Entry } | null>(null);
   const [speciesId, setSpeciesId] = useState<number | null>(null);
   const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number } | null>(null);
   const [scanQuery, setScanQuery] = useState('');
@@ -55,7 +55,7 @@ export default function PocketTrainer() {
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
-        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={brief => setSelection({ brief })} />}
+        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} />}
         {tab === 'badge' && <BadgesScreen />}
       </View></ScrollChromeContext.Provider>}
     </View>

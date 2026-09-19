@@ -1,10 +1,17 @@
 import type { CardBrief } from './model';
 import { DAY, priceKey } from './pricing';
+import supplements from '../data/card-supplements.json';
+
+export const supplementalCards = supplements as Record<string, Record<string, any>>;
 
 const cached = new Map<string, { data: any; at: number }>();
 const pending = new Map<string, Promise<any>>();
 /** Card details and pricing share one request when opened together. */
 export async function fetchCardData(card: CardBrief, force = false): Promise<any> {
+  // Manual entries have no catalog identity or market quote.
+  if (card.id.startsWith('manual-')) return { id: card.id, variants: {} };
+  const supplemental = supplementalCards[card.language]?.[card.id];
+  if (supplemental) return supplemental;
   const key = priceKey(card), hit = cached.get(key);
   if (!force && hit && Date.now() - hit.at < DAY) return hit.data;
   if (pending.has(key)) return pending.get(key)!;

@@ -80,10 +80,12 @@ struct CardVision {
     request.customWords = correction ? Array(words.prefix(5000)) : []
     request.minimumTextHeight = 0.005
     let supported = try request.supportedRecognitionLanguages()
-    let wanted = language == "ja" ? ["ja-JP", "en-US"] : ["en-US"]
+    let locale = ["ja": "ja-JP", "zh-cn": "zh-Hans", "zh-tw": "zh-Hant"][language] ?? "en-US"
+    let wanted = locale == "en-US" ? [locale] : [locale, "en-US"]
     request.recognitionLanguages = wanted.filter { supported.contains($0) }
-    if language == "ja" && !supported.contains("ja-JP") {
-      throw failure("Japanese text recognition is not available on this device. Try searching by the card number.")
+    if !supported.contains(locale) {
+      let name = ["ja": "Japanese", "zh-cn": "Simplified Chinese", "zh-tw": "Traditional Chinese"][language] ?? "English"
+      throw failure("\(name) text recognition is not available on this device. Try searching by the card number.")
     }
     try VNImageRequestHandler(ciImage: image, options: [:]).perform([request])
     return (request.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }

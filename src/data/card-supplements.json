@@ -1,0 +1,16 @@
+{
+  "zh-cn": {
+    "CBB4C-1707": {
+      "id": "CBB4C-1707",
+      "localId": "17 07",
+      "name": "四季鹿",
+      "category": "Pokemon",
+      "dexId": [585],
+      "hp": 70,
+      "types": ["Grass"],
+      "rarity": "★★★",
+      "set": { "id": "CBB4C", "name": "宝石包 Vol.4", "cardCount": { "official": 7 } },
+      "variants": { "holo": true }
+    }
+  }
+}

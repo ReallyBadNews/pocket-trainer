@@ -1,11 +1,12 @@
 import { pokemonIds } from './card-kind';
-export type Language = 'en' | 'ja';
+import { isLanguage, type Language } from './languages';
+export type { Language } from './languages';
 export type Finish = 'normal' | 'holo' | 'reverse' | 'firstEdition' | 'firstEditionHolo' | 'firstEditionReverse' | 'wPromo' | 'unsure';
-export type CardBrief = { id: string; localId: string; name: string; image?: string; language: Language; category?: string; trainerType?: string; energyType?: string; tagTeam?: boolean };
+export type CardBrief = { id: string; localId: string; name: string; image?: string; localImage?: string; language: Language; category?: string; trainerType?: string; energyType?: string; tagTeam?: boolean };
 export type Card = CardBrief & {
   set: { id: string; name: string; total: number };
   dexIds: number[]; types: string[]; category: string; rarity: string;
-  hp?: number; description?: string; finishes: Finish[]; localImage?: string;
+  hp?: number; description?: string; finishes: Finish[];
 };
 export type Entry = { key: string; card: Card; finish: Finish; quantity: number; favorite: boolean; addedAt: string };
 export const TRAINER_SKIN_TONES = ['porcelain', 'peach', 'golden', 'brown', 'deep'] as const;
@@ -38,6 +39,7 @@ export const FINISH_LABELS: Record<Finish, string> = {
 };
 export const TRAINER_COLORS = TRAINER_OUTFITS.map(outfit => TRAINER_OUTFIT_COLORS[outfit]);
 export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [] }] });
+export const collectorNumber = (card: Card) => `${card.localId}/${card.set.total ? String(card.set.total).padStart(card.localId.includes(' ') ? 2 : 1, '0') : '?'}`;
 export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:${card.id}:${finish}`;
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap(e => pokemonIds(e.card)));
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);
@@ -76,7 +78,7 @@ export const BADGES = [
   { id: 'ten', name: 'Field researcher', description: 'Discover 10 Pokémon', target: 10, kind: 'species' },
   { id: 'fifty', name: 'Pokémon explorer', description: 'Discover 50 Pokémon', target: 50, kind: 'species' },
   { id: 'hundred', name: 'Binder builder', description: 'Collect 100 cards', target: 100, kind: 'cards' },
-  { id: 'world', name: 'World collector', description: 'Collect English and Japanese cards', target: 2, kind: 'languages' },
+  { id: 'world', name: 'World collector', description: 'Collect cards in two languages', target: 2, kind: 'languages' },
   { id: 'sixhundred', name: 'Collection champion', description: 'Collect 600 cards', target: 600, kind: 'cards' },
 ] as const;
 export function badgeProgress(trainer: Trainer, badge: typeof BADGES[number]): number {
@@ -116,7 +118,7 @@ export function parseCollection(raw: string): Collection {
     const entries: Entry[] = t.entries.map((e: unknown) => {
       if (!isRecord(e) || !isRecord(e.card) || !str(e.finish) || !Object.hasOwn(FINISH_LABELS, e.finish) || typeof e.quantity !== 'number' || !Number.isInteger(e.quantity) || e.quantity < 1 || e.quantity > 999 || typeof e.favorite !== 'boolean' || !str(e.addedAt) || !Number.isFinite(Date.parse(e.addedAt))) return invalid();
       const c = e.card;
-      if (!str(c.id, 100) || !str(c.localId, 50) || !str(c.name) || !['en', 'ja'].includes(String(c.language)) || !isRecord(c.set) || !str(c.set.id, 100) || !str(c.set.name) || typeof c.set.total !== 'number' || !Number.isInteger(c.set.total) || c.set.total < 0 || !Array.isArray(c.dexIds) || !c.dexIds.every(n => Number.isInteger(n) && n > 0 && n < 10000) || !Array.isArray(c.types) || !c.types.every(v => str(v, 50)) || !str(c.category) || !str(c.rarity) || !Array.isArray(c.finishes) || !c.finishes.every(v => typeof v === 'string' && Object.hasOwn(FINISH_LABELS, v)) || (c.image !== undefined && !safeImage(c.image))) return invalid();
+      if (!str(c.id, 100) || !str(c.localId, 50) || !str(c.name) || !isLanguage(c.language) || !isRecord(c.set) || !str(c.set.id, 100) || !str(c.set.name) || typeof c.set.total !== 'number' || !Number.isInteger(c.set.total) || c.set.total < 0 || !Array.isArray(c.dexIds) || !c.dexIds.every(n => Number.isInteger(n) && n > 0 && n < 10000) || !Array.isArray(c.types) || !c.types.every(v => str(v, 50)) || !str(c.category) || !str(c.rarity) || !Array.isArray(c.finishes) || !c.finishes.every(v => typeof v === 'string' && Object.hasOwn(FINISH_LABELS, v)) || (c.image !== undefined && !safeImage(c.image))) return invalid();
       const card: Card = {
         id: c.id, localId: c.localId, name: c.name, language: c.language as Language,
         set: { id: c.set.id, name: c.set.name, total: c.set.total }, dexIds: c.dexIds as number[], types: c.types as string[],
