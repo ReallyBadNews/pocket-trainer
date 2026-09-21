@@ -5,6 +5,14 @@ import type { Card } from './model';
 import { cardImage } from './catalog';
 
 export async function keepCardArt(card: Card): Promise<Card> {
+  if (card.localImage?.startsWith('file://')) {
+    const directory = new Directory(Paths.document, 'card-art');
+    directory.create({ idempotent: true, intermediates: true });
+    const source = new File(card.localImage);
+    const destination = new File(directory, `${card.language}-${card.id.replace(/[^a-z0-9-]/gi, '_')}${source.extension || '.jpg'}`);
+    if (source.uri !== destination.uri && !destination.exists) source.copy(destination);
+    return { ...card, localImage: destination.uri };
+  }
   const url = cardImage(card);
   if (!url) return card;
   try {

@@ -1,3 +1,4 @@
+import { isLanguage } from './languages';
 import type { CardBrief, Entry, Finish } from './model';
 
 export type MarketPrice = { finish: Finish; amount: number; currency: 'USD' | 'EUR'; source: 'TCGplayer' | 'Cardmarket'; updatedAt: string };
@@ -103,7 +104,7 @@ export function parsePriceCache(raw: string | null, now = Date.now()): { snapsho
     const data = JSON.parse(raw);
     if (data.version !== 1 || !Array.isArray(data.snapshots)) return { snapshots };
     for (const s of data.snapshots.slice(0, 5000)) {
-      if (!record(s) || typeof s.key !== 'string' || !/^(en|ja):[\w.!%?-]{1,100}$/.test(s.key) || !timestamp(s.checkedAt) || s.checkedAt > now + DAY || !Array.isArray(s.prices) || !Array.isArray(s.finishes)) continue;
+      if (!record(s) || typeof s.key !== 'string' || !isLanguage(s.key.split(':')[0]) || !/^[a-z-]+:[\w.!%?-]{1,100}$/.test(s.key) || !timestamp(s.checkedAt) || s.checkedAt > now + DAY || !Array.isArray(s.prices) || !Array.isArray(s.finishes)) continue;
       if (!s.finishes.every((f: unknown) => finishes.includes(f as Finish))) continue;
       const prices = s.prices.filter((p: unknown): p is MarketPrice => record(p) && finishes.includes(p.finish) && positive(p.amount) && validDate(p.updatedAt) && ((p.source === 'TCGplayer' && p.currency === 'USD') || (p.source === 'Cardmarket' && p.currency === 'EUR')));
       snapshots[s.key] = { key: s.key, checkedAt: s.checkedAt, finishes: s.finishes, prices };

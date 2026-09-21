@@ -7,7 +7,8 @@ import { C, CardArt, Chip, Icon, Progress, SearchBox, Txt, Button, mono, ui } fr
 import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, cardKindLabel, type CardFilter } from '@/lib/card-kind';
-import { BADGES, badgeProgress, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
+import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
+import { collectorNumber, BADGES, badgeProgress, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
 import { CardPriceTag, CollectionValue } from '@/components/card-values';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
@@ -20,7 +21,7 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
   const { width } = useWindowDimensions();
   const columns = width >= 900 ? 5 : width >= 650 ? 4 : 2;
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
-  const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!query || normalize(`${s.en}${s.ja}${s.id}`).includes(normalize(query)))), [query, filter, discovered]);
+  const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!query || normalize(`${s.en}${s.ja}${s['zh-cn']}${s['zh-tw']}${s.id}`).includes(normalize(query)))), [query, filter, discovered]);
   return <Animated.FlatList {...scroll} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} columnWrapperStyle={{ gap: 10 }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your Pokédex</Txt><Txt muted>Every card starts a discovery.</Txt></View><View style={s.counter}><Txt style={s.counterNumber}>{String(discovered.size).padStart(3, '0')}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>discovered</Txt></View></View>
@@ -33,7 +34,7 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
       <SearchBox value={query} onChange={setQuery} placeholder="Find a Pokémon by name or number" />
       <View style={ui.row}>{['All Pokémon', 'Discovered', 'Kanto'].map(label => <Chip key={label} label={label} selected={filter === label} onPress={() => setFilter(label)} />)}</View>
     </View>}
-    ListEmptyComponent={<View style={s.empty}><Txt style={ui.subtitle}>{query ? 'No Pokémon found' : 'Your first discovery is waiting'}</Txt><Txt muted style={{ textAlign: 'center' }}>{query ? 'Try an English or Japanese name, or a Pokédex number.' : 'Add a Pokémon card to bring its entry to life.'}</Txt></View>}
+    ListEmptyComponent={<View style={s.empty}><Txt style={ui.subtitle}>{query ? 'No Pokémon found' : 'Your first discovery is waiting'}</Txt><Txt muted style={{ textAlign: 'center' }}>{query ? 'Try an English, Japanese or Chinese name, or a Pokédex number.' : 'Add a Pokémon card to bring its entry to life.'}</Txt></View>}
     renderItem={({ item }) => {
       const owned = discovered.has(item.id);
       return <Pressable accessibilityRole="button" accessibilityLabel={`${item.en}, number ${item.id}, ${owned ? 'discovered' : 'not yet discovered'}`} onPress={() => onSpecies(item.id)} style={({ pressed }) => [s.pokemon, { flex: 1 / columns }, owned && s.pokemonOwned, pressed && { opacity: .7 }]}>
@@ -59,7 +60,7 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
   const columns = width >= 900 ? 5 : width >= 650 ? 4 : 2;
   const client = usePricing(trainer.entries.map(e => e.card), 20);
   const confirmationCount = trainer.entries.filter(needsPrinting).length;
-  const filtered = trainer.entries.filter(e => (!onlyNeedsPrinting || needsPrinting(e)) && matchesCardFilter(e.card, typeFilter) && (!query || query.trim().split(/\s+/).every(term => normalize(`${e.card.name} ${e.card.set.name} ${e.card.localId} ${e.card.dexIds.map(id => speciesById.get(id)?.en ?? '').join(' ')}`).includes(normalize(term)))) && (filter !== 'Favorites' || e.favorite) && (filter !== 'Duplicates' || e.quantity > 1) && (filter !== 'Japanese' || e.card.language === 'ja'));
+  const filtered = trainer.entries.filter(e => (!onlyNeedsPrinting || needsPrinting(e)) && matchesCardFilter(e.card, typeFilter) && (!query || query.trim().split(/\s+/).every(term => normalize(`${e.card.name} ${e.card.set.name} ${e.card.localId} ${e.card.dexIds.map(id => speciesById.get(id)?.en ?? '').join(' ')}`).includes(normalize(term)))) && (filter !== 'Favorites' || e.favorite) && (filter !== 'Duplicates' || e.quantity > 1) && (filter !== 'Japanese' || e.card.language === 'ja') && (filter !== 'Chinese' || e.card.language.startsWith('zh-')));
   const entries = sortBinderEntries(filtered, sort, client.snapshots, client.fx);
   const priceSort = sort === 'priceHigh' || sort === 'priceLow';
   function clearFilters() { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(false); }
@@ -80,14 +81,14 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
         {sortOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Binder sort order" style={s.sortMenu}>{BINDER_SORTS.map(option => <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={option.label} aria-checked={sort === option.id} onPress={() => { setSort(option.id); setSortOpen(false); }} style={s.sortOption}><Txt style={{ fontSize: 13, fontWeight: sort === option.id ? '600' : '400' }}>{option.label}</Txt>{sort === option.id && <Icon name="check" size={17} />}</Pressable>)}</View>}
         {priceSort && <Txt muted style={{ fontSize: 11, lineHeight: 17 }}>Uses the lower estimate in each range. Unpriced cards appear last.</Txt>}
       </View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{['All cards', 'Favorites', 'Duplicates', 'Japanese'].map(label => <Chip key={label} label={label} selected={label === filter} onPress={() => setFilter(label)} />)}</ScrollView>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{['All cards', 'Favorites', 'Duplicates', 'Japanese', 'Chinese'].map(label => <Chip key={label} label={label} selected={label === filter} onPress={() => setFilter(label)} />)}</ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{CARD_FILTERS.map(f => <Chip key={f.id} label={f.id === 'all' ? 'Every type' : f.label} selected={typeFilter === f.id} onPress={() => setTypeFilter(f.id)} />)}</ScrollView>
       {(onlyNeedsPrinting || query || filter !== 'All cards' || typeFilter !== 'all') && <View style={ui.between}><Txt muted style={{ fontSize: 12 }}>{entries.length} {entries.length === 1 ? 'printing' : 'printings'}{onlyNeedsPrinting ? ' to confirm' : ' shown'}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Clear binder filters" onPress={clearFilters} style={{ minHeight: 40, justifyContent: 'center' }}><Txt style={{ fontSize: 12, textDecorationLine: 'underline' }}>Clear filters</Txt></Pressable></View>}
     </View>}
-    ListEmptyComponent={<View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English and Japanese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}, ${item.card.language === 'ja' ? 'Japanese' : 'English'}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
+    ListEmptyComponent={<View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[item.card.language]}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
       <View><CardArt card={item.card} /><View style={s.quantity}><Txt style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>×{item.quantity}</Txt></View>{item.favorite && <View style={s.favorite}><Icon name="heart" size={15} color={C.red} filled /></View>}</View>
-      <Txt style={{ fontWeight: '800', fontSize: 14, marginTop: 8 }} numberOfLines={1}>{item.card.name}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }} numberOfLines={1}>{item.card.set.name}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>{cardKindLabel(item.card)}</Txt><Txt muted style={{ fontFamily: mono, fontSize: 10 }}>{item.card.language === 'ja' ? 'JP' : 'EN'} · {item.card.localId}/{item.card.set.total}</Txt>
+      <Txt style={{ fontWeight: '800', fontSize: 14, marginTop: 8 }} numberOfLines={1}>{item.card.name}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }} numberOfLines={1}>{item.card.set.name}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>{cardKindLabel(item.card)}</Txt><Txt muted style={{ fontFamily: mono, fontSize: 10 }}>{LANGUAGE_CODES[item.card.language]} · {collectorNumber(item.card)}</Txt>
       <CardPriceTag card={item.card} finish={item.finish} />
     </Pressable>} />;
 }

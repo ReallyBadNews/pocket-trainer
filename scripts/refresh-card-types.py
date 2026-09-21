@@ -4,6 +4,7 @@ import json
 import pathlib
 import urllib.parse
 import urllib.request
+import urllib.error
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DATA = ROOT / 'src' / 'data'
@@ -15,18 +16,23 @@ FIELDS = [('categories', 'Pokemon', 1), ('categories', 'Trainer', 2), ('categori
 def fetch(task):
     language, field, value, code = task
     url = f'https://api.tcgdex.net/v2/{language}/{field}/{urllib.parse.quote(value)}'
-    with urllib.request.urlopen(url, timeout=60) as response:
-        result = json.load(response)
-    if not isinstance(result.get('cards'), list) or not result['cards']:
+    try:
+        with urllib.request.urlopen(url, timeout=60) as response:
+            result = json.load(response)
+    except urllib.error.HTTPError as error:
+        if error.code == 404 and field != 'categories':
+            return language, code, []
+        raise
+    if not isinstance(result.get('cards'), list):
         raise RuntimeError(f'Invalid classification index: {url}')
     return language, code, result['cards']
 
-def refresh():
-    tasks = [(lang, *field) for lang in ('en', 'ja') for field in FIELDS]
+def refresh(languages=('en', 'ja', 'zh-cn', 'zh-tw')):
+    tasks = [(lang, *field) for lang in languages for field in FIELDS]
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(fetch, tasks))
-    output = {}
-    for lang in ('en', 'ja'):
+    output = json.loads((DATA / 'card-types.json').read_text())
+    for lang in languages:
         cards = json.loads((DATA / f'cards-{lang}.json').read_text())
         ids = {c['id'] for c in cards}
         types = {}

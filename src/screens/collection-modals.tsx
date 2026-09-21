@@ -5,10 +5,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, Txt, mono, ui } from '@/components/pokedex-ui';
+import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
 import { fetchCard, speciesById, speciesImage } from '@/lib/catalog';
-import { addCard, changePrinting, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
+import { collectorNumber, addCard, changePrinting, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
 import { exportFile, importFile, keepCardArt } from '@/lib/files';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
 import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLORS, TrainerAvatar } from '@/components/trainer-avatar';
@@ -21,9 +22,9 @@ export function Sheet({ title, onClose, children, busy = false }: { title: strin
   return <View style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal style={m.sheet}><View style={m.sheetHeader}><Txt style={ui.subtitle}>{title}</Txt>{!busy && <IconButton icon="close" label="Close" onPress={onClose} />}</View>{children}</View></View>;
 }
 
-export function CardModal({ brief, entry, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; onClose: () => void; onAdded: (card: Card, newIds: number[], quantity: number) => void; onBusyChange: (busy: boolean) => void }) {
+export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (card: Card, newIds: number[], quantity: number) => void; onBusyChange: (busy: boolean) => void }) {
   const { trainer, updateTrainer } = useCollection();
-  const [card, setCard] = useState<Card | null>(entry?.card ?? null);
+  const [card, setCard] = useState<Card | null>(entry?.card ?? draft ?? null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
   const [loading, setLoading] = useState(!entry);
@@ -38,6 +39,7 @@ export function CardModal({ brief, entry, onClose, onAdded, onBusyChange }: { br
   useEffect(() => {
     let active = true;
     if (entry) return;
+    if (draft) { setLoading(false); return; }
     setLoading(true); setError(null);
     const saved = trainer.entries.find(e => e.card.id === brief.id && e.card.language === brief.language)?.card;
     (saved ? Promise.resolve(saved) : fetchCard(brief)).then(c => {
@@ -68,10 +70,10 @@ export function CardModal({ brief, entry, onClose, onAdded, onBusyChange }: { br
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
     {card && <>
-      <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}><CardArt key={card.id} card={card} high style={{ width: 210, maxWidth: '100%' }} /></ZoomablePhoto><View style={m.languageTag}><Txt style={{ fontWeight: '800', fontSize: 12 }}>{card.language === 'ja' ? '日本語 · Japanese' : 'English'}</Txt></View></View>
-      <View style={ui.between}><View style={{ flex: 1 }}><Txt style={ui.title}>{card.name}</Txt>{card.language === 'ja' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
+      <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}><CardArt key={card.id} card={card} high style={{ width: 210, maxWidth: '100%' }} /></ZoomablePhoto><View style={m.languageTag}><Txt style={{ fontWeight: '800', fontSize: 12 }}>{LANGUAGE_LABELS[card.language]}</Txt></View></View>
+      <View style={ui.between}><View style={{ flex: 1 }}><Txt style={ui.title}>{card.name}</Txt>{card.language !== 'en' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
       <Txt muted>{card.set.name}</Txt><Txt style={{ fontWeight: '800', fontSize: 13 }}>{cardKindLabel(card)}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
-      <View style={m.cardMeta}><View><Txt muted style={m.small}>Card number</Txt><Txt style={{ fontFamily: mono, fontWeight: '700' }}>{card.localId}/{card.set.total || '?'}</Txt></View><View><Txt muted style={m.small}>Rarity</Txt><Txt style={{ fontWeight: '700' }}>{card.rarity}</Txt></View>{card.hp && <View><Txt muted style={m.small}>HP</Txt><Txt style={{ fontWeight: '700' }}>{card.hp}</Txt></View>}</View>
+      <View style={m.cardMeta}><View><Txt muted style={m.small}>Card number</Txt><Txt style={{ fontFamily: mono, fontWeight: '700' }}>{collectorNumber(card)}</Txt></View><View><Txt muted style={m.small}>Rarity</Txt><Txt style={{ fontWeight: '700' }}>{card.rarity}</Txt></View>{card.hp && <View><Txt muted style={m.small}>HP</Txt><Txt style={{ fontWeight: '700' }}>{card.hp}</Txt></View>}</View>
       {!entry && <><Txt style={{ fontSize: 13, lineHeight: 20, color: C.muted }}>Compare the artwork and card number with yours before adding it.</Txt><Txt style={ui.subtitle}>Which printing?</Txt><View style={[ui.row, { flexWrap: 'wrap' }]}>{printingChoices.map(f => <Chip key={f} label={FINISH_LABELS[f]} selected={f === finish} onPress={() => !busy && setFinish(f)} />)}</View><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>Holo has a shiny picture. Reverse holo usually shines around the picture. “Not sure yet” is okay.</Txt></>}
       {liveEntry && <><Txt style={ui.subtitle}>Your printing</Txt><View style={[ui.row, { flexWrap: 'wrap' }]}>{printingChoices.map(f => <Chip key={f} label={FINISH_LABELS[f]} selected={f === finish} onPress={() => !busy && setFinish(f)} />)}</View>{finish !== liveEntry.finish && <Button title="Save printing" secondary busy={busy} onPress={() => run(async () => { await updateTrainer(t => changePrinting(t, liveEntry.key, finish)); onClose(); })} />}</>}
       <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} />
@@ -93,7 +95,7 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry }: { id: number
   return <Sheet title={`Pokédex #${String(id).padStart(3, '0')}`} onClose={onClose}><ScrollView contentContainerStyle={m.content}>
     <View style={{ alignItems: 'center', gap: 8 }}><Image source={speciesImage(id)} style={{ width: 240, height: 230, opacity: owned ? 1 : .3 }} tintColor={owned ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" /><Txt style={ui.title}>{pokemon.en}</Txt><Txt muted>{pokemon.ja} · {pokemon.genus}</Txt><View style={m.languageTag}><Txt style={{ fontSize: 12, fontWeight: '700' }}>{owned ? `${entries.reduce((n, e) => n + e.quantity, 0)} cards collected` : 'Not discovered yet'}</Txt></View></View>
     <Button title={`Find ${pokemon.en} cards`} icon="search" onPress={() => onFindCards(pokemon.en)} />
-    {owned ? <><Txt style={ui.subtitle}>Your {pokemon.en} cards</Txt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{entries.map(e => <Pressable accessibilityRole="button" accessibilityLabel={`Open ${e.card.name} ${e.card.id}`} key={e.key} onPress={() => onEntry(e)} style={{ width: '46%', marginBottom: 8 }}><CardArt card={e.card} /><Txt style={{ fontSize: 12, marginTop: 5, fontWeight: '700' }}>{e.card.language === 'ja' ? 'JP' : 'EN'} · #{e.card.localId} · ×{e.quantity}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{e.card.set.name}</Txt><CardPriceTag card={e.card} finish={e.finish} /></Pressable>)}</View></> : <Txt muted style={{ textAlign: 'center' }}>Add a {pokemon.en} card to bring this entry to life.</Txt>}
+    {owned ? <><Txt style={ui.subtitle}>Your {pokemon.en} cards</Txt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{entries.map(e => <Pressable accessibilityRole="button" accessibilityLabel={`Open ${e.card.name} ${e.card.id}`} key={e.key} onPress={() => onEntry(e)} style={{ width: '46%', marginBottom: 8 }}><CardArt card={e.card} /><Txt style={{ fontSize: 12, marginTop: 5, fontWeight: '700' }}>{LANGUAGE_CODES[e.card.language]} · #{e.card.localId} · ×{e.quantity}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{e.card.set.name}</Txt><CardPriceTag card={e.card} finish={e.finish} /></Pressable>)}</View></> : <Txt muted style={{ textAlign: 'center' }}>Add a {pokemon.en} card to bring this entry to life.</Txt>}
   </ScrollView></Sheet>;
 }
 

@@ -13,8 +13,8 @@ The browser preview supports catalog search, card review, collecting, favorites,
 ## First version
 
 - Separate trainer profiles saved on each device; no account or recurring backend bill.
-- English and Japanese physical card catalog: 33,849 entries in the bundled snapshot.
-- Search Japanese cards using an English Pokémon name, a Japanese name, or collector number.
+- English, Japanese, Simplified Chinese and Traditional Chinese physical card catalogs. Chinese coverage and manual entry are described in [Chinese cards](docs/chinese-cards.md).
+- Search using an English, Japanese or Chinese Pokémon name, set code, or collector number.
 - Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it.
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
 - Delete a saved printing and all its copies with confirmation from card details.
@@ -38,7 +38,7 @@ pnpm export:web
 pnpm export:ios
 ```
 
-`pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, English/Japanese searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
+`pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, multilingual searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
 
 The earlier signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
 
