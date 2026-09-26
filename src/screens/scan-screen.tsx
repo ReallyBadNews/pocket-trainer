@@ -8,7 +8,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'reac
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, SearchBox, Txt, ui } from '@/components/pokedex-ui';
 import { scanCandidates, searchCards, setForCard, ENERGY_SEARCHES, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/lib/scanner';
-import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
+import { LANGUAGES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
 import type { Card, CardBrief, Language } from '@/lib/model';
@@ -24,6 +24,7 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
   const [manual, setManual] = useState(false);
   // Auto-detect reads the language from each photo; `language` is the one in use.
   const [autoLanguage, setAutoLanguage] = useState(true);
+  const [languageOpen, setLanguageOpen] = useState(false);
   const [detected, setDetected] = useState<Language | null>(null);
   const [language, setLanguage] = useState<Language>('en');
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
@@ -48,6 +49,8 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
   const [note, setNote] = useState<string | null>(null);
   const browsing = !query.trim() && typeFilter !== 'all' && !suggested.length;
   const scanLanguage: ScanLanguage = autoLanguage ? 'auto' : language;
+  // After a scan, auto mode names what it read so a wrong guess is easy to spot.
+  const languageSummary = !autoLanguage ? LANGUAGE_LABELS[language] : detected ? `${LANGUAGE_LABELS[detected]} (detected)` : 'Auto-detect';
   const results = useMemo(() => !(query.trim() || browsing) ? suggested.map(s => s.card) : autoLanguage && query.trim() ? searchAnyLanguage(query, detected, 80, typeFilter) : searchCards(query, language, 80, typeFilter), [query, language, autoLanguage, detected, suggested, typeFilter, browsing]);
   async function readPhoto(uri: string, selectedLanguage: ScanLanguage, selection: Crop | undefined, id: number) {
     setError(null); setNote(null); setQuery(''); setSuggested([]); lastScan.current = null; setEnergyHint(false); setImproving('done');
@@ -112,8 +115,12 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
   return <Animated.FlatList {...scroll} data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>
-      <View style={[ui.row, { flexWrap: 'wrap' }]}><Chip label={detected ? `Auto-detect · ${LANGUAGE_CODES[detected]}` : 'Auto-detect'} selected={autoLanguage} onPress={() => changeLanguage('auto')} />{LANGUAGES.map(lang => <Chip key={lang} label={LANGUAGE_LABELS[lang]} selected={!autoLanguage && language === lang} onPress={() => changeLanguage(lang)} />)}</View>
-      {detected && <Txt muted style={{ fontSize: 12 }}>Read as {LANGUAGE_LABELS[detected]}. If that's wrong, choose your card's language.</Txt>}
+      <View style={{ gap: 8 }}>
+        <Pressable accessibilityRole="button" accessibilityLabel={`Card language: ${languageSummary}`} accessibilityHint="Opens language choices. Automatic detection is recommended." aria-expanded={languageOpen} onPress={() => setLanguageOpen(open => !open)} style={[s.languageButton, languageOpen && { borderColor: C.ink }]}>
+          <Txt style={{ fontSize: 12, fontWeight: '600' }}>Language: {languageSummary}</Txt><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={14} /></View>
+        </Pressable>
+        {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={s.languageOption}><View style={{ flex: 1 }}><Txt style={{ fontSize: 13, fontWeight: scanLanguage === option ? '600' : '400' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted style={{ fontSize: 11 }}>Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={17} />}</Pressable>)}</View>}
+      </View>
       {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted style={{ fontSize: 12 }}>{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
       <View style={s.capture}>
         <View style={[s.corner, { top: 16, left: 16, borderTopWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { top: 16, right: 16, borderTopWidth: 3, borderRightWidth: 3 }]} /><View style={[s.corner, { bottom: 16, left: 16, borderBottomWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { bottom: 16, right: 16, borderBottomWidth: 3, borderRightWidth: 3 }]} />
@@ -141,6 +148,9 @@ const s = StyleSheet.create({
   reading: { position: 'absolute', inset: 0, backgroundColor: '#20392BE8', justifyContent: 'center', alignItems: 'center', gap: 10 },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   note: { padding: 14, backgroundColor: '#DEE8D1', borderRadius: 12, gap: 3 },
+  languageButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderColor: '#C0CDB3', borderRadius: 10, paddingHorizontal: 11, minHeight: 42, backgroundColor: '#F5F8EE' },
+  languageMenu: { borderRadius: 12, padding: 5, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: '#C0CDB3' },
+  languageOption: { minHeight: 44, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 10 },
   resultArt: { width: 200, maxWidth: '100%', alignSelf: 'center' },
   resultDetails: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   result: { gap: 15, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: 12, borderRadius: 13, marginBottom: 10 },
