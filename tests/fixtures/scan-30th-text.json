@@ -1,0 +1,32 @@
+[
+  {
+    "label": "User photo: Pikachu 30C 044/128 with the 22/30 Pikachu badge, in a sleeve; production CardVision on macOS",
+    "language": "en",
+    "expected": "30th-044",
+    "scan": {
+      "text": "Pikachu\n# 604\nNO. 0025 Mouse Pokémon HT: 1'4\" WT: 13.2 Ibs.\nAgility\nFlip a coin. If heads, during your opponent's next turn,\nprevent all damage from and effects of attacks done to this\nPokémon.\n3\n× 2\nresistance\nweakness\nretreat\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\nJ\n22/30\n044/128\nPokémon discharges electricity.",
+      "topText": "Pikachu\nPikach\nPikacu\n# 604\n# 60 4\n#60 4\n",
+      "bottomText": "Pokémon.\n3\nweakness\nresistance\nretreat\nx2\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\n5300/N)\n)044/128 V22/30\nPokémon discharges electricity.\nPokémon.\n3\n× 2\nresistance\nweakness\nretreat\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\nJ\n22/30\n044/128\nPokémon discharges electricity.\n"
+    }
+  },
+  {
+    "label": "User photo: Nidoran♀ 30C 087/128, in a top loader; production CardVision on macOS",
+    "language": "en",
+    "expected": "30th-087",
+    "scan": {
+      "text": "BASIG\nNidoran 7\nHP60\n3\nNO. 0029 Poison Pin Pokémon HT: 1'4\" WT: 15.4 Ibs.\nGrowl\nDuring your opponent's next turn, attacks used by the\nDefending Pokémon do 30 less damage (before applying\nWeakness and Resistance).\n10\nHeadbutt\nresistance\nretreat\nweakness\n× 2\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\n30C EN\nJ\nwind direction and stay downwind of predators.\n087/128 •",
+      "topText": "BASIG\nBASIG\nBASI\nNidoran 7\nNidoran +\nNidoran\nHP60\nHP60\nHP60\n",
+      "bottomText": "нсаиниьь\nresistance\nretreat\nx2\nweakness\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\nJ\n30C EN\nwind direction and stay downwind of predators.\n087/128\nresistance\nretreat\nweakness\n× 2\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\n30C EN\nJ\nwind direction and stay downwind of predators.\n087/128 •\n"
+    }
+  },
+  {
+    "label": "User photo: Illumise 30C 004/128, in a top loader; production CardVision on macOS",
+    "language": "en",
+    "expected": "30th-004",
+    "scan": {
+      "text": "BASIC\nIllumise\nHP 80\n3\nNO. 0314 Firefly Pokémon HT: 2' WT: 39 Ibs.\nAbility Supereffective Pheromones\nIf you have Volbeat in play, apply Weakness for both Active\nPokémon as ×3.\n30\nRam\n× 2\nresistance\nretreat\nweakness\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\n30C EN\n•\n004/128\nPokemon / Nintendo / Creature / GAME FREAK",
+      "topText": "BASIC\nBASIG\nBASI\nIllumise\nIlumise\nIllumse\nHP 80\nHP80\nH 80\n",
+      "bottomText": "resistance\nx2\nweakness\nretreat\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\nJ\n30CEN\n004/128\nntendo / Creatures / GAME FREAI\n× 2\nresistance\nretreat\nweakness\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\n30C EN\n•\n004/128\nPokemon / Nintendo / Creature / GAME FREAK\n"
+    }
+  }
+]

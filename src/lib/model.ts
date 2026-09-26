@@ -39,7 +39,9 @@ export const FINISH_LABELS: Record<Finish, string> = {
 };
 export const TRAINER_COLORS = TRAINER_OUTFITS.map(outfit => TRAINER_OUTFIT_COLORS[outfit]);
 export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [] }] });
-export const collectorNumber = (card: Card) => `${card.localId}/${card.set.total ? String(card.set.total).padStart(card.localId.includes(' ') ? 2 : 1, '0') : '?'}`;
+/** Printed totals share the number's width: 001/066, and Gem Pack 17 07/07. */
+export const collectorTotal = (localId: string, total: number) => String(total).padStart(/^\d+$/.test(localId.split(' ').pop()!) ? localId.split(' ').pop()!.length : 1, '0');
+export const collectorNumber = (card: Card) => `${card.localId}/${card.set.total ? collectorTotal(card.localId, card.set.total) : '?'}`;
 export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:${card.id}:${finish}`;
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap(e => pokemonIds(e.card)));
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);

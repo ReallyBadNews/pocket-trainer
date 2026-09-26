@@ -1,23 +1,25 @@
 import { cardCategory, isTagTeam, matchesCardFilter, scanTypeHint, trainerType, type CardFilter } from './card-kind';
 import english from '../data/cards-en.json';
 import japanese from '../data/cards-ja.json';
+import korean from '../data/cards-ko.json';
 import simplified from '../data/cards-zh-cn.json';
 import traditional from '../data/cards-zh-tw.json';
 import englishSets from '../data/sets-en.json';
 import japaneseSets from '../data/sets-ja.json';
+import koreanSets from '../data/sets-ko.json';
 import simplifiedSets from '../data/sets-zh-cn.json';
 import traditionalSets from '../data/sets-zh-tw.json';
 import { LANGUAGES } from './languages';
 import speciesData from '../data/species.json';
 import imageOverrides from '../data/image-overrides.json';
 const artOverrides = imageOverrides as Partial<Record<Language, Record<string, string>>>;
-import type { Card, CardBrief, Finish, Language } from './model';
+import { collectorTotal, type Card, type CardBrief, type Finish, type Language } from './model';
 import { fetchCardData, supplementalCards } from './card-api';
 import { DAY, parseCardPricing } from './pricing';
 
 export const species = speciesData as ({ id: number; genus: string } & Record<Language, string>)[];
 export const speciesById = new Map(species.map(s => [s.id, s]));
-const catalogs: Record<Language, Omit<CardBrief, 'language'>[]> = { en: english, ja: japanese, 'zh-cn': simplified, 'zh-tw': traditional };
+const catalogs: Record<Language, Omit<CardBrief, 'language'>[]> = { en: english, ja: japanese, ko: korean, 'zh-cn': simplified, 'zh-tw': traditional };
 export const allCards: CardBrief[] = LANGUAGES.flatMap(language => {
   const cards: CardBrief[] = catalogs[language].map(c => ({ ...c, image: c.image ?? artOverrides[language]?.[c.id], language }));
   for (const extra of Object.values(supplementalCards[language] ?? {})) {
@@ -25,10 +27,11 @@ export const allCards: CardBrief[] = LANGUAGES.flatMap(language => {
   }
   return cards;
 });
-type SetBrief = { id: string; name: string; cardCount: { official: number; total: number } };
+type SetBrief = { id: string; name: string; abbreviation?: string; cardCount: { official: number; total: number } };
 const setMaps = {
   en: new Map((englishSets as SetBrief[]).map(s => [s.id, s])),
   ja: new Map((japaneseSets as SetBrief[]).map(s => [s.id, s])),
+  ko: new Map((koreanSets as SetBrief[]).map(s => [s.id, s])),
   'zh-cn': new Map((simplifiedSets as SetBrief[]).map(s => [s.id, s])),
   'zh-tw': new Map((traditionalSets as SetBrief[]).map(s => [s.id, s])),
 };
@@ -39,7 +42,7 @@ export const cardImage = (card: CardBrief, high = false) => {
 };
 export const speciesImage = (id: number) => `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 export const normalize = (value: string) => value.normalize('NFKC').toLowerCase().replace(/[\s\p{P}\p{S}]/gu, '');
-const searchable = allCards.map(card => ({ card, name: normalize(card.name), id: normalize(card.id), number: normalize(card.localId), collector: normalize(`${card.localId}/${String(setForCard(card)?.cardCount.official ?? '').padStart(card.localId.includes(' ') ? 2 : 1, '0')}`), set: normalize(setForCard(card)?.name ?? '') }));
+const searchable = allCards.map(card => ({ card, name: normalize(card.name), id: normalize(card.id), number: normalize(card.localId), collector: normalize(`${card.localId}/${collectorTotal(card.localId, setForCard(card)?.cardCount.official ?? 0)}`), set: normalize(setForCard(card)?.name ?? '') }));
 
 export function searchCards(query: string, language: Language, limit = 80, filter: CardFilter = 'all'): CardBrief[] {
   const term = normalize(query);
@@ -56,6 +59,12 @@ export type ScanCandidate = { card: CardBrief; score: number; evidence: string; 
 const scanWords = Object.fromEntries(LANGUAGES.map(language => [language, [...new Set(allCards.filter(c => c.language === language).map(c => c.name))]])) as Record<Language, string[]>;
 export const recognitionWords = (language: Language) => scanWords[language];
 const canonicalNumber = (s: string) => s.toLowerCase().replace(/\s+/g, '').replace(/^0+(?=\d)/, '');
+const codePatterns = new Map<string, RegExp>();
+const printedCode = (code: string, flags: string, suffix = '') => {
+  const key = `${flags}:${suffix}:${code}`;
+  if (!codePatterns.has(key)) codePatterns.set(key, code.length < 3 ? /(?!)/ : new RegExp(`(?:^|[^A-Za-z0-9])${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${suffix}(?:$|[^A-Za-z0-9])`, flags));
+  return codePatterns.get(key)!;
+};
 const numberFromOCR = (s: string) => {
   // Keep subset prefixes (TG/GG/SV); repair letter-shaped digits only in the numeric part.
   const match = s.match(/^([a-z]{0,3}?)([0-9oilsbz]+)$/i);
@@ -92,7 +101,7 @@ function fuzzyHeader(name: string, lines: string[], language: Language): boolean
 export function scanCandidates(scan: ScanText, language: Language, limit = 12, filter: CardFilter = 'all'): ScanCandidate[] {
   const full = normalize(scan.text);
   const hint = scanTypeHint(scan.topText);
-  const meaningfulLines = scan.topText.split(/\n/).map(normalize).filter(l => !/^(?:energy|basicenergy|specialenergy|エネルギー|基本エネルギー|特殊エネルギー|trainer|trainers|supporter|item|stadium|tagteam|グッズ|スタジアム|サポート|トレーナーズ|能量|基本能量|特殊能量|训练家|訓練家|物品|道具|支援者|支持者|竞技场|競技場)$/.test(l));
+  const meaningfulLines = scan.topText.split(/\n/).map(normalize).filter(l => !/^(?:energy|basicenergy|specialenergy|エネルギー|基本エネルギー|特殊エネルギー|trainer|trainers|supporter|item|stadium|tagteam|グッズ|スタジアム|サポート|トレーナーズ|能量|基本能量|特殊能量|训练家|訓練家|物品|道具|支援者|支持者|竞技场|競技場|에너지|기본에너지|특수에너지|트레이너스|서포트|굿즈|스타디움|포켓몬의도구)$/.test(l));
   const top = meaningfulLines.join('');
   const headerLines = [...new Set(meaningfulLines.filter(l => l.length > 0 && l.length <= 45))].slice(0, 30);
   const fuzzyCache = new Map<string, boolean>();
@@ -101,7 +110,8 @@ export function scanCandidates(scan: ScanText, language: Language, limit = 12, f
     return fuzzyCache.get(name)!;
   };
   const bottom = scan.bottomText.normalize('NFKC');
-  const minNameLength = language.startsWith('zh-') ? 2 : 3;
+  // Hangul and Chinese names can be two characters long (伊布, 뮤츠).
+  const minNameLength = language === 'ko' || language.startsWith('zh-') ? 2 : 3;
   const fractions = [...`${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(/([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})\s*[/／]\s*([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})/gi)]
     .map(f => [numberFromOCR(f[1]), numberFromOCR(f[2])]);
   // Gem Packs print a card group followed by a variant fraction: 17 07/07.
@@ -130,8 +140,9 @@ export function scanCandidates(scan: ScanText, language: Language, limit = 12, f
     const matchingNumbers = fractions.filter(f => f[0] === canonicalNumber(c.card.localId));
     const numberMatch = matchingNumbers.length > 0;
     const totalMatch = matchingNumbers.some(f => Number(f[1]) === set?.cardCount.official);
-    const setCode = c.card.id.slice(0, c.card.id.lastIndexOf('-'));
-    const codeMatch = setCode.length >= 3 && new RegExp(`(?:^|[^a-z0-9])${setCode.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|[^a-z0-9])`, 'i').test(bottom);
+    const codeMatch = printedCode(c.card.id.slice(0, c.card.id.lastIndexOf('-')), 'i').test(bottom)
+      // English cards print an uppercase abbreviation, often joined to EN: 30C EN, MEGEN.
+      || (!!set?.abbreviation && printedCode(set.abbreviation.split(':')[0], '', '(?:EN)?').test(bottom));
     const exactPrinting = codeMatch && numberMatch;
     const categoryBonus = hint !== 'all' ? matchesCardFilter(c.card, hint) ? 45 : -70 : 0;
     let score = categoryBonus + nameScore + (numberMatch ? totalMatch ? 150 : 65 : 0) + (exactPrinting ? 160 : 0);
@@ -163,15 +174,15 @@ export function rerankByArtwork(candidates: ScanCandidate[], distances: Map<stri
 }
 
 export const ENERGY_SEARCHES = [
-  { label: 'Grass', en: 'Grass Energy', ja: '草エネルギー', 'zh-cn': '草', 'zh-tw': '草' },
-  { label: 'Fire', en: 'Fire Energy', ja: '炎エネルギー', 'zh-cn': '火', 'zh-tw': '火' },
-  { label: 'Water', en: 'Water Energy', ja: '水エネルギー', 'zh-cn': '水', 'zh-tw': '水' },
-  { label: 'Lightning', en: 'Lightning Energy', ja: '雷エネルギー', 'zh-cn': '雷', 'zh-tw': '雷' },
-  { label: 'Psychic', en: 'Psychic Energy', ja: '超エネルギー', 'zh-cn': '超', 'zh-tw': '超' },
-  { label: 'Fighting', en: 'Fighting Energy', ja: '闘エネルギー', 'zh-cn': '斗', 'zh-tw': '鬥' },
-  { label: 'Darkness', en: 'Darkness Energy', ja: '悪エネルギー', 'zh-cn': '恶', 'zh-tw': '惡' },
-  { label: 'Metal', en: 'Metal Energy', ja: '鋼エネルギー', 'zh-cn': '钢', 'zh-tw': '鋼' },
-  { label: 'Fairy', en: 'Fairy Energy', ja: 'フェアリーエネルギー', 'zh-cn': '妖精', 'zh-tw': '妖精' },
+  { label: 'Grass', en: 'Grass Energy', ja: '草エネルギー', ko: '풀 에너지', 'zh-cn': '草', 'zh-tw': '草' },
+  { label: 'Fire', en: 'Fire Energy', ja: '炎エネルギー', ko: '불꽃 에너지', 'zh-cn': '火', 'zh-tw': '火' },
+  { label: 'Water', en: 'Water Energy', ja: '水エネルギー', ko: '물 에너지', 'zh-cn': '水', 'zh-tw': '水' },
+  { label: 'Lightning', en: 'Lightning Energy', ja: '雷エネルギー', ko: '번개 에너지', 'zh-cn': '雷', 'zh-tw': '雷' },
+  { label: 'Psychic', en: 'Psychic Energy', ja: '超エネルギー', ko: '초 에너지', 'zh-cn': '超', 'zh-tw': '超' },
+  { label: 'Fighting', en: 'Fighting Energy', ja: '闘エネルギー', ko: '격투 에너지', 'zh-cn': '斗', 'zh-tw': '鬥' },
+  { label: 'Darkness', en: 'Darkness Energy', ja: '悪エネルギー', ko: '악 에너지', 'zh-cn': '恶', 'zh-tw': '惡' },
+  { label: 'Metal', en: 'Metal Energy', ja: '鋼エネルギー', ko: '강철 에너지', 'zh-cn': '钢', 'zh-tw': '鋼' },
+  { label: 'Fairy', en: 'Fairy Energy', ja: 'フェアリーエネルギー', ko: '페어리 에너지', 'zh-cn': '妖精', 'zh-tw': '妖精' },
 ];
 export function needsScanRefinement(candidates: ScanCandidate[]): boolean {
   const best = candidates[0];

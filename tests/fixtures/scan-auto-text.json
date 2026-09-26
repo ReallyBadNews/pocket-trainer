@@ -1,0 +1,92 @@
+[
+  {
+    "label": "Korean SV5K 001/071 Roselia (retailer scan); production CardVision auto-detect pass on macOS",
+    "language": "ko",
+    "expected": "SV5K-001",
+    "scan": {
+      "text": "기본\n로젤리아\nw60\n전국도감 NO.0315 가시조전문 기 0.3m 용무기: 2.0kg)\n특성 0독가시\n이 포켓몬이 배틀필드에서 상대의 포켓몬으로부터 기술의 데미지를 받았을\n때 기술을 사용한 포켓몬을 독으로 만든다.\n리프스텝\n10\n저항력\n후퇴\n약 점\n*\n1x2\n꽃향기를 많으면 기분이\nillus. Tomomi Ozaki\n편안해진다. 향이 강아면\nㅐ\nSVSK\n건강한 로갤리아라는 뜻이다.\n001/071 €",
+      "topText": "기본\n본\n기\n로젤리아\n로젤리\n젤리아\nw60\n₩60\n60\n",
+      "bottomText": "x2\nIllus. Tomomi Ozaki\nSy5K\n001/071 C\n220=299259\n저항력\n후퇴\n약 점\n*\n1x2\n꽃향기를 많으면 기분이\nillus. Tomomi Ozaki\n편안해진다. 향이 강아면\nㅐ\nSVSK\n건강한 로갤리아라는 뜻이다.\n001/071 €\n"
+    }
+  },
+  {
+    "label": "Korean SV5K 008/071 (retailer scan); production CardVision auto-detect pass on macOS",
+    "language": "ko",
+    "expected": "SV5K-008",
+    "scan": {
+      "text": "1진화\n엘풍\nw100\n소미안에서 진화\n전국도강 NO.0547 바랑송기포켓몬 카: 0.7 m 몸무게: 6.6kg\n특성 0) 사분사뿐 힐\n신의 차례에 이 카드를 패에서 꺼내서 진화시켰을 때 1번 사용할 수\n있다. 자신의 배틀필드의 포켓몬의 HP를 모두 회복한다. 그 뒤, 회복한\n포켓몬에게 붙어 있는 에너지를 모두 트래쉬한다.\n40\n씨폭탄\nx2\n저항력\n약 점\n후되\n솜을 흘리며 장난을 친다.\nJius. Mizue\n물을 끼얹으면 무거워져서\n음직일 수 없게 되어 포기한다.\n008/071 R",
+      "topText": "1진화\n진화\n1화\n엘풍\n엘\n풍\nw100\n1 100\nw100\n소미안에서 진화\n소미안에서 진화\n미안에서 진화\n",
+      "bottomText": "x2\nNlus. Mizue\n8829024Az4\nSV5K\n008/071 R\n849411992794\n©2024 Pokimon/Nintendo/Creatureu/GAME FREAK.\nx2\n저항력\n약 점\n후되\n솜을 흘리며 장난을 친다.\nJius. Mizue\n물을 끼얹으면 무거워져서\n음직일 수 없게 되어 포기한다.\n008/071 R\n"
+    }
+  },
+  {
+    "label": "Japanese SV5K 025/071 Wugtrio ex (TCGdex reference image); production CardVision auto-detect pass on macOS",
+    "language": "ja",
+    "expected": "SV5K-025",
+    "scan": {
+      "text": "7進化\n#2504\nウミトリオ（\nウミディグダから進化\nテラスタル\nこのポケモンは、ベンチにいるかぎり、ワザのダメージを受けない。\nトリコロポンプ\n皆券の手乳からエネルギーを3枚までトラッシュし、その数✕60\nダメージを、相手のポケモン1袋に雪える。【ベンチは弱・選発分\nを計算しない。」\nしびれホールド\n120\n次の相手の審、このワザを受けたポケモンは、にげられない。\nにげる\n弱\n点\n抵抗力\neXルール\nlus. Sban Graphics\nポケモジを父がきせつしたとき、相手はサイドを2枚とる。\nsv5K\nH\n025/071 RR\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "7進化\n#2504\nウミトリオ（\nウミトリオ（\nウミトリオ\nウミディグダから進化\nウミディグタから進化\nウミディグから進化\nテラスタル\nララスタル\nテスタル\nこのポケモンは、ベンチにいるかぎり、ワザのダメージを受けない。\nこのポケモンはベンチにいるかぎり、ワザのダメージを受けない。\nこのポケモン、ベンチにいるかぎり、ワザのダメージを受けない。\n",
+      "bottomText": "ILV\n56#\nx2\n*\nexJ-IL\nIllus. 5ban Graphics\n*ґ£›ểХЪ₴#*<đ#Ť·{K≤2Ÿ<3•\nH\nsv5K\n025/071 RR\n©2024 Pokémon/Nintendo/Creatures/GAME.FREAK.\n次の相手の審、このワザを受けたポケモンは、にげられない。\nにげる\n弱\n点\n抵抗力\neXルール\nlus. Sban Graphics\nポケモジを父がきせつしたとき、相手はサイドを2枚とる。\nsv5K\nH\n025/071 RR\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\n"
+    }
+  },
+  {
+    "label": "Traditional Chinese SV7 001 (TCGdex reference image); production CardVision auto-detect pass on macOS",
+    "language": "zh-tw",
+    "expected": "SV7-001",
+    "scan": {
+      "text": "區礎\n芭瓢蟲\nHP 60€\n全國圖鑑No.0165 五星寶可夢 身高：1.0m 體重：10.8kg\n30\n魯莽頭擊\n撤退\n) × 2\n抵抗力\n點\nIllus.\nWhisker\n天氣整冷時，大量的芭蟲會從各處聚集起來，\n互相靠在一起取暖。\n001/102 C",
+      "topText": "區礎\n芭瓢蟲\nHP 60€\nHP 60 €\nHP 60₴\n",
+      "bottomText": "H iE\n# Mã\nx2\nHE#AD\nIllus. Whisker\nSV7 F\n001/102 C\n撤退\n) × 2\n抵抗力\n點\nIllus.\nWhisker\n天氣整冷時，大量的芭蟲會從各處聚集起來，\n互相靠在一起取暖。\n001/102 C\n"
+    }
+  },
+  {
+    "label": "English 151 Pikachu 025/165 (TCGdex reference image); production CardVision auto-detect pass on macOS",
+    "language": "en",
+    "expected": "sv03.5-025",
+    "scan": {
+      "text": "BASIG\nPikachu\nHe 60 4\nNO. 0025 Mouse Pokémon HT: 1'4° WT: 13.2 lbs.\nCharge\nSearch your deck for a Basic 4 Energy card and attach it\nto this Pokémon. Then, shuffle your deck.\n50\nPika Punch\n4\nretreat\nweakness\nresistance\n) ×2\nWhen it is angered, it immediately discharges the\nIllus. Naoyo Kimura\nenergy stored in the pouches in its cheeks.\nG\n025/165 •",
+      "topText": "BASIG\nBASI\nBASG\nPikachu\nPikach\nPikahu\nHe 60 4\nHe 604\nMe 60 4\n",
+      "bottomText": "weakness\nretreat\nresistance\nx2\nWhen it is angered, it immediately discharges the\nIllus. Naoyo Kimura\nenergy stored in the pouches in its cheeks.\nMEW EN\n025/165\n4\nretreat\nweakness\nresistance\n) ×2\nWhen it is angered, it immediately discharges the\nIllus. Naoyo Kimura\nenergy stored in the pouches in its cheeks.\nG\n025/165 •\n"
+    }
+  },
+  {
+    "label": "User photo: Simplified Chinese Deerling CBB4C 17 07/07; production CardVision auto-detect pass on macOS",
+    "language": "zh-cn",
+    "expected": "CBB4C-1707",
+    "scan": {
+      "text": "基础\n四季鹿\nHP7O\n活蹦乱跳\n10,\n落叶沖撞\n40\n选择这只宝可梦身上附着的1个。能量，放于弃牌区。\n抗性\n撤退\n粥点\nIlloss Susumo Maeya\n随着季节流动，气味也会变化。这介样子的四李鹿\nH cвв4C]\n散友的气味乘和香甜，会残留在典監中\n1ZO7/07\n©2026 Pokémon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "基础\n四季鹿\nHP7O\nHP7O\nHP7O\n",
+      "bottomText": "DeDD\nCU\nKURRCY\nx2\n33 H\nIltoss Susamu Maeya\nCBB4С\nH\n1707/07\n©2026 Pokémon/Nintendo/Creatures/GAME FREAK.\n抗性\n撤退\n粥点\nIlloss Susumo Maeya\n随着季节流动，气味也会变化。这介样子的四李鹿\nH cвв4C]\n散友的气味乘和香甜，会残留在典監中\n1ZO7/07\n©2026 Pokémon/Nintendo/Creatures/GAME FREAK.\n"
+    }
+  },
+  {
+    "label": "User photo: sleeved Pikachu 30C 044/128; production CardVision auto-detect pass on macOS",
+    "language": "en",
+    "expected": "30th-044",
+    "scan": {
+      "text": "Pikachu\n# 604\nNO. 0025 Mouse Pokémon HT: 1'4\" WT: 13.2 Ibs.\nAgility\nFlip a coin. If heads, during your opponent's next turn,\nprevent all damage from and effects of attacks done to this\nPokémon.\n3\n× 2\nresistance\nweakness\nretreat\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\nJ\n22/30\n044/128\nPokémon discharges electricity.",
+      "topText": "Pikachu\nPikach\nPikacu\n# 604\n# 60 4\n#60 4\n",
+      "bottomText": "Pokémon.\n3\nweakness\nresistance\nretreat\nx2\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\n5300/N)\n)044/128 V22/30\nPokémon discharges electricity.\nPokémon.\n3\n× 2\nresistance\nweakness\nretreat\nIt has small electric sacs on both its\nIllus. akagi\ncheeks. When in a tough spot, this\nJ\n22/30\n044/128\nPokémon discharges electricity.\n"
+    }
+  },
+  {
+    "label": "User photo: Nidoran♀ 30C 087/128; production CardVision auto-detect pass on macOS",
+    "language": "en",
+    "expected": "30th-087",
+    "scan": {
+      "text": "BASIG\nNidoran 7\nHP60\n3\nNO. 0029 Poison Pin Pokémon HT: 1'4\" WT: 15.4 Ibs.\nGrowl\nDuring your opponent's next turn, attacks used by the\nDefending Pokémon do 30 less damage (before applying\nWeakness and Resistance).\n10\nHeadbutt\nresistance\nretreat\nweakness\n× 2\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\n30C EN\nJ\nwind direction and stay downwind of predators.\n087/128 •",
+      "topText": "BASIG\nBASIG\nBASI\nNidoran 7\nNidoran +\nNidoran\nHP60\nHP60\nHP60\n",
+      "bottomText": "нсаиниьь\nresistance\nretreat\nx2\nweakness\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\nJ\n30C EN\nwind direction and stay downwind of predators.\n087/128\nresistance\nretreat\nweakness\n× 2\nFemales are more sensitive to smells than males.\nIllus. Taira Akitsu\nWhile foraging, they'll use their whiskers to check\n30C EN\nJ\nwind direction and stay downwind of predators.\n087/128 •\n"
+    }
+  },
+  {
+    "label": "User photo: Illumise 30C 004/128; production CardVision auto-detect pass on macOS",
+    "language": "en",
+    "expected": "30th-004",
+    "scan": {
+      "text": "BASIC\nIllumise\nHP 80\n3\nNO. 0314 Firefly Pokémon HT: 2' WT: 39 Ibs.\nAbility Supereffective Pheromones\nIf you have Volbeat in play, apply Weakness for both Active\nPokémon as ×3.\n30\nRam\n× 2\nresistance\nretreat\nweakness\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\n30C EN\n•\n004/128\nPokemon / Nintendo / Creature / GAME FREAK",
+      "topText": "BASIC\nBASIG\nBASI\nIllumise\nIlumise\nIllumse\nHP 80\nHP80\nH 80\n",
+      "bottomText": "resistance\nx2\nweakness\nretreat\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\nJ\n30CEN\n004/128\nntendo / Creatures / GAME FREAI\n× 2\nresistance\nretreat\nweakness\nIt guides Volbeat to draw signs in the night sky. There\nIllus. Shibuzoh.\nare scholars who research the meaning of these signs.\n30C EN\n•\n004/128\nPokemon / Nintendo / Creature / GAME FREAK\n"
+    }
+  }
+]
