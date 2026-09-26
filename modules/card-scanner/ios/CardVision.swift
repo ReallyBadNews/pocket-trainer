@@ -79,12 +79,19 @@ struct CardVision {
     request.usesLanguageCorrection = correction
     request.customWords = correction ? Array(words.prefix(5000)) : []
     request.minimumTextHeight = 0.005
+    // "auto" lets Vision pick the script; JavaScript identifies the card language from the text.
+    // Listing several CJK languages instead only uses the first one.
+    if language == "auto" {
+      request.automaticallyDetectsLanguage = true
+      try VNImageRequestHandler(ciImage: image, options: [:]).perform([request])
+      return (request.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
+    }
     let supported = try request.supportedRecognitionLanguages()
-    let locale = ["ja": "ja-JP", "zh-cn": "zh-Hans", "zh-tw": "zh-Hant"][language] ?? "en-US"
+    let locale = ["ja": "ja-JP", "ko": "ko-KR", "zh-cn": "zh-Hans", "zh-tw": "zh-Hant"][language] ?? "en-US"
     let wanted = locale == "en-US" ? [locale] : [locale, "en-US"]
     request.recognitionLanguages = wanted.filter { supported.contains($0) }
     if !supported.contains(locale) {
-      let name = ["ja": "Japanese", "zh-cn": "Simplified Chinese", "zh-tw": "Traditional Chinese"][language] ?? "English"
+      let name = ["ja": "Japanese", "ko": "Korean", "zh-cn": "Simplified Chinese", "zh-tw": "Traditional Chinese"][language] ?? "English"
       throw failure("\(name) text recognition is not available on this device. Try searching by the card number.")
     }
     try VNImageRequestHandler(ciImage: image, options: [:]).perform([request])

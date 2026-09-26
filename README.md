@@ -13,9 +13,9 @@ The browser preview supports catalog search, card review, collecting, favorites,
 ## First version
 
 - Separate trainer profiles saved on each device; no account or recurring backend bill.
-- English, Japanese, Simplified Chinese and Traditional Chinese physical card catalogs. Chinese coverage and manual entry are described in [Chinese cards](docs/chinese-cards.md).
-- Search using an English, Japanese or Chinese Pokémon name, set code, or collector number.
-- Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it.
+- English, Japanese, Korean, Simplified Chinese and Traditional Chinese physical card catalogs, including the 30th Celebration (30C) set. Coverage and manual entry are described in [Korean cards](docs/korean-cards.md) and [Chinese cards](docs/chinese-cards.md).
+- Search using an English, Japanese, Korean or Chinese Pokémon name, set code, or collector number.
+- Photograph or choose one card image, review suggested matches, choose its printing and quantity, then add it. The card's language is detected automatically; choosing a language overrides it.
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
 - Delete a saved printing and all its copies with confirmation from card details.
 - Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.

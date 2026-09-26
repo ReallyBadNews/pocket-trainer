@@ -35,10 +35,10 @@ export const pokemonIds = (card: Card) => cardCategory(card) === 'Pokemon' ? [..
 export function scanTypeHint(header: string): CardFilter {
   // Only the heading area counts: attack/rule text often mentions Energy or Trainers.
   const text = header.normalize('NFKC');
-  if (/竞技场|競技場|スタジアム|\bstadium\b/i.test(text)) return 'stadium';
-  if (/物品|道具|グッズ|\bitem\b/i.test(text)) return 'item';
-  if (/训练家|訓練家|支援者|支持者|サポート|トレーナーズ|\b(?:supporter|trainer)\b/i.test(text)) return 'trainer';
-  if (/\btag\s*team\b|タッグチーム/i.test(text)) return 'tagteam';
-  if (/^(?:基本|特殊)?能量\s*$/m.test(text) || /^(?:basic\s+|special\s+)?energy\s*$/im.test(text) || /^(?:基本|特殊)?エネルギー\s*$/m.test(text)) return 'energy';
+  if (/스타디움|竞技场|競技場|スタジアム|\bstadium\b/i.test(text)) return 'stadium';
+  if (/굿즈|物品|道具|グッズ|\bitem\b/i.test(text)) return 'item';
+  if (/트레이너스|서포트|포켓몬의\s*도구|训练家|訓練家|支援者|支持者|サポート|トレーナーズ|\b(?:supporter|trainer)\b/i.test(text)) return 'trainer';
+  if (/\btag\s*team\b|태그\s*팀|タッグチーム/i.test(text)) return 'tagteam';
+  if (/^(?:기본|특수)?\s*에너지\s*$/m.test(text) || /^(?:基本|特殊)?能量\s*$/m.test(text) || /^(?:basic\s+|special\s+)?energy\s*$/im.test(text) || /^(?:基本|特殊)?エネルギー\s*$/m.test(text)) return 'energy';
   return 'all';
 }

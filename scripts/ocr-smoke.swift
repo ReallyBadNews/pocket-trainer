@@ -6,8 +6,9 @@ import Foundation
     let args = CommandLine.arguments
     let url = URL(fileURLWithPath: args[1])
     let language = args.count > 2 ? args[2] : "en"
+    // Auto-detect reads without a vocabulary, as in the app.
     let cardsURL = URL(fileURLWithPath: "src/data/cards-\(language).json")
-    let cards = try JSONSerialization.jsonObject(with: Data(contentsOf: cardsURL)) as! [[String: Any]]
+    let cards = language == "auto" ? [] : try JSONSerialization.jsonObject(with: Data(contentsOf: cardsURL)) as! [[String: Any]]
     let words = Array(Set(cards.compactMap { $0["name"] as? String })).sorted()
     let crop = args.count > 3 ? args[3].split(separator: ",").compactMap { Double($0) } : []
     let result = try CardVision.recognize(url, language: language, words: words, crop: crop)

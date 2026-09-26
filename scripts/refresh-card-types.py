@@ -27,7 +27,7 @@ def fetch(task):
         raise RuntimeError(f'Invalid classification index: {url}')
     return language, code, result['cards']
 
-def refresh(languages=('en', 'ja', 'zh-cn', 'zh-tw')):
+def refresh(languages=('en', 'ja', 'ko', 'zh-cn', 'zh-tw')):
     tasks = [(lang, *field) for lang in languages for field in FIELDS]
     with concurrent.futures.ThreadPoolExecutor(max_workers=6) as pool:
         results = list(pool.map(fetch, tasks))

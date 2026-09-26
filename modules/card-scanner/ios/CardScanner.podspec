@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
   s.name = 'CardScanner'
   s.version = '1.0.0'
-  s.summary = 'On-device English and Japanese card text recognition'
+  s.summary = 'On-device multilingual card text recognition'
   s.description = s.summary
   s.license = { :type => 'MIT' }
   s.author = 'Pocket Trainer'
