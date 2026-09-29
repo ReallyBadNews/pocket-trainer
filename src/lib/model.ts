@@ -43,13 +43,14 @@ export const WISHLIST_LIMIT = 200;
  * `wishlist` is optional so trainers created by older code still type-check; parseCollection always fills it.
  */
 export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number; wishlist?: Wish[] };
-export type Collection = { version: 1; activeId: string; trainers: Trainer[] };
+/** grownUpLock guards deleting cards and backups. It belongs to this device: backups never carry it. */
+export type Collection = { version: 1; activeId: string; trainers: Trainer[]; grownUpLock: boolean };
 
 export const FINISH_LABELS: Record<Finish, string> = {
   normal: 'Regular', holo: 'Holo', reverse: 'Reverse holo', firstEdition: '1st edition', firstEditionHolo: '1st edition holo', firstEditionReverse: '1st edition reverse', wPromo: 'W promo', unsure: 'Not sure yet',
 };
 export const TRAINER_COLORS = TRAINER_OUTFITS.map(outfit => TRAINER_OUTFIT_COLORS[outfit]);
-export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [], wishlist: [] }] });
+export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', grownUpLock: true, trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [], wishlist: [] }] });
 /** Printed totals share the number's width: 001/066, and Gem Pack 17 07/07. */
 export const collectorTotal = (localId: string, total: number) => String(total).padStart(/^\d+$/.test(localId.split(' ').pop()!) ? localId.split(' ').pop()!.length : 1, '0');
 export const collectorNumber = (card: Card) => `${card.localId}/${card.set.total ? collectorTotal(card.localId, card.set.total) : '?'}`;
@@ -157,6 +158,7 @@ export function parseCollection(raw: string): Collection {
   const data: unknown = JSON.parse(raw);
   const invalid = () => { throw new Error('This file is not a valid Pocket Trainer backup.'); };
   if (!isRecord(data) || data.version !== 1 || !Array.isArray(data.trainers) || !data.trainers.length || data.trainers.length > 20 || !str(data.activeId)) return invalid();
+  if (data.grownUpLock !== undefined && typeof data.grownUpLock !== 'boolean') return invalid();
   const trainers: Trainer[] = data.trainers.map((t: unknown, trainerIndex) => {
     if (!isRecord(t) || !str(t.id, 100) || !str(t.name, 32) || !str(t.color, 7) || !/^#[0-9a-f]{6}$/i.test(t.color) || !Array.isArray(t.entries) || t.entries.length > 20000) return invalid();
     const fallbackAppearance = trainerAppearanceFor(trainerIndex);
@@ -201,15 +203,17 @@ export function parseCollection(raw: string): Collection {
     return { id: t.id, name: t.name, color: t.color, appearance, entries, ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}), wishlist: parseWishlist(t.wishlist) };
   });
   if (new Set(trainers.map(t => t.id)).size !== trainers.length || !trainers.some(t => t.id === data.activeId)) return invalid();
-  return { version: 1, activeId: data.activeId as string, trainers };
+  // Saves from before the lock existed, and every backup, open locked; only Settings can unlock.
+  return { version: 1, activeId: data.activeId as string, trainers, grownUpLock: data.grownUpLock ?? true };
 }
 
 const portableWishes = (t: Trainer) => (t.wishlist ?? []).map(w => ({ ...w, card: { ...w.card, localImage: undefined } }));
+/** The lock stays out of backups so a shared or edited file can't carry an unlocked setting. Trainers (and their quiz scores and wishlists) travel whole. */
 export function portableBackup(collection: Collection): string {
-  return JSON.stringify({ ...collection, trainers: collection.trainers.map(t => ({ ...t, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })), wishlist: portableWishes(t) })) }, null, 2);
+  return JSON.stringify({ version: collection.version, activeId: collection.activeId, trainers: collection.trainers.map(t => ({ ...t, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })), wishlist: portableWishes(t) })) }, null, 2);
 }
 
-/** Import adds independent profiles, preserving every existing collection. */
+/** Import adds independent profiles, preserving every existing collection and this device's lock. */
 export function mergeBackup(current: Collection, incoming: Collection, suffix = Date.now().toString(36)): Collection {
   if (current.trainers.length + incoming.trainers.length > 20) throw new Error('A device can have up to 20 trainer profiles.');
   const ids = new Set(current.trainers.map(t => t.id));
