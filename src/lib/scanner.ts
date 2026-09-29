@@ -3,8 +3,16 @@ import type { Language } from './model';
 import type { ScanLanguage } from './language-detect';
 import { recognitionWords, rerankByArtwork, cardImage, needsScanRefinement, type ScanText, type ScanCandidate } from './catalog';
 import type { Crop, ScanResult } from './scan-types';
-const module = requireOptionalNativeModule<{ recognize(uri: string, language: string, words: string[], crop: number[]): Promise<ScanResult>; refine(uri: string, language: string, words: string[]): Promise<ScanText>; compare(uri: string, urls: string[]): Promise<number[]> }>('CardScanner');
+import type { CameraOptics } from './live-capture';
+const module = requireOptionalNativeModule<{ backCameraOptics(): Partial<CameraOptics>; recognize(uri: string, language: string, words: string[], crop: number[]): Promise<ScanResult>; refine(uri: string, language: string, words: string[]): Promise<ScanText>; compare(uri: string, urls: string[]): Promise<number[]> }>('CardScanner');
 export const canRecognize = !!module;
+/** Read once the camera is running, so the lens reports the format it is actually using. */
+export function backCameraOptics(): CameraOptics | null {
+  try {
+    const optics = module?.backCameraOptics();
+    return optics?.minimumFocusDistance !== undefined ? optics as CameraOptics : null;
+  } catch { return null; }
+}
 export async function recognizeCard(uri: string, language: ScanLanguage, crop?: Crop): Promise<ScanResult> {
   if (!module) throw new Error('Automatic matching is available in the installed iPhone/iPad app. You can still find this card by name or number.');
   // Auto-detect reads without a vocabulary; the follow-up pass uses the detected language's names.

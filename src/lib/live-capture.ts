@@ -29,6 +29,29 @@ export function guideRegion(guide: Box, view: { width: number; height: number },
   return [x, y, Math.min(1 - x, guide.width / shownWidth), Math.min(1 - y, guide.height / shownHeight)];
 }
 
+/** What the back camera reports about its lens: focus limit in millimetres and its wide-side view angle. */
+export type CameraOptics = { minimumFocusDistance: number; fieldOfView: number; aspect: number; maxZoom: number };
+export const CARD_WIDTH_MM = 63;
+/** Binder pockets are a little wider than the card they hold. */
+export const POCKET_WIDTH_MM = 66;
+const FOCUS_MARGIN = 1.15;
+const MAX_FOCUS_ZOOM = 3;
+
+/**
+ * Many iPhones cannot focus closer than about 20 cm, but a card fills the guide from about 9 cm away.
+ * Zoom in just enough that the subject fills `fill` of the preview's width while the phone is still
+ * far enough back to focus. Returns expo-camera's 0–1 zoom, which is exponential in the zoom factor.
+ */
+export function closeFocusZoom(optics: CameraOptics, subjectMm: number, fill: number) {
+  const { minimumFocusDistance, fieldOfView, aspect, maxZoom } = optics;
+  if (!(minimumFocusDistance > 0 && fieldOfView > 0 && aspect > 0 && maxZoom > 1 && fill > 0)) return 0;
+  // The portrait preview's width is the photo's short side.
+  const halfWidth = Math.tan(fieldOfView * Math.PI / 360) * aspect;
+  const distance = subjectMm / (2 * fill * halfWidth);
+  const factor = Math.min(MAX_FOCUS_ZOOM, maxZoom, minimumFocusDistance * FOCUS_MARGIN / distance);
+  return factor > 1 ? Math.log(factor) / Math.log(maxZoom) : 0;
+}
+
 export function liveHint(scan: Pick<ScanResult, 'text' | 'autoCropped'>, matches: ScanCandidate[]): LiveHint {
   const text = normalize(scan.text);
   if (text.length < 12) return 'looking';

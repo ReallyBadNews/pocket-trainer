@@ -14,7 +14,7 @@ import { pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
 import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
-import { LiveCamera } from '@/components/live-camera';
+import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 import type { Crop } from '@/lib/scan-types';
 import { PAGE_LAYOUTS, pageSummary, pocketCrops, pocketIncluded, pocketStatus, waitingPocket, type PageLayout, type Pocket } from '@/lib/page-scan';
 
@@ -31,7 +31,14 @@ function quickCompare(uri: string, candidates: ScanCandidate[]) {
 }
 
 /** Read every pocket of one binder page, then add the confirmed cards together. */
-export function PageScan({ header, language, captureRequest, onAdded }: { header: ReactNode; language: ScanLanguage; captureRequest: number; onAdded: (added: AddedCards) => void }) {
+export function PageScan({ header, language, captureRequest, livePhoto, onCardPhoto, onAdded }: {
+  header: ReactNode; language: ScanLanguage; captureRequest: number;
+  /** A page photo already taken in the camera, read as soon as this opens. */
+  livePhoto?: LivePhoto | null;
+  /** The camera was switched to one card before its photo was taken. */
+  onCardPhoto: (photo: LivePhoto, match?: LiveMatch) => void;
+  onAdded: (added: AddedCards) => void;
+}) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
   const addCards = useAddCards();
@@ -56,6 +63,7 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
     handledCapture.current = captureRequest;
     void takePhoto();
   }, [captureRequest]);
+  useEffect(() => { if (livePhoto) acceptLive(livePhoto); }, []);
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const summary = pageSummary(pockets);
 
@@ -117,9 +125,11 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
       if (alive.current) { setBusy(false); setError(e instanceof Error ? e.message : 'The page could not be read. Try another photo.'); }
     }
   }
-  function acceptLive(next: Photo) {
-    setLiveOpen(false); setPhoto(next);
-    void readPage(next, layout);
+  function acceptLive(next: LivePhoto, match?: LiveMatch) {
+    setLiveOpen(false);
+    if (!next.page) { onCardPhoto(next, match); return; }
+    setLayout(next.page); setPhoto(next);
+    void readPage(next, next.page);
   }
   function changeLayout(next: PageLayout) {
     if (busy || adding || next.id === layout.id) return;

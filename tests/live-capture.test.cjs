@@ -36,3 +36,22 @@ test('the page guide maps to the matching part of a photo wider than the screen'
   const edge = guideRegion({ x: -50, y: -50, width: 600, height: 1000 }, { width: 402, height: 874 }, { width: 3024, height: 4032 });
   assert.ok(edge[0] >= 0 && edge[1] >= 0 && edge[0] + edge[2] <= 1 && edge[1] + edge[3] <= 1);
 });
+
+test('the viewfinder zooms in so a card filling the guide stays in focus range', () => {
+  const { closeFocusZoom, CARD_WIDTH_MM, POCKET_WIDTH_MM } = require('../.test-build/lib/live-capture');
+  // Roughly an iPhone 16 Pro main camera: 20 cm focus limit, 24 mm-equivalent lens.
+  const pro = { minimumFocusDistance: 200, fieldOfView: 71.6, aspect: .75, maxZoom: 123.75 };
+  const factor = zoom => Math.pow(pro.maxZoom, zoom);
+  const halfWidth = Math.tan(pro.fieldOfView * Math.PI / 360) * pro.aspect;
+  // At the chosen zoom, a card filling 68% of the preview is 23 cm away: just past the focus limit.
+  const cardZoom = factor(closeFocusZoom(pro, CARD_WIDTH_MM, .68));
+  assert.ok(cardZoom > 2 && cardZoom < 3);
+  assert.ok(Math.abs(cardZoom * CARD_WIDTH_MM / (2 * .68 * halfWidth) - 230) < 1e-6);
+  // A 9-pocket page already fills the frame from far enough away; a 4-pocket page needs a little zoom.
+  assert.ok(factor(closeFocusZoom(pro, 3 * POCKET_WIDTH_MM, .94)) < 1.25);
+  assert.ok(factor(closeFocusZoom(pro, 2 * POCKET_WIDTH_MM, .94)) > 1.5);
+  // Close-focusing lenses stay unzoomed, extreme cases are capped, and unknown optics are left alone.
+  assert.equal(closeFocusZoom({ ...pro, minimumFocusDistance: 60 }, CARD_WIDTH_MM, .68), 0);
+  assert.ok(Math.abs(factor(closeFocusZoom({ ...pro, minimumFocusDistance: 900 }, CARD_WIDTH_MM, .68)) - 3) < 1e-9);
+  assert.equal(closeFocusZoom({ ...pro, minimumFocusDistance: -1 }, CARD_WIDTH_MM, .68), 0);
+});

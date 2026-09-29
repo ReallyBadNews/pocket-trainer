@@ -32,6 +32,8 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
   const [quickDismissed, setQuickDismissed] = useState(false);
   const [quickBusy, setQuickBusy] = useState(false);
   const [liveOpen, setLiveOpen] = useState(false);
+  // A page photo taken after switching modes inside the card camera, for the page reader.
+  const [pagePhoto, setPagePhoto] = useState<LivePhoto | null>(null);
   const [manual, setManual] = useState(false);
   // Auto-detect reads the language from each photo; `language` is the one in use.
   const [autoLanguage, setAutoLanguage] = useState(true);
@@ -125,6 +127,7 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
   // The live camera may already have read the card; otherwise the photo goes through the normal reader.
   function acceptLive(next: LivePhoto, match?: LiveMatch) {
     setLiveOpen(false); setError(null);
+    if (next.page) { ++generation.current; setImproving('done'); setPagePhoto(next); setMode('page'); return; }
     setOriginal(next); setPhoto(next.uri); setManualCrop(undefined); setCrop(fullCrop);
     if (!match) { void runScan(next.uri, scanLanguage); return; }
     ++generation.current; lastScan.current = match.scan;
@@ -157,7 +160,7 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
   const toolsLabel = !autoLanguage ? LANGUAGE_LABELS[language] : detected && detected !== 'en' ? LANGUAGE_LABELS[detected] : null;
   const intro = <>
     {!sure && <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>{mode === 'page' ? 'Snap a whole binder page and add every card at once.' : 'Pokémon, Trainers, Energy—every card belongs.'}</Txt></View>}
-    <View accessibilityRole="tablist" style={s.modes}>{([['card', 'One card'], ['page', 'Binder page']] as const).map(([id, label]) => <Pressable key={id} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: mode === id }} disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setMode(id); }} style={[s.mode, mode === id && s.modeSelected]}><Icon name={id === 'card' ? 'scan' : 'binder'} size={18} color={mode === id ? 'white' : C.ink} /><Txt style={{ fontWeight: '800', fontSize: 14, color: mode === id ? 'white' : C.ink }}>{label}</Txt></Pressable>)}</View>
+    <View accessibilityRole="tablist" style={s.modes}>{([['card', 'One card'], ['page', 'Binder page']] as const).map(([id, label]) => <Pressable key={id} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: mode === id }} disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setPagePhoto(null); setMode(id); }} style={[s.mode, mode === id && s.modeSelected]}><Icon name={id === 'card' ? 'scan' : 'binder'} size={18} color={mode === id ? 'white' : C.ink} /><Txt style={{ fontWeight: '800', fontSize: 14, color: mode === id ? 'white' : C.ink }}>{label}</Txt></Pressable>)}</View>
     <View style={{ gap: 8 }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Scan tools${toolsLabel ? `, reading ${toolsLabel}` : ''}`} accessibilityHint="Language, crop and read again" aria-expanded={toolsOpen} onPress={() => { setToolsOpen(open => !open); setLanguageOpen(false); }} style={[s.languageButton, toolsOpen && { borderColor: C.ink }]}>
         <Icon name="tools" size={16} /><Txt style={{ fontSize: 12, fontWeight: '600' }}>Tools{toolsLabel ? ` · ${toolsLabel}` : ''}</Txt><View style={{ transform: [{ rotate: toolsOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={14} /></View>
@@ -171,7 +174,7 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
       </View>}
     </View>
   </>;
-  if (mode === 'page') return <PageScan header={intro} language={scanLanguage} captureRequest={captureRequest} onAdded={added => onAdded(added, 'page')} />;
+  if (mode === 'page') return <PageScan header={intro} language={scanLanguage} captureRequest={captureRequest} livePhoto={pagePhoto} onCardPhoto={(next, match) => { setPagePhoto(null); setMode('card'); acceptLive(next, match); }} onAdded={added => onAdded(added, 'page')} />;
   if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={[s.list, scroll.contentContainerStyle]}>
     <CardCrop photo={original} initial={crop} onDrag={setDragging} onCancel={() => { setEditing(false); setDragging(false); }} onConfirm={selection => {
       setEditing(false); setDragging(false); setManualCrop(selection); void runScan(original.uri, scanLanguage, selection);
