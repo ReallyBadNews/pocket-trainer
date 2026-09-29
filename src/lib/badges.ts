@@ -1,4 +1,4 @@
-export type BadgeEmblem = 'medal' | 'starters' | 'eevee' | 'birds' | 'fossil' | 'dex';
+export type BadgeEmblem = 'medal' | 'starters' | 'eevee' | 'birds' | 'fossil' | 'dex' | 'binder';
 export const BADGE_GROUPS = ['Starter adventures', 'Pokémon challenges', 'Collection milestones'] as const;
 type BadgeDetails = {
   id: string;
@@ -9,7 +9,7 @@ type BadgeDetails = {
   target: number;
 };
 export type Badge = BadgeDetails & (
-  | { kind: 'species' | 'cards' | 'languages' }
+  | { kind: 'species' | 'cards' | 'languages' | 'sets' }
   | { kind: 'species-set'; speciesIds: readonly number[] }
 );
 
@@ -45,4 +45,6 @@ export const BADGES: readonly Badge[] = [
   { id: 'hundred', name: 'Binder builder', description: 'Collect 100 cards', target: 100, kind: 'cards', group: 'Collection milestones', emblem: 'medal' },
   { id: 'world', name: 'World collector', description: 'Collect cards in two languages', target: 2, kind: 'languages', group: 'Collection milestones', emblem: 'medal' },
   { id: 'sixhundred', name: 'Collection champion', description: 'Collect 600 cards', target: 600, kind: 'cards', group: 'Collection milestones', emblem: 'medal' },
+  // Secret rares numbered past the set size are a bonus, so a set can be finished without them.
+  { id: 'set-master', name: 'Set master', description: 'Collect every numbered card in one set. Secret rares are a bonus.', target: 1, kind: 'sets', group: 'Collection milestones', emblem: 'binder' },
 ];

@@ -5,9 +5,10 @@ import { AchievementEmblem } from '@/components/achievement-emblem';
 import { C, Chip, Icon, Progress, Txt, ui } from '@/components/pokedex-ui';
 import { useChromeScroll } from '@/components/scroll-chrome';
 import { BADGES, BADGE_GROUPS, type Badge } from '@/lib/badges';
-import { speciesById } from '@/lib/catalog';
+import { catalogSet, speciesById } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
 import { badgeProgress, discoveredIds } from '@/lib/model';
+import { setProgress, type SetProgress } from '@/lib/set-progress';
 
 type BadgeFilter = 'All badges' | 'To earn' | 'Earned';
 
@@ -16,10 +17,11 @@ export function BadgesScreen({ onSpecies }: { onSpecies: (id: number) => void })
   const { trainer } = useCollection();
   const [filter, setFilter] = useState<BadgeFilter>('All badges');
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
+  const sets = useMemo(() => setProgress(trainer, catalogSet), [trainer]);
   const achievements = useMemo(() => BADGES.map(badge => {
-    const progress = badgeProgress(trainer, badge, discovered);
+    const progress = badgeProgress(trainer, badge, discovered, sets.filter(set => set.complete).length);
     return { badge, progress, earned: progress >= badge.target };
-  }), [trainer, discovered]);
+  }), [trainer, discovered, sets]);
   const earnedCount = achievements.filter(achievement => achievement.earned).length;
   const visible = achievements.filter(achievement => filter === 'All badges' || (filter === 'Earned' ? achievement.earned : !achievement.earned));
 
@@ -35,7 +37,7 @@ export function BadgesScreen({ onSpecies }: { onSpecies: (id: number) => void })
       if (!items.length) return null;
       return <View key={group} style={s.group}>
         <Txt accessibilityRole="header" style={[ui.subtitle, s.groupTitle]}>{group}</Txt>
-        {items.map(({ badge, progress, earned }) => <AchievementRow key={badge.id} badge={badge} progress={progress} earned={earned} discovered={discovered} onSpecies={onSpecies} />)}
+        {items.map(({ badge, progress, earned }) => <AchievementRow key={badge.id} badge={badge} progress={progress} earned={earned} discovered={discovered} closestSet={sets[0]} onSpecies={onSpecies} />)}
       </View>;
     })}
     {!visible.length && <View style={s.empty}>
@@ -46,20 +48,22 @@ export function BadgesScreen({ onSpecies }: { onSpecies: (id: number) => void })
   </Animated.ScrollView>;
 }
 
-function AchievementRow({ badge, progress, earned, discovered, onSpecies }: {
-  badge: Badge; progress: number; earned: boolean; discovered: ReadonlySet<number>; onSpecies: (id: number) => void;
+function AchievementRow({ badge, progress, earned, discovered, closestSet, onSpecies }: {
+  badge: Badge; progress: number; earned: boolean; discovered: ReadonlySet<number>; closestSet?: SetProgress; onSpecies: (id: number) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
+  // One finished set earns Set master, so its bar follows the set he is closest to finishing.
+  const closest = badge.kind === 'sets' && !earned ? closestSet : undefined;
   return <View style={[s.achievement, earned && s.earned]}>
     <View style={s.row}>
       <AchievementEmblem emblem={badge.emblem} earned={earned} />
       <View style={s.copy}>
         <Txt style={s.name}>{badge.name}</Txt>
         <Txt muted style={s.description}>{badge.description}</Txt>
-        <View style={s.progress}><Progress value={progress} total={badge.target} color={earned ? '#A98428' : '#679255'} /></View>
+        <View style={s.progress}><Progress value={closest ? closest.owned : progress} total={closest ? closest.official : badge.target} color={earned ? '#A98428' : '#679255'} /></View>
         <View style={s.status}>
           {earned && <Icon name="check" color="#80611F" size={14} />}
-          <Txt style={[s.progressText, earned && { color: '#80611F' }]}>{earned ? 'Badge earned!' : `${progress} / ${badge.target} ${badge.kind === 'cards' ? 'cards' : badge.kind === 'languages' ? 'languages' : 'Pokémon'}`}</Txt>
+          <Txt style={[s.progressText, earned && { color: '#80611F' }]}>{earned ? 'Badge earned!' : badge.kind === 'sets' ? closest ? `Closest: ${closest.name} · ${closest.owned} / ${closest.official}` : 'Add a card to start your first set' : `${progress} / ${badge.target} ${badge.kind === 'cards' ? 'cards' : badge.kind === 'languages' ? 'languages' : 'Pokémon'}`}</Txt>
         </View>
       </View>
     </View>
@@ -98,7 +102,7 @@ const s = StyleSheet.create({
   description: { fontSize: 13, lineHeight: 19 },
   progress: { marginVertical: 5 },
   status: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  progressText: { color: C.muted, fontSize: 11, lineHeight: 17, fontWeight: '700' },
+  progressText: { color: C.muted, fontSize: 11, lineHeight: 17, fontWeight: '700', flexShrink: 1 },
   toggle: { minHeight: 44, paddingVertical: 10, paddingHorizontal: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8, borderTopWidth: 1, borderTopColor: C.line },
   toggleText: { color: C.muted, fontSize: 12, fontWeight: '700', flexShrink: 1 },
   checklist: { padding: 12, paddingTop: 0, gap: 10 },

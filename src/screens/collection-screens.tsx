@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { C, CardArt, Chip, Icon, Progress, SearchBox, Txt, TypePill, Button, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
-import { species, speciesById, speciesImage, normalize } from '@/lib/catalog';
+import { catalogSet, species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, cardKindLabel, type CardFilter } from '@/lib/card-kind';
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { collectorNumber, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
@@ -16,6 +16,8 @@ import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from 
 import { usePricing } from '@/lib/use-pricing';
 import { speciesTypes, typeCounts, typeLabel, TYPE_COLORS, type PokemonType } from '@/lib/species-details';
 import { QuizInvite } from './quiz-screen';
+import { setProgress, type SetProgress } from '@/lib/set-progress';
+import { BINDER_VIEWS, BinderPages, type BinderView } from '@/components/binder-pages';
 
 export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void; onQuiz: () => void }) {
   const scroll = useChromeScroll();
@@ -60,8 +62,9 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onSc
     }} />;
 }
 
-export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrintingChange }: {
-  onScan: () => void; onEntry: (entry: Entry) => void; onlyNeedsPrinting: boolean; onNeedsPrintingChange: (value: boolean) => void;
+export function BinderScreen({ onScan, onEntry, onSet, onlyNeedsPrinting, onNeedsPrintingChange, view, onViewChange }: {
+  onScan: () => void; onEntry: (entry: Entry) => void; onSet: (set: SetProgress) => void; onlyNeedsPrinting: boolean; onNeedsPrintingChange: (value: boolean) => void;
+  view: BinderView; onViewChange: (view: BinderView) => void;
 }) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
@@ -77,11 +80,15 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
   const filtered = trainer.entries.filter(e => (!onlyNeedsPrinting || needsPrinting(e)) && matchesCardFilter(e.card, typeFilter) && (!query || query.trim().split(/\s+/).every(term => normalize(`${e.card.name} ${e.card.set.name} ${e.card.localId} ${e.card.dexIds.map(id => speciesById.get(id)?.en ?? '').join(' ')}`).includes(normalize(term)))) && (filter !== 'Favorites' || e.favorite) && (filter !== 'Duplicates' || e.quantity > 1) && (filter !== 'Japanese' || e.card.language === 'ja') && (filter !== 'Korean' || e.card.language === 'ko') && (filter !== 'Chinese' || e.card.language.startsWith('zh-')));
   const entries = sortBinderEntries(filtered, sort, client.snapshots, client.fx);
   const priceSort = sort === 'priceHigh' || sort === 'priceLow';
+  const sets = useMemo(() => setProgress(trainer, catalogSet), [trainer]);
+  const pages = view === 'pages';
   function clearFilters() { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(false); }
-  return <Animated.FlatList {...scroll} data={entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}
+  // Pages keep this vertical list, so the app chrome still collapses; the carousel lives in the header.
+  return <Animated.FlatList {...scroll} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your card binder</Txt><Txt muted>{totalCards(trainer)} cards · {trainer.entries.length} printings · {duplicateCards(trainer)} {duplicateCards(trainer) === 1 ? 'extra' : 'extras'}</Txt></View><Pressable accessibilityRole="button" accessibilityLabel="Add a card" onPress={onScan} style={s.addButton}><Icon name="plus" color="white" /></Pressable></View>
       <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(true); }} />
+      <YourSets sets={sets} onSet={onSet} />
       <SearchBox value={query} onChange={setQuery} placeholder="Search your cards" />
       <View style={{ gap: 8 }}>
         <View style={s.tools}>
@@ -97,14 +104,35 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{['All cards', 'Favorites', 'Duplicates', 'Japanese', 'Korean', 'Chinese'].map(label => <Chip key={label} label={label} selected={label === filter} onPress={() => setFilter(label)} />)}</ScrollView>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{CARD_FILTERS.map(f => <Chip key={f.id} label={f.id === 'all' ? 'Every type' : f.label} selected={typeFilter === f.id} onPress={() => setTypeFilter(f.id)} />)}</ScrollView>
+      <View accessibilityRole="radiogroup" accessibilityLabel="Binder view" style={s.viewToggle}>{BINDER_VIEWS.map(option => <Pressable key={option.id} accessibilityRole="radio" accessibilityLabel={option.id === 'pages' ? 'Binder pages' : 'Card grid'} aria-checked={view === option.id} onPress={() => onViewChange(option.id)} style={[s.viewOption, view === option.id && { backgroundColor: C.ink }]}><Icon name={option.icon} size={17} color={view === option.id ? C.paper : C.muted} /><Txt style={{ fontSize: 13, fontWeight: '700', color: view === option.id ? C.paper : C.muted }}>{option.label}</Txt></Pressable>)}</View>
       {(onlyNeedsPrinting || query || filter !== 'All cards' || typeFilter !== 'all') && <View style={ui.between}><Txt muted style={{ fontSize: 12 }}>{entries.length} {entries.length === 1 ? 'printing' : 'printings'}{onlyNeedsPrinting ? ' to confirm' : ' shown'}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Clear binder filters" onPress={clearFilters} style={{ minHeight: 40, justifyContent: 'center' }}><Txt style={{ fontSize: 12, textDecorationLine: 'underline' }}>Clear filters</Txt></Pressable></View>}
+      {pages && entries.length > 0 && <BinderPages entries={entries} onEntry={onEntry} />}
     </View>}
-    ListEmptyComponent={<View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese, Korean and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
+    ListEmptyComponent={pages && entries.length > 0 ? null : <View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese, Korean and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
     renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[item.card.language]}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
       <View>{isShiny(item.card, item.finish) ? <HoloShine><CardArt card={item.card} /></HoloShine> : <CardArt card={item.card} />}<View style={s.quantity}><Txt style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>×{item.quantity}</Txt></View>{item.favorite && <View style={s.favorite}><Icon name="heart" size={15} color={C.red} filled /></View>}</View>
       <Txt style={{ fontWeight: '800', fontSize: 14, marginTop: 8 }} numberOfLines={1}>{item.card.name}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }} numberOfLines={1}>{item.card.set.name}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>{cardKindLabel(item.card)}</Txt><Txt muted style={{ fontFamily: mono, fontSize: 10 }}>{LANGUAGE_CODES[item.card.language]} · {collectorNumber(item.card)}</Txt>
       <CardPriceTag card={item.card} finish={item.finish} />
     </Pressable>} />;
+}
+
+/** Collection overview: the sets closest to complete, with a checklist behind each one. */
+function YourSets({ sets, onSet }: { sets: SetProgress[]; onSet: (set: SetProgress) => void }) {
+  const [all, setAll] = useState(false);
+  if (!sets.length) return null;
+  const complete = sets.filter(set => set.complete).length;
+  return <View style={s.sets}>
+    <View style={ui.between}><Txt accessibilityRole="header" style={{ fontWeight: '800', fontSize: 17 }}>Your sets</Txt><Txt muted style={{ fontSize: 11, flexShrink: 1, textAlign: 'right' }}>{complete ? `${complete} complete!` : 'Tap a set to see what’s missing'}</Txt></View>
+    {(all ? sets : sets.slice(0, 3)).map(set => {
+      const note = [set.complete && 'Set complete!', set.bonus > 0 && `+${set.bonus} bonus`].filter(Boolean).join(' · ');
+      return <Pressable key={set.key} accessibilityRole="button" accessibilityLabel={`${set.name}, ${LANGUAGE_LABELS[set.language]}: ${set.owned} of ${set.official} cards${note ? `, ${note}` : ''}. Open checklist`} onPress={() => onSet(set)} style={({ pressed }) => [s.setRow, set.complete && s.setDone, pressed && { opacity: .7 }]}>
+        <View style={ui.between}><View style={s.setName}><Txt numberOfLines={1} style={{ fontWeight: '800', fontSize: 14, flexShrink: 1 }}>{set.name}</Txt><Txt style={s.setLanguage}>{LANGUAGE_CODES[set.language]}</Txt></View><Txt style={{ fontFamily: mono, fontSize: 12, fontWeight: '700' }}>{set.owned} / {set.official}</Txt></View>
+        <Progress value={set.owned} total={set.official} color={set.complete ? '#A98428' : '#679255'} />
+        {!!note && <View style={ui.row}>{set.complete && <Icon name="check" size={13} color="#80611F" />}<Txt style={{ fontSize: 11, lineHeight: 16, fontWeight: '700', color: set.complete ? '#80611F' : C.muted }}>{note}</Txt></View>}
+      </Pressable>;
+    })}
+    {sets.length > 3 && <Pressable accessibilityRole="button" accessibilityLabel={all ? 'Show fewer sets' : `See all ${sets.length} sets`} aria-expanded={all} onPress={() => setAll(value => !value)} style={({ pressed }) => [s.setsToggle, pressed && { opacity: .6 }]}><Txt style={{ fontSize: 12, fontWeight: '700', color: C.muted }}>{all ? 'Show fewer sets' : `See all sets (${sets.length})`}</Txt><Icon name={all ? 'minus' : 'plus'} size={17} color={C.muted} /></Pressable>}
+  </View>;
 }
 
 const s = StyleSheet.create({
@@ -130,4 +158,12 @@ const s = StyleSheet.create({
   sortOption: { minHeight: 44, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   quantity: { position: 'absolute', bottom: 8, right: 8, backgroundColor: C.ink, paddingHorizontal: 9, borderRadius: 7 },
   favorite: { position: 'absolute', top: 7, right: 7, backgroundColor: 'white', borderRadius: 20, padding: 6 },
+  viewToggle: { flexDirection: 'row', gap: 3, padding: 3, borderRadius: 13, backgroundColor: '#E3EAD9', borderWidth: 1, borderColor: '#C7D2BB' },
+  viewOption: { flex: 1, minHeight: 44, borderRadius: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  sets: { gap: 8, padding: 12, paddingBottom: 6, borderRadius: 16, backgroundColor: '#F5F8EE', borderWidth: 1, borderColor: C.line },
+  setRow: { minHeight: 52, gap: 6, paddingVertical: 9, paddingHorizontal: 11, borderRadius: 11, backgroundColor: '#FCFDF9', borderWidth: 1, borderColor: '#DCE4D2', justifyContent: 'center' },
+  setDone: { backgroundColor: '#F7ECCC', borderColor: '#DBC786' },
+  setName: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
+  setLanguage: { fontFamily: mono, fontSize: 10, lineHeight: 15, paddingHorizontal: 5, borderRadius: 5, overflow: 'hidden', backgroundColor: '#DCE6D0', color: C.muted },
+  setsToggle: { minHeight: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 4 },
 });
