@@ -1,0 +1,59 @@
+{
+ "source": "Synthetic 9-pocket page of public TCGdex images with glare, 3° rotation, perspective, blur and noise, read cell by cell with the production CardVision core (auto language) on macOS.",
+ "pockets": [
+  {
+   "expected": "sv03.5-004",
+   "text": "BASIC\nCharmander\nне 70\nBlazing Destruction\nDiscard a Stadium in play.\nSteady Firebreathing\n30\nweakness\n× 2\nresistance\nretreat\nUK. GIDORA\nFrom the time it is born, a flame burns at the tip of its\ntail. Its life would end if the flame were to go out.\n004/165 •",
+   "topText": "BASIC\nBASIG\nBASI\nCharmander\nCharmaner\nCharmader\nне 70\nне70\nне.70\n",
+   "bottomText": "eakness\nx2\nresistance\nretreat\nMus. GIDORA\nFrom the time it is born, a flame burns at the tip of its\nMEW\n1 004/165 •\ntail. Its life would end if the flame were to go out.\nSZOUI PO\n1o/Ceatu\nes/ GAME\nFREAK\nweakness\n× 2\nresistance\nretreat\nUK. GIDORA\nFrom the time it is born, a flame burns at the tip of its\ntail. Its life would end if the flame were to go out.\n004/165 •\n"
+  },
+  {
+   "expected": "sv03.5-025",
+   "text": "BASIC\nPikachu\n160 4\nCharge\nSearch your deck for a Basic Energy card and attach it\nto this Pokémon. Then, shuffle your deck.\n4\nPika Punch\n50\nweakness\n× 2\nresistance\nretreat\nboye Kimura\nWhen it is angered, it immediately discharges the\n025/165 •\nenergy stored in the pouches in its cheeks",
+   "topText": "BASIC\nBASI\nBASC\nPikachu\nPikach\nPikahu\n160 4\nN604\nN604\n",
+   "bottomText": "weakness\nx2\nresistance\nretreat\n*\nIllos. Nooye Kimure\nWhen it is angered, it immediately discharnges the\nMEW IN\n025/165\nenergy stored in the pouches in its cheeks\n©2023 Pokemon / Nintendo/C\nMAtIEN/ GAME FREAN\nweakness\n× 2\nresistance\nretreat\nboye Kimura\nWhen it is angered, it immediately discharges the\n025/165 •\nenergy stored in the pouches in its cheeks\n"
+  },
+  {
+   "expected": "sv03.5-133",
+   "text": "BASIC\nEevee\nMP 70\nNO: 0133\nColorful Friends\nSearch your deck for up to 3 Pokémon of different types.\nreveal them, and put them into your hand. Then, shuffle\nyour deck.\nSkip\n10\nweaknes\n× 2\nresistance\nretreat\n*\nNorumi Sold\nIts ability to evolve into many forms allows it to\nMEND 133/165 •\nadapt smoothly and perfectly to any environment.",
+   "topText": "BASIC\nBASIC\nBASIG\nEevee\nEvee\nEeve\nMP 70\nMP70\nuP 70\n",
+   "bottomText": "Skip\n10\nweakness\nx2\nresistance\nretreat\nIps. Norum/ Soto\nIts ability to evoive into many forms allows it to\n133/165 •\nadapt smoothly and perfectly to any environment.\no / Сreatуres/ GAME FREAX\nSkip\n10\nweaknes\n× 2\nresistance\nretreat\n*\nNorumi Sold\nIts ability to evolve into many forms allows it to\nMEND 133/165 •\nadapt smoothly and perfectly to any environment.\n"
+  },
+  {
+   "expected": "sv08-057",
+   "text": "BASIC\nPikachu e\nw2004\nTora\nAs long as this Pokémon is on your Bench, prevent all damage done to this\nPokémon by attacks (both yours and your opponent's)\nAbility\nResolute Heart\nIf this Pokémon has full HP and would be Knocked Out by\ndamage from an attack, it is not Knocked Out, and its\nremaining HP becomes 10.\nTopaz Bolt\n300\nDiscard 3 Energy from this Pokémon.\nweakness\n× 2\nresistance\nretreat\nPokémon eX rule\noky CG Works\nWhen your Pokémon eX\nH\nis Knocked Out, your opponent takes 2 Prize cards.\n057/191\nItem",
+   "topText": "BASIC\nBASIG\nBASI\nPikachu e\nPikachue\nPikachu @\nw2004\nTora\nTera\nTara\nAs long as this Pokémon is on your Bench, prevent all damage done to this\nAs long as this Pokémon is on your Bench, prevent afl damage done to this\nAs long as this Pokémon is on your Bench, prevent al damage done to this\nPokémon by attacks (both yours and your opponent's)\nPokémon by attacks (both yours and your opponent's).\nPokémon by attacks (both yours and your opponent'»).\n",
+   "bottomText": "weakness\nx2\nresistance\nretreat\nPokémon eX rule\nAllus aky CG Works\nWhen your Pokémon eX\nH\nSSP BN\nis Knocked Out, your opponent taker 2 Prize cards.\n057/191\n92024 Pokemor\n/Peinte\ndo / Creatures/GAME FRE\nItem\nTOA\nweakness\n× 2\nresistance\nretreat\nPokémon eX rule\noky CG Works\nWhen your Pokémon eX\nH\nis Knocked Out, your opponent takes 2 Prize cards.\n057/191\nItem\n"
+  },
+  {
+   "expected": "sv06-130",
+   "text": "Dragapult ex\nw320\nEvolves from Drakioak\nvera\nAs long as this Pokimon is on your Bench, prevent all damage done to this\nPokimen by attacks (both yours and your opponents)\nJet Headbutt\n70\nPhantom Dive\n200\nPut 6 damage counters on your opponent's Benched\nPokémon in any way you like.\nweakness\nustand\nretreat\nPokémon eX rule\n7h Sbon Groph\nWhen your Pokémon eX\nis Knocked Out, your opponent takes 2 Prize cards.\n130/167\n*",
+   "topText": "Dragapult ex\nDragapult eX\nDragapultex\nw320\nEvolves from Drakioak\nEvolves from Drakioad\nEvolves from Drakioak.\nvera\nVera\nTera\nAs long as this Pokimon is on your Bench, prevent all damage done to this\nAs long as this Pokimon is on your Bench, prevent all damage done so this\nAs long as this Pokimon is on your Bench, prevent all damage done to thin\nPokimen by attacks (both yours and your opponents)\nPokémen by attacks (both yours and your opponents)\nPekimen by attacks (both yours and your opponents)\n",
+   "bottomText": "weakness\nresistance\nretreat\nPokémon eX rule\nSban Graphis\nWhen your Pokémon eX\nTWМ Iк\nis Knocked Out, your opponent takes 2 Prize cards.\n1307167\no / Creatares / GAME FREAK\nweakness\nustand\nretreat\nPokémon eX rule\n7h Sbon Groph\nWhen your Pokémon eX\nis Knocked Out, your opponent takes 2 Prize cards.\n130/167\n*\n"
+  },
+  {
+   "expected": "swsh12.5-001",
+   "text": "BASIC\nOddish\nHP 50\nNO. 043. Weed Pokemon HT 1'8: WT 11.9 Ibs\nLeaf Boomerang\n10x\nFlip 2 coins. This attack does 10 damage for each heads.\nweakness\n/ resistance\nretreat\nIllus. ryomo uronuke\nIf exposed to moonlight, it starts to move. it roams\nfar and wide at night to scatter its seeds.\n001/159 •\n02023 Poke-on/ Nintendo/Creatures/GAMEFREAK",
+   "topText": "BASIC\nBASI\nBSIC\nOddish\nOddis\nOddsh\nHP 50\nHP50\nHP50\n",
+   "bottomText": "weakness\nx2\n( resistance\nretreat\nillus. ryomo wrotuke\nIf exposed to moonlight, it starts to move. It roams\nfar and wide at night to scatter its seeds.\n001/159 •\n92023 Polemen/M\nntendo / Crewtunes/GAME FREAK\nweakness\n/ resistance\nretreat\nIllus. ryomo uronuke\nIf exposed to moonlight, it starts to move. it roams\nfar and wide at night to scatter its seeds.\n001/159 •\n02023 Poke-on/ Nintendo/Creatures/GAMEFREAK\n"
+  },
+  {
+   "expected": "sv04.5-091",
+   "text": "Ultra Ball\nYou can use this card only if you discard 2 other cards from\nyour hand.\nSearch your deck for a Pokémon, reveal it, and put it into\nyour hand. Then, shuffle your deck.\nYou may play any number of Item cards during\nMus. Ayoko Yoshida\nyour turn.\nG\nPAF IN\n091/091 •\no / Creatures/GAME FREAK",
+   "topText": "Ultra Ball\nUltraBall\nUlta Ball\n",
+   "bottomText": "You may play any number of Item cards during\nIllus, Ayoka Yoshida\nyour turn.\nPAFI\n091/091\nФ2024 Pokémol\n/Creatures/GAME FREAK\nYou may play any number of Item cards during\nMus. Ayoko Yoshida\nyour turn.\nG\nPAF IN\n091/091 •\no / Creatures/GAME FREAK\n"
+  },
+  {
+   "expected": "sv02-085",
+   "text": "BASIC\nSlowpoke\nNO 0079\nPOKO HE 3 11 WT.79,41\nTail-Fishing\nFlip a coin. If heads, search your deck for a card and put it\ninto your hand. Then, shuffle your deck. If tails, discard a\ncard from your hand.\nZen Headbutt\n30\n× 2\nresistance\n-30\nretreat\nIt is incredibly slow and dopey. it takes five\nG\n085/193 •\nseconds tor it to feel pain when under attack\n©2023 P\ndo / Creatures / GAME FREAK",
+   "topText": "BASIC\nBASIG\nBASI\nSlowpoke\nSlowpok\nSlowoke\n",
+   "bottomText": "weaknesi\nx2\nresistance 5-30\nretreat\ntlus, sowsow\nIt is incredibly slow and dopey, It takes five\nPALDN\n085/193\nseconds for it to feel pain when under attack\n©2023 Poka\nn / Nintendo /Creatures/GAME FREAK\n× 2\nresistance\n-30\nretreat\nIt is incredibly slow and dopey. it takes five\nG\n085/193 •\nseconds tor it to feel pain when under attack\n©2023 P\ndo / Creatures / GAME FREAK\n"
+  },
+  {
+   "expected": "me01-010",
+   "text": "STAGE2\nMeganium\nHP 160 €\nEvolves from Bayleef\nNO. 0154. Herb Pokemon HT. 5:11: WT. 221.6 Ibs.\nAbility\nWild Growth\nEach Basic Energy attached to all of your Pokémon provides\nEnergy. The effect of Wild Growth doesn't stack.\nSolar Beam\n140\nreakness\n× 2\nresistance\nretreat\nBlus. Yoriyuki Ikegomi\nAnyone who stands beside it becomes\nrefreshed, just as if they were soaking in\n010/132*\nthe soothing atmosphere of a forest.\n02025 Pokemon / Nintendo / Creatures/ GAME FREAK",
+   "topText": "STAGE2\nSTAGE\nSTAGE2\nMeganium\nMeganim\nMeganum\nHP 160 €\nHP 160€\nuP 160 €\nEvolves from Bayleef\nEvolves from Baylee\nEvolves from Baylef\n",
+   "bottomText": "veakness\nx2\nresistance\nretreat\nflus. Yoriyuki Ikegami\nAnyone who stands beside it becomes\nMEG EN\nrefreshed, just as if they were soaking in\n010/132\nthe soothing atmosphere of a forest.\n02025 Pokémon / Nintendo / Creatures/GAME FREAK\nreakness\n× 2\nresistance\nretreat\nBlus. Yoriyuki Ikegomi\nAnyone who stands beside it becomes\nrefreshed, just as if they were soaking in\n010/132*\nthe soothing atmosphere of a forest.\n02025 Pokemon / Nintendo / Creatures/ GAME FREAK\n"
+  }
+ ]
+}

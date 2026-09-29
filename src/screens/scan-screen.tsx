@@ -18,9 +18,11 @@ import { fullCrop, type Crop, type ScanResult } from '@/lib/scan-types';
 import { CARD_FILTERS, cardKindLabel, scanTypeHint, type CardFilter } from '@/lib/card-kind';
 import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
+import { PageScan } from './page-scan';
 
-export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardBrief, draft?: Card) => void; initialQuery?: string }) {
+export function ScanScreen({ onCard, onPageAdded, initialQuery = '' }: { onCard: (card: CardBrief, draft?: Card) => void; onPageAdded: (card: Card, newIds: number[], quantity: number) => void; initialQuery?: string }) {
   const scroll = useChromeScroll();
+  const [mode, setMode] = useState<'card' | 'page'>('card');
   const [manual, setManual] = useState(false);
   // Auto-detect reads the language from each photo; `language` is the one in use.
   const [autoLanguage, setAutoLanguage] = useState(true);
@@ -107,6 +109,17 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
     } catch (e) { if (alive.current && generation.current === id) setError(e instanceof Error ? e.message : 'The photo could not be read. Try again or search below.'); }
     finally { if (alive.current && generation.current === id) { busyRef.current = false; setBusy(false); setImproving('done'); } }
   }
+  const intro = <>
+    <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>{mode === 'page' ? 'Snap a whole binder page and add every card at once.' : 'Pokémon, Trainers, Energy—every card belongs.'}</Txt></View>
+    <View accessibilityRole="tablist" style={s.modes}>{([['card', 'One card'], ['page', 'Binder page']] as const).map(([id, label]) => <Pressable key={id} accessibilityRole="tab" accessibilityLabel={label} accessibilityState={{ selected: mode === id }} disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setMode(id); }} style={[s.mode, mode === id && s.modeSelected]}><Icon name={id === 'card' ? 'scan' : 'binder'} size={18} color={mode === id ? 'white' : C.ink} /><Txt style={{ fontWeight: '800', fontSize: 14, color: mode === id ? 'white' : C.ink }}>{label}</Txt></Pressable>)}</View>
+    <View style={{ gap: 8 }}>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Card language: ${languageSummary}`} accessibilityHint="Opens language choices. Automatic detection is recommended." aria-expanded={languageOpen} onPress={() => setLanguageOpen(open => !open)} style={[s.languageButton, languageOpen && { borderColor: C.ink }]}>
+        <Txt style={{ fontSize: 12, fontWeight: '600' }}>Language: {languageSummary}</Txt><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={14} /></View>
+      </Pressable>
+      {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={s.languageOption}><View style={{ flex: 1 }}><Txt style={{ fontSize: 13, fontWeight: scanLanguage === option ? '600' : '400' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted style={{ fontSize: 11 }}>Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={17} />}</Pressable>)}</View>}
+    </View>
+  </>;
+  if (mode === 'page') return <PageScan header={intro} language={scanLanguage} onAdded={onPageAdded} />;
   if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={[s.list, scroll.contentContainerStyle]}>
     <CardCrop photo={original} initial={crop} onDrag={setDragging} onCancel={() => { setEditing(false); setDragging(false); }} onConfirm={selection => {
       setEditing(false); setDragging(false); setManualCrop(selection); void runScan(original.uri, scanLanguage, selection);
@@ -114,13 +127,7 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
   </Animated.ScrollView>;
   return <Animated.FlatList {...scroll} data={results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
-      <View><Txt style={ui.title}>A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>
-      <View style={{ gap: 8 }}>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Card language: ${languageSummary}`} accessibilityHint="Opens language choices. Automatic detection is recommended." aria-expanded={languageOpen} onPress={() => setLanguageOpen(open => !open)} style={[s.languageButton, languageOpen && { borderColor: C.ink }]}>
-          <Txt style={{ fontSize: 12, fontWeight: '600' }}>Language: {languageSummary}</Txt><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={14} /></View>
-        </Pressable>
-        {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={s.languageOption}><View style={{ flex: 1 }}><Txt style={{ fontSize: 13, fontWeight: scanLanguage === option ? '600' : '400' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted style={{ fontSize: 11 }}>Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={17} />}</Pressable>)}</View>}
-      </View>
+      {intro}
       {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted style={{ fontSize: 12 }}>{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
       <View style={s.capture}>
         <View style={[s.corner, { top: 16, left: 16, borderTopWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { top: 16, right: 16, borderTopWidth: 3, borderRightWidth: 3 }]} /><View style={[s.corner, { bottom: 16, left: 16, borderBottomWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { bottom: 16, right: 16, borderBottomWidth: 3, borderRightWidth: 3 }]} />
@@ -143,6 +150,9 @@ export function ScanScreen({ onCard, initialQuery = '' }: { onCard: (card: CardB
 }
 const s = StyleSheet.create({
   list: { padding: 20, paddingBottom: 40 },
+  modes: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 14, backgroundColor: '#DCE6CF' },
+  mode: { flex: 1, minHeight: 44, borderRadius: 11, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7 },
+  modeSelected: { backgroundColor: C.ink },
   capture: { minHeight: 245, backgroundColor: '#2C4037', borderRadius: 19, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 2, overflow: 'hidden' },
   corner: { position: 'absolute', width: 24, height: 24, borderColor: '#86B99A' },
   reading: { position: 'absolute', inset: 0, backgroundColor: '#20392BE8', justifyContent: 'center', alignItems: 'center', gap: 10 },
