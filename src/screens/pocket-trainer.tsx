@@ -56,7 +56,7 @@ export default function PocketTrainer() {
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
-        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} />}
+        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} onPageAdded={(card, newIds, quantity) => setDiscovery({ card, newIds, quantity })} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>

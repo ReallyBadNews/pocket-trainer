@@ -12,6 +12,19 @@ The original scanner ran one Apple Vision text-recognition pass across the entir
 
 “Adjust crop” opens the original photo with four draggable corners. “Read this card” reruns recognition on that selection. “Read again” retries the current selection. Changing languages also rereads the photo. Manual name/number search remains available; “Mega Charizard” also finds catalog names written “M Charizard EX.”
 
+## Binder pages
+
+**Binder page** mode photographs a whole 9-, 4- or 12-pocket page. The photo is divided evenly into pockets, and each pocket runs the same progressive pipeline as a single card with its pocket as the crop. Picture comparison is limited to three seconds per pocket so one slow download cannot hold up the page. Each pocket is classified:
+
+- **Match** (green check): an exact set/number printing or a clear name + number match. Ready to add.
+- **Check** (yellow ?): the best suggestion is uncertain. It is only added after the collector confirms it or picks another suggestion.
+- **Empty**: fewer than 12 readable characters (an empty sleeve or a card back).
+- **Unreadable**: text was found but no card matched. The pocket panel offers search.
+
+Card details are fetched while the page is reviewed, which lets pockets that will unlock a new Pokémon show a NEW tag. Adding the page saves every included card in one collection update, with the same default printing as the single-card flow, and shows one discovery celebration.
+
+A synthetic page of nine public card images with glare, a 3° rotation, perspective, blur and noise ranked all nine exact cards first using an even grid (`tests/fixtures/scan-page-text.json`). Real sleeves and binder rings still need physical testing; the photo should be taken from directly above with the page filling the frame.
+
 ## Language detection
 
 Auto-detect is the default. The first whole-card pass sets Apple Vision's `automaticallyDetectsLanguage` rather than a fixed language. Listing several CJK languages does not work, because Vision then uses only the first. `detectCardLanguage` then classifies the card body text. The footer is excluded because it is always read with the English model.
