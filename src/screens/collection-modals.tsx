@@ -1,10 +1,10 @@
 import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, Txt, mono, ui } from '@/components/pokedex-ui';
+import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, TypePill, Txt, mono, ui } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
@@ -16,6 +16,7 @@ import { CardPriceTag, CardValuePanel } from '@/components/card-values';
 import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLORS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
+import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { AboutScreen } from './about-screen';
 
 export function Sheet({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
@@ -83,15 +84,57 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   </ScrollView></Sheet>;
 }
 
-export function SpeciesModal({ id, onClose, onFindCards, onEntry }: { id: number; onClose: () => void; onFindCards: (name: string) => void; onEntry: (entry: Entry) => void }) {
+const nameOf = (id: number) => speciesById.get(id)?.en ?? `#${id}`;
+const listNames = (ids: number[]) => ids.length < 2 ? ids.map(nameOf).join('') : `${ids.slice(0, -1).map(nameOf).join(', ')} and ${nameOf(ids[ids.length - 1])}`;
+function familyNote(ids: number[], discovered: ReadonlySet<number>) {
+  const have = ids.filter(id => discovered.has(id));
+  if (have.length === ids.length) return 'You have the whole family!';
+  if (!have.length) return 'Who will you discover first?';
+  return have.length <= 3 ? `You have ${listNames(have)}!` : `You have ${have.length} of ${ids.length} in this family!`;
+}
+
+export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: { id: number; onClose: () => void; onFindCards: (name: string) => void; onEntry: (entry: Entry) => void; onSpecies: (id: number) => void }) {
   const { trainer } = useCollection();
+  const { width } = useWindowDimensions();
   const pokemon = speciesById.get(id)!;
   const entries = trainer.entries.filter(e => pokemonIds(e.card).includes(id));
   const owned = entries.length > 0;
+  const cardCount = entries.reduce((n, e) => n + e.quantity, 0);
+  const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
+  const types = speciesTypes(id);
+  const entry = pokedexEntry(id);
+  const family = evolutionFamily(id);
+  const familyIds = family.flat().map(member => member.id);
+  // Only Eevee has more than three branches; wrap them into a grid beside it.
+  // Tiles share the row (sheet width minus padding, arrows and gaps) so three stages fit a 375pt phone.
+  const wideColumns = width >= 700 ? 4 : 2;
+  const slots = family.reduce((n, stage) => n + (stage.length > 3 ? wideColumns : 1), 0);
+  const tile = Math.min(96, Math.floor((Math.min(width - 24, 600) - 66 - (family.length - 1) * 30 - (wideColumns - 1) * 6 * Number(family.some(stage => stage.length > 3))) / Math.max(1, slots)));
   return <Sheet title={`Pokédex #${String(id).padStart(3, '0')}`} onClose={onClose}><ScrollView contentContainerStyle={m.content}>
-    <View style={{ alignItems: 'center', gap: 8 }}><Image source={speciesImage(id)} style={{ width: 240, height: 230, opacity: owned ? 1 : .3 }} tintColor={owned ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" /><Txt style={ui.title}>{pokemon.en}</Txt><Txt muted>{pokemon.ja} · {pokemon.genus}</Txt><View style={m.languageTag}><Txt style={{ fontSize: 12, fontWeight: '700' }}>{owned ? `${entries.reduce((n, e) => n + e.quantity, 0)} cards collected` : 'Not discovered yet'}</Txt></View></View>
+    <View style={{ alignItems: 'center', gap: 8 }}><Image accessibilityLabel={owned ? pokemon.en : `${pokemon.en} silhouette`} source={speciesImage(id)} style={{ width: 240, height: 230, opacity: owned ? 1 : .3 }} tintColor={owned ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" /><Txt style={ui.title}>{pokemon.en}</Txt>
+      {types.length > 0 && <View accessible accessibilityLabel={`${types.map(typeLabel).join(' and ')} type`} style={ui.row}>{types.map(type => <TypePill key={type} type={type} />)}</View>}
+      <Txt muted>{pokemon.ja} · {pokemon.genus}</Txt><View style={m.languageTag}><Txt style={{ fontSize: 12, fontWeight: '700' }}>{owned ? `${cardCount} ${cardCount === 1 ? 'card' : 'cards'} collected` : 'Not discovered yet'}</Txt></View></View>
+    <View accessible accessibilityLabel={owned ? `Pokédex entry. ${entry ?? 'Coming soon.'}` : `Pokédex entry locked. Discover ${pokemon.en} to unlock it.`} style={m.entry}>
+      <View style={m.entryLip}><View style={m.speaker}>{[1, 2, 3].map(n => <View key={n} style={m.speakerLine} />)}</View><Txt style={m.entryLabel}>POKÉDEX ENTRY</Txt><View style={[m.power, !owned && { backgroundColor: '#A5B299' }]} /></View>
+      <View style={m.entryScreen}>{owned
+        ? <Txt style={m.entryText}>{entry ?? 'This Pokédex entry is still being written.'}</Txt>
+        : <View style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="lock" size={24} color="#6B7B64" /><View style={{ flex: 1, gap: 2 }}><Txt style={[m.entryText, { fontWeight: '800' }]}>Discover {pokemon.en} to unlock its Pokédex entry!</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19 }}>Scan or add any {pokemon.en} card.</Txt></View></View>}</View>
+    </View>
+    <View style={{ gap: 10 }}><Txt style={ui.subtitle}>Evolution</Txt>{family.length > 1 ? <>
+      <View style={m.evolution}>{family.map((stage, i) => <Fragment key={i}>
+        {i > 0 && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><Icon name="arrow" size={18} color={C.muted} /></View>}
+        <View style={[m.stage, stage.length > 3 && { flexDirection: 'row', flexWrap: 'wrap', width: wideColumns * tile + (wideColumns - 1) * 6 }]}>{stage.map(member => {
+          const current = member.id === id, found = discovered.has(member.id);
+          return <Pressable key={member.id} accessibilityRole="button" accessibilityLabel={`${nameOf(member.id)}, ${found ? 'discovered' : 'not yet discovered'}${current ? ', showing now' : ''}`} accessibilityState={{ selected: current }} onPress={() => !current && onSpecies(member.id)} style={({ pressed }) => [m.stageTile, { width: tile }, current && m.stageCurrent, pressed && !current && { opacity: .7 }]}>
+            <Image source={speciesImage(member.id)} style={[{ width: tile - 18, height: tile - 18 }, !found && { opacity: .3 }]} tintColor={found ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" />
+            <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} style={m.stageName}>{nameOf(member.id)}</Txt>
+          </Pressable>;
+        })}</View>
+      </Fragment>)}</View>
+      <Txt style={{ textAlign: 'center', fontWeight: '700', fontSize: 14 }}>{familyNote(familyIds, discovered)}</Txt>
+    </> : <Txt muted>{pokemon.en} doesn’t evolve. It’s one of a kind!</Txt>}</View>
     <Button title={`Find ${pokemon.en} cards`} icon="search" onPress={() => onFindCards(pokemon.en)} />
-    {owned ? <><Txt style={ui.subtitle}>Your {pokemon.en} cards</Txt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{entries.map(e => <Pressable accessibilityRole="button" accessibilityLabel={`Open ${e.card.name} ${e.card.id}`} key={e.key} onPress={() => onEntry(e)} style={{ width: '46%', marginBottom: 8 }}><CardArt card={e.card} /><Txt style={{ fontSize: 12, marginTop: 5, fontWeight: '700' }}>{LANGUAGE_CODES[e.card.language]} · #{e.card.localId} · ×{e.quantity}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{e.card.set.name}</Txt><CardPriceTag card={e.card} finish={e.finish} /></Pressable>)}</View></> : <Txt muted style={{ textAlign: 'center' }}>Add a {pokemon.en} card to bring this entry to life.</Txt>}
+    {owned && <><Txt style={ui.subtitle}>Your {pokemon.en} cards</Txt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{entries.map(e => <Pressable accessibilityRole="button" accessibilityLabel={`Open ${e.card.name} ${e.card.id}`} key={e.key} onPress={() => onEntry(e)} style={{ width: '46%', marginBottom: 8 }}><CardArt card={e.card} /><Txt style={{ fontSize: 12, marginTop: 5, fontWeight: '700' }}>{LANGUAGE_CODES[e.card.language]} · #{e.card.localId} · ×{e.quantity}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{e.card.set.name}</Txt><CardPriceTag card={e.card} finish={e.finish} /></Pressable>)}</View></>}
   </ScrollView></Sheet>;
 }
 
@@ -156,7 +199,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     <Button title="Export family backup" icon="download" secondary busy={busy} onPress={() => run(() => exportFile(portableBackup(collection)))} />
     <Button title="Import a backup" icon="upload" secondary busy={busy} onPress={() => run(async () => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); setNote(`Imported ${incoming.trainers.length} trainer profile${incoming.trainers.length === 1 ? '' : 's'}.`); })} />
     <ErrorNotice text={error} />{note && <View style={m.note}><Txt>{note}</Txt></View>}
-    <View style={m.divider} /><Txt muted style={{ fontSize: 12, lineHeight: 19 }}>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }}>Card data and images: TCGdex. Pokémon names and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt>
+    <View style={m.divider} /><Txt muted style={{ fontSize: 12, lineHeight: 19 }}>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }}>Card data and images: TCGdex. Pokémon names, Pokédex data and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt>
   </ScrollView></Sheet>;
 }
 
@@ -205,5 +248,13 @@ const m = StyleSheet.create({
   builderChoiceText: { fontSize: 12, lineHeight: 16, fontWeight: '700', textAlign: 'center' },
   builderSwatch: { width: 22, height: 22, borderRadius: 12, borderWidth: 2, borderColor: '#FFFFFF' },
   input: { minHeight: 50, paddingHorizontal: 14, borderWidth: 1, borderColor: '#B8C6AC', borderRadius: 12, backgroundColor: '#FCFDF9', color: C.ink, fontSize: 16 }, divider: { height: 1, backgroundColor: C.line, marginVertical: 4 },
+  entry: { borderRadius: 16, borderWidth: 3, borderColor: '#A72937', overflow: 'hidden' },
+  entryLip: { height: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#CBD6BE', backgroundColor: '#DDE5D4' },
+  entryLabel: { fontWeight: '900', fontSize: 11, lineHeight: 17, color: '#6B7B64', letterSpacing: 2 },
+  speaker: { flexDirection: 'row', gap: 3 }, speakerLine: { width: 3, height: 9, borderRadius: 2, backgroundColor: '#A5B299' }, power: { height: 6, width: 6, borderRadius: 5, backgroundColor: '#6DAB63' },
+  entryScreen: { padding: 16, backgroundColor: '#D6E7BD' }, entryText: { fontSize: 16, lineHeight: 24 },
+  evolution: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 16, backgroundColor: '#DDE6D1' },
+  stage: { gap: 6, justifyContent: 'center' }, stageTile: { minHeight: 88, alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
+  stageCurrent: { backgroundColor: '#F8FAF3', borderColor: '#ADC79F' }, stageName: { fontSize: 11, lineHeight: 15, fontWeight: '800', textAlign: 'center', letterSpacing: -.2 },
   discoveryStage: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 290 }, discoveryRing: { position: 'absolute', width: 265, height: 265, borderRadius: 140, backgroundColor: '#D6E7BD', borderWidth: 16, borderColor: '#E3EDCD' },
 });
