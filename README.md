@@ -23,6 +23,7 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Delete a saved printing and all its copies with confirmation from card details.
 - Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.
 - Each Pokédex entry shows the Pokémon's types, its English Pokédex text once it is discovered, and its whole evolution family, including baby Pokémon and branches like Eevee's. Tap a stage to jump to it. The Pokédex tab counts discovered Pokémon by type; tap a type to show only that type.
+- Pokédex voice: a discovered entry shows the Pokémon's animated sprite and can be read aloud ("Bulbasaur, the Seed Pokémon…") with the device's speech voice, and "Hear its cry" plays its cry. A new discovery calls out and reads its entry automatically, unless VoiceOver is on. Cries follow the silent switch.
 - Favorites, extra-copy counts, 22 achievement badges and discovery animations. Starter challenges cover all 27 Grass, Fire and Water starters and their 81 species across Kanto–Paldea, with a badge for each region. Eevee’s family, legendary birds, Kanto fossils, the original 151 and collection milestones have their own goals. Expand a species checklist to see what’s missing and find its cards; any printing or language counts. Progress follows each trainer’s current collection, including existing cards and imported backups.
 - Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
 - Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
@@ -63,7 +64,7 @@ pnpm catalog:refresh
 pnpm species:refresh
 ```
 
-`pnpm species:refresh` runs `scripts/refresh-species.py` (Python 3 standard library only) to rebuild `src/data/species-details.json` (about 149 KB) from [PokéAPI's CSV data](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv): each species' default-form types, what it evolves from, and its English Pokédex text from the newest game that has one. The output is deterministic, so a rerun only changes when PokéAPI does.
+`pnpm species:refresh` runs `scripts/refresh-species.py` (Python 3 standard library only) to rebuild `src/data/species-details.json` (about 138 KB) from [PokéAPI's CSV data](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv): each species' default-form types, what it evolves from, and its English Pokédex text from the newest main-series game that has one (the journal-style Legends entries are used only when nothing else exists). The output is deterministic, so a rerun only changes when PokéAPI does.
 
 TCGdex language coverage varies; some cards have no artwork or incomplete metadata. Physical cards are filtered separately from Pokémon TCG Pocket. Current sources and snapshot counts are recorded in `src/data/catalog-meta.json`.
 
@@ -85,4 +86,4 @@ The preview's user LaunchAgent is `com.reallybadnews.pokedex-preview`; it runs t
 
 ## Credits
 
-Card metadata and images: [TCGdex](https://tcgdex.dev/). Pokémon names, types, evolutions, Pokédex text and artwork: [PokéAPI](https://pokeapi.co/). Pokémon is owned by its respective rights holders. This is an unofficial family fan project.
+Card metadata and images: [TCGdex](https://tcgdex.dev/). Pokémon names, types, evolutions, Pokédex text and artwork: [PokéAPI](https://pokeapi.co/). Cries and animated sprites: [Pokémon Showdown](https://play.pokemonshowdown.com/), loaded when played. Pokémon is owned by its respective rights holders. This is an unofficial family fan project.
