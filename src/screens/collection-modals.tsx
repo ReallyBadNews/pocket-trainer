@@ -2,7 +2,7 @@ import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, TypePill, Txt, mono, ui } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
@@ -20,6 +20,9 @@ import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/sp
 import { AboutScreen } from './about-screen';
 import { animatedSprite } from '@/lib/pokedex-voice';
 import { usePokedexVoice } from '@/lib/use-pokedex-voice';
+import { CatchReveal, Confetti, HoloShine } from '@/components/celebration';
+import { isShiny } from '@/lib/shine';
+import Reanimated, { ZoomIn } from 'react-native-reanimated';
 
 export function Sheet({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
   const insets = useSafeAreaInsets();
@@ -69,7 +72,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
     {card && <>
-      <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}><CardArt key={card.id} card={card} high style={{ width: 210, maxWidth: '100%' }} /></ZoomablePhoto><View style={m.languageTag}><Txt style={{ fontWeight: '800', fontSize: 12 }}>{LANGUAGE_LABELS[card.language]}</Txt></View></View>
+      <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}>{isShiny(card, finish) ? <HoloShine style={{ width: 210, maxWidth: '100%' }}><CardArt key={card.id} card={card} high /></HoloShine> : <CardArt key={card.id} card={card} high style={{ width: 210, maxWidth: '100%' }} />}</ZoomablePhoto><View style={m.languageTag}><Txt style={{ fontWeight: '800', fontSize: 12 }}>{LANGUAGE_LABELS[card.language]}</Txt></View></View>
       <View style={ui.between}><View style={{ flex: 1 }}><Txt style={ui.title}>{card.name}</Txt>{card.language !== 'en' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
       <Txt muted>{card.set.name}</Txt><Txt style={{ fontWeight: '800', fontSize: 13 }}>{cardKindLabel(card)}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
       <View style={m.cardMeta}><View><Txt muted style={m.small}>Card number</Txt><Txt style={{ fontFamily: mono, fontWeight: '700' }}>{collectorNumber(card)}</Txt></View><View><Txt muted style={m.small}>Rarity</Txt><Txt style={{ fontWeight: '700' }}>{card.rarity}</Txt></View>{card.hp && <View><Txt muted style={m.small}>HP</Txt><Txt style={{ fontWeight: '700' }}>{card.hp}</Txt></View>}</View>
@@ -219,26 +222,13 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
 }
 
 export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onClose }: { card: Card; newIds: number[]; quantity: number; nextLabel: string; onNext: () => void; onClose: () => void }) {
-  const [reduced, setReduced] = useState(true);
-  const scale = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    let active = true;
-    AccessibilityInfo.isReduceMotionEnabled().then(value => { if (active) setReduced(value); });
-    const listener = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
-    return () => { active = false; listener.remove(); };
-  }, []);
-  useEffect(() => {
-    if (reduced) { scale.setValue(1); return; }
-    scale.setValue(.75);
-    const animation = Animated.spring(scale, { toValue: 1, friction: 5, useNativeDriver: true });
-    animation.start(); return () => animation.stop();
-  }, [reduced, scale]);
+  const [revealed, setRevealed] = useState(false);
   const discovered = newIds.length > 0;
   const pokemon = speciesById.get(newIds[0]);
   const voice = usePokedexVoice();
   // Like the anime Pokédex: the new Pokémon calls out, then its entry is read. VoiceOver users keep control.
   useEffect(() => {
-    if (!pokemon) return;
+    if (!pokemon || !revealed) return;
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout> | undefined;
     AccessibilityInfo.isScreenReaderEnabled().then(reader => {
@@ -247,9 +237,9 @@ export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onCl
       timer = setTimeout(() => { if (!cancelled) void voice.speak(pokemon.id); }, 1400);
     });
     return () => { cancelled = true; clearTimeout(timer); };
-  }, [pokemon?.id]);
+  }, [pokemon?.id, revealed]);
   const names = newIds.map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ');
-  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} /><Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>{discovered ? <><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Animated.View></View><Txt style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
+  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} />{discovered ? <CatchReveal onReveal={() => setRevealed(true)}><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></CatchReveal> : <><Confetti count={18} /><Reanimated.View entering={ZoomIn.springify().damping(12)}>{isShiny(card) ? <HoloShine style={{ width: 185, marginVertical: 20 }}><CardArt card={card} /></HoloShine> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Reanimated.View></>}</View>{discovered && !revealed ? <Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>Who’s inside?</Txt> : <><Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}</>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
 }
 
 const m = StyleSheet.create({
