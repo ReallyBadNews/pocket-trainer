@@ -140,3 +140,25 @@ test('deleting all copies preserves other printings and survives a saved collect
   assert.equal(totalCards(empty), 0);
   assert.equal(discoveredIds(empty).size, 0);
 });
+
+test('the grown-up lock starts on, survives saves and opens older saves locked', () => {
+  const collection = freshCollection();
+  assert.equal(collection.grownUpLock, true);
+  assert.equal(parseCollection(JSON.stringify({ ...collection, grownUpLock: false })).grownUpLock, false);
+  const legacy = structuredClone(collection);
+  delete legacy.grownUpLock;
+  assert.equal(parseCollection(JSON.stringify(legacy)).grownUpLock, true);
+  for (const value of ['false', 0, null, {}]) assert.throws(() => parseCollection(JSON.stringify({ ...collection, grownUpLock: value })));
+});
+test('backups never carry or change the grown-up lock', () => {
+  const unlocked = { ...freshCollection(), grownUpLock: false };
+  unlocked.trainers[0] = addCard(unlocked.trainers[0], card, 'normal', 1);
+  const raw = portableBackup(unlocked);
+  assert.ok(!raw.includes('grownUpLock'));
+  assert.equal(parseCollection(raw).grownUpLock, true);
+  const edited = parseCollection(JSON.stringify({ ...JSON.parse(raw), grownUpLock: false }));
+  assert.equal(edited.grownUpLock, false);
+  const merged = mergeBackup(freshCollection(), edited, 'lock');
+  assert.equal(merged.grownUpLock, true); assert.equal(merged.trainers.length, 2);
+  assert.equal(mergeBackup(unlocked, parseCollection(raw), 'lock').grownUpLock, false);
+});

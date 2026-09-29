@@ -33,9 +33,19 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Switch the binder between a card grid and 9-pocket binder pages you swipe through like a real binder (two-page spreads on iPad). Filters and sorting apply to both.
 - Set progress for each language's sets (for example 34 / 165), closest to complete first. Each set opens a checklist of every card: collected cards in color, missing ones dimmed with their numbers. Each number counts once, whatever the finish or number of copies. Secret rares numbered past the set size are bonus cards: they never push progress past 100% and are not needed for the Set master badge.
 - Export/import the family's collections as JSON. Imports add independent profile copies and preserve existing data.
+- A grown-up lock, on by default, asks a quick grown-up question before deleting a card or exporting/importing a family backup. Collecting, scanning, favorites and wishlists are never locked. See [for parents](#for-parents-the-grown-up-lock).
 - Original Blender device, Poké Ball, badges and app icon, with editable `.blend` files and reproducible scripts.
 
 Family sync, trading and animated Pokémon characters are deferred.
+
+## For parents: the grown-up lock
+
+With the lock on, a "Grown-ups only" panel asks a two-digit × one-digit multiplication (like 27 × 8) on a number pad before a card is deleted (the **Delete card** confirmation, including tapping − on the last copy) and before a family backup is exported or imported. A wrong answer brings a new question; there are no timers or lockouts. It's a speed bump for a young child, not real security. To make it harder later, change `GROWN_UP_RANGE` in `src/lib/grown-up.ts`.
+
+- **Turning it off:** Settings → Grown-up lock. Switching it off asks the question; switching it back on doesn't.
+- **Defaults:** On for new installs and for collections saved before the lock existed.
+- **Backups:** The lock is a setting for this device only. Backups never include it and importing one never changes it, so a restored device starts locked.
+- **Not locked:** Adding and scanning cards, the quick undo right after adding, favorites, wishlists (adding, removing and sharing), changing printings, removing extra copies (but not the last one), switching or adding trainers, and trainer names and looks. Names are left open because renaming is part of play and easy to undo.
 
 ## Run and check
 

@@ -2,7 +2,7 @@ import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, Share, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, Share, StyleSheet, Switch, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, TypePill, Txt, mono, ui } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
@@ -18,6 +18,7 @@ import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLO
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
+import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
 import { animatedSprite } from '@/lib/pokedex-voice';
 import { usePokedexVoice } from '@/lib/use-pokedex-voice';
@@ -25,9 +26,10 @@ import { CatchReveal, Confetti, HoloShine } from '@/components/celebration';
 import { isShiny } from '@/lib/shine';
 import Reanimated, { ZoomIn } from 'react-native-reanimated';
 
-export function Sheet({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
+/** `overlay` (the grown-up check) covers the sheet and hides it from screen readers while open. */
+export function Sheet({ title, onClose, children, busy = false, overlay }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean; overlay?: ReactNode }) {
   const insets = useSafeAreaInsets();
-  return <View style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal style={m.sheet}><View style={m.sheetHeader}><Txt style={ui.subtitle}>{title}</Txt>{!busy && <IconButton icon="close" label="Close" onPress={onClose} />}</View>{children}</View></View>;
+  return <View style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal={!overlay} accessibilityElementsHidden={!!overlay} importantForAccessibility={overlay ? 'no-hide-descendants' : 'auto'} style={m.sheet}><View style={m.sheetHeader}><Txt style={ui.subtitle}>{title}</Txt>{!busy && <IconButton icon="close" label="Close" onPress={onClose} />}</View>{children}</View>{overlay}</View>;
 }
 
 export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (added: AddedCards) => void; onBusyChange: (busy: boolean) => void }) {
@@ -42,6 +44,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState<Finish>(entry?.finish ?? 'unsure');
   const [removing, setRemoving] = useState(false);
+  const { locked, requireGrownUp, gate } = useGrownUpCheck();
   const liveEntry = entry ? trainer.entries.find(e => e.key === entry.key) : undefined;
   const wished = isWished(trainer, brief);
   // Manual drafts have no catalog identity to reopen later, and owned cards are already granted.
@@ -80,7 +83,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     catch (e) { setWishError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'); }
     finally { setWishing(false); }
   }
-  return <Sheet title={entry ? 'Inside your binder' : 'Is this your card?'} onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+  return <Sheet title={entry ? 'Inside your binder' : 'Is this your card?'} onClose={onClose} busy={busy} overlay={gate}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
@@ -94,7 +97,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
       <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} />
       {liveEntry ? <><View style={ui.between}><View><Txt style={ui.subtitle}>Copies in your binder</Txt><Txt muted style={{ fontSize: 13 }}>{FINISH_LABELS[liveEntry.finish]}</Txt></View><View style={m.stepper}><IconButton icon="minus" label="Remove one copy" onPress={() => !busy && (liveEntry.quantity === 1 ? setRemoving(true) : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1))))} /><Txt style={m.stepperNumber}>{liveEntry.quantity}</Txt><IconButton icon="plus" label="Add one copy" onPress={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} /></View></View>
         {!removing && <Button title="Delete card" secondary disabled={busy} onPress={() => setRemoving(true)} />}
-        {removing && <View style={m.removeBox}><Txt style={{ fontWeight: '800' }}>Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt style={{ fontSize: 13 }}>This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt><View style={ui.row}><Button title="Keep it" disabled={busy} onPress={() => setRemoving(false)} secondary style={{ flex: 1 }} /><Button title="Delete card" onPress={() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); })} busy={busy} style={{ flex: 1 }} /></View></View>}
+        {removing && <View style={m.removeBox}><Txt style={{ fontWeight: '800' }}>Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt style={{ fontSize: 13 }}>This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>{locked && <Txt style={{ fontSize: 13, fontWeight: '700' }}>A grown-up answers a quick question first.</Txt>}<View style={ui.row}><Button title="Keep it" disabled={busy} onPress={() => setRemoving(false)} secondary style={{ flex: 1 }} /><Button title="Delete card" icon={locked ? 'lock' : undefined} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} busy={busy} style={{ flex: 1 }} /></View></View>}
         {card.description && <View style={m.note}><Txt style={{ fontSize: 14 }}>{card.description}</Txt></View>}
         <Button title="Done" onPress={onClose} secondary disabled={busy} />
       </> : <><View style={ui.between}><Txt style={ui.subtitle}>How many copies?</Txt><View style={m.stepper}><IconButton icon="minus" label="Fewer copies" onPress={() => !busy && setQuantity(n => Math.max(1, n - 1))} /><Txt style={m.stepperNumber}>{quantity}</Txt><IconButton icon="plus" label="More copies" onPress={() => !busy && setQuantity(n => Math.min(999, n + 1))} /></View></View><Button title={`Add ${quantity === 1 ? 'to binder' : `${quantity} to binder`}`} icon="plus" onPress={save} busy={busy} />
@@ -193,6 +196,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
   const guard = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const { locked, requireGrownUp, gate } = useGrownUpCheck();
   async function run(action: () => Promise<void>) {
     if (guard.current) return;
     guard.current = true; setBusy(true); onBusyChange(true); setError(null); setNote(null);
@@ -222,16 +226,18 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     <Button title="Back to trainer family" secondary disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(false); }} />
   </ScrollView></Sheet>;
 
-  return <Sheet title="Settings" onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+  return <Sheet title="Settings" onClose={onClose} busy={busy} overlay={gate}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     <Button title="About" secondary disabled={busy} onPress={() => setAboutOpen(true)} />
     <Txt style={ui.subtitle}>Your trainer family</Txt><Txt muted>Each trainer has their own Pokédex, binder, and field identity on this device.</Txt>
     {collection.trainers.map(t => <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.name}`} key={t.id} disabled={busy} onPress={() => run(async () => { await transact(c => ({ ...c, activeId: t.id })); setName(t.name); setDraft(t.appearance); })} style={[m.profile, t.id === trainer.id && { borderColor: C.ink, backgroundColor: '#DEE7D2' }]}><TrainerAvatar appearance={t.appearance} size={48} /><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{t.name}</Txt><Txt muted style={{ fontSize: 12 }}>{totalCards(t)} cards · {discoveredIds(t).size} Pokémon</Txt></View>{t.id === trainer.id && <Icon name="check" size={21} />}</Pressable>)}
     <Pressable accessibilityRole="button" accessibilityLabel={`Open trainer builder for ${trainer.name}`} disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(true); }} style={({ pressed }) => [m.builderInvite, { borderColor: trainer.color }, pressed && { opacity: .7 }]}><TrainerAvatar appearance={trainer.appearance} size={82} /><View style={{ flex: 1, gap: 3 }}><Txt style={ui.subtitle}>Build {trainer.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 18 }}>Choose their hair, skin tone, field jacket, and headwear.</Txt><Txt style={{ color: C.redDark, fontWeight: '800', fontSize: 13 }}>Open trainer builder</Txt></View><Icon name="arrow" size={20} color={C.redDark} /></Pressable>
     <Txt style={ui.subtitle}>Trainer name</Txt><TextInput accessibilityLabel="Trainer name" value={name} onChangeText={setName} maxLength={32} style={m.input} editable={!busy} /><Button title="Save name" secondary disabled={!name.trim() || name.trim() === trainer.name} busy={busy} onPress={() => run(async () => { await updateTrainer(t => ({ ...t, name: name.trim() })); setNote('Trainer name saved.'); })} />
     <Txt style={ui.subtitle}>Add another trainer</Txt><TextInput accessibilityLabel="New trainer name" placeholder="Choose a trainer name" placeholderTextColor={C.muted} value={newName} onChangeText={setNewName} maxLength={32} style={m.input} editable={!busy} /><Button title="Add trainer" icon="plus" disabled={!newName.trim() || collection.trainers.length >= 20} busy={busy} onPress={() => run(async () => { await transact(c => { if (c.trainers.length >= 20) throw new Error('This device already has 20 trainers.'); const appearance = trainerAppearanceFor(c.trainers.length); return { ...c, trainers: [...c.trainers, { id: `trainer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: newName.trim(), color: TRAINER_OUTFIT_COLORS[appearance.outfit], appearance, entries: [], wishlist: [] }] }; }); setNewName(''); setNote('New trainer added. Tap their name to start collecting.'); })} />
+    <View style={m.divider} /><Txt style={ui.subtitle}>Grown-up lock</Txt>
+    <View style={m.lockRow}><Icon name="lock" size={24} color={locked ? C.ink : C.muted} /><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{locked ? 'On' : 'Off'}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 18 }}>{locked ? 'A grown-up answers a quick question before a card is deleted or a family backup is saved or imported.' : 'Anyone can delete cards and save or import backups.'}</Txt></View><Switch accessibilityLabel="Grown-up lock" accessibilityHint={locked ? 'Turning it off asks a grown-up question first' : undefined} value={locked} disabled={busy} trackColor={{ true: C.red, false: '#C7D2BB' }} onValueChange={on => on ? run(async () => { await transact(c => ({ ...c, grownUpLock: true })); setNote('Grown-up lock is on.'); }) : requireGrownUp(() => run(async () => { await transact(c => ({ ...c, grownUpLock: false })); setNote('Grown-up lock is off.'); }), 'turn off the grown-up lock')} /></View>
     <View style={m.divider} /><Txt style={ui.subtitle}>Keep your collection safe</Txt><Txt muted style={{ fontSize: 13 }}>Save a family backup to Files or share it to another device. Importing adds copies of the trainers and keeps your current collections.</Txt>
-    <Button title="Export family backup" icon="download" secondary busy={busy} onPress={() => run(() => exportFile(portableBackup(collection)))} />
-    <Button title="Import a backup" icon="upload" secondary busy={busy} onPress={() => run(async () => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); setNote(`Imported ${incoming.trainers.length} trainer profile${incoming.trainers.length === 1 ? '' : 's'}.`); })} />
+    <Button title="Export family backup" icon="download" secondary busy={busy} onPress={() => requireGrownUp(() => run(() => exportFile(portableBackup(collection))), 'save or share a family backup')} />
+    <Button title="Import a backup" icon="upload" secondary busy={busy} onPress={() => requireGrownUp(() => run(async () => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); setNote(`Imported ${incoming.trainers.length} trainer profile${incoming.trainers.length === 1 ? '' : 's'}.`); }), 'import a backup')} />
     <ErrorNotice text={error} />{note && <View style={m.note}><Txt>{note}</Txt></View>}
     <View style={m.divider} /><Txt muted style={{ fontSize: 12, lineHeight: 19 }}>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }}>Card data and images: TCGdex. Pokémon names, Pokédex data and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt>
   </ScrollView></Sheet>;
@@ -316,6 +322,7 @@ const m = StyleSheet.create({
   cardMeta: { flexDirection: 'row', flexWrap: 'wrap', gap: 25, paddingVertical: 14, borderTopWidth: 1, borderBottomWidth: 1, borderColor: C.line }, small: { fontSize: 11, lineHeight: 17 },
   stepper: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#DCE6D0', borderRadius: 12 }, stepperNumber: { fontFamily: mono, fontSize: 19, fontWeight: '700', minWidth: 27, textAlign: 'center' },
   removeBox: { padding: 14, backgroundColor: '#F3DADB', borderRadius: 14, gap: 10 }, note: { padding: 14, backgroundColor: '#DBE7CD', borderRadius: 12 },
+  lockRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: C.line, backgroundColor: '#F8FAF3' },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 13, borderRadius: 14, borderWidth: 1, borderColor: C.line },
   builderInvite: { flexDirection: 'row', alignItems: 'center', gap: 13, padding: 14, borderRadius: 18, borderWidth: 2, backgroundColor: '#F8FAF3' },
   trainerCard: { alignItems: 'center', padding: 16, borderWidth: 3, borderRadius: 22, backgroundColor: '#DCE8D2', overflow: 'hidden' },
