@@ -15,9 +15,10 @@ import { useCollection } from '@/lib/collection-context';
 import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { LiveCamera } from '@/components/live-camera';
+import type { Crop } from '@/lib/scan-types';
 import { PAGE_LAYOUTS, pageSummary, pocketCrops, pocketIncluded, pocketStatus, waitingPocket, type PageLayout, type Pocket } from '@/lib/page-scan';
 
-type Photo = { uri: string; width: number; height: number };
+type Photo = { uri: string; width: number; height: number; region?: Crop };
 const detailKey = (card: CardBrief) => `${card.language}:${card.id}`;
 // Picture comparison downloads reference art. On a full page it must not hold up the next pocket.
 const COMPARE_LIMIT_MS = 3000;
@@ -70,7 +71,7 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
   }
   async function readPage(next: Photo, pageLayout: PageLayout) {
     const id = ++generation.current;
-    const crops = pocketCrops(pageLayout);
+    const crops = pocketCrops(pageLayout, next.region);
     setPockets(crops.map(waitingPocket)); setSelected(null); setError(null); setNote(null);
     if (!canRecognize) { setNote('Page photo ready. Automatic reading works in the installed iPhone/iPad app.'); return; }
     setBusy(true);
@@ -154,13 +155,18 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
 
   const gap = 8;
   const tileWidth = gridWidth ? Math.floor((gridWidth - 16 - gap * (layout.columns - 1)) / layout.columns) : 0;
-  const pocketAspect = photo ? (photo.width / layout.columns) / (photo.height / layout.rows) : .716;
+  const [rx, ry, rw, rh] = photo?.region ?? [0, 0, 1, 1];
+  const pocketAspect = photo ? (photo.width * rw / layout.columns) / (photo.height * rh / layout.rows) : .716;
   const tileHeight = tileWidth / pocketAspect;
   // Show each pocket's slice of the page right away; the matched card flips in over it.
-  const slice = (index: number, width: number, height: number) => photo && <Image source={photo.uri} contentFit="fill" style={{
-    position: 'absolute', width: width * layout.columns, height: height * layout.rows,
-    left: -(index % layout.columns) * width, top: -Math.floor(index / layout.columns) * height,
-  }} />;
+  const slice = (index: number, width: number, height: number) => {
+    if (!photo) return null;
+    const fullWidth = width * layout.columns / rw, fullHeight = height * layout.rows / rh;
+    return <Image source={photo.uri} contentFit="fill" style={{
+      position: 'absolute', width: fullWidth, height: fullHeight,
+      left: -rx * fullWidth - (index % layout.columns) * width, top: -ry * fullHeight - Math.floor(index / layout.columns) * height,
+    }} />;
+  };
   const active = selected !== null ? pockets[selected] : null;
   const guidePocket = layout.rows > 3 ? 36 : layout.columns === 2 ? 52 : 44;
 
