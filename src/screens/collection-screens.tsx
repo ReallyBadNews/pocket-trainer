@@ -10,6 +10,8 @@ import { CARD_FILTERS, matchesCardFilter, cardKindLabel, type CardFilter } from 
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { collectorNumber, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
 import { CardPriceTag, CollectionValue } from '@/components/card-values';
+import { HoloShine } from '@/components/celebration';
+import { isShiny } from '@/lib/shine';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
 import { speciesTypes, typeCounts, typeLabel, TYPE_COLORS, type PokemonType } from '@/lib/species-details';
@@ -97,7 +99,7 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
     </View>}
     ListEmptyComponent={<View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese, Korean and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
     renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[item.card.language]}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
-      <View><CardArt card={item.card} /><View style={s.quantity}><Txt style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>×{item.quantity}</Txt></View>{item.favorite && <View style={s.favorite}><Icon name="heart" size={15} color={C.red} filled /></View>}</View>
+      <View>{isShiny(item.card, item.finish) ? <HoloShine><CardArt card={item.card} /></HoloShine> : <CardArt card={item.card} />}<View style={s.quantity}><Txt style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>×{item.quantity}</Txt></View>{item.favorite && <View style={s.favorite}><Icon name="heart" size={15} color={C.red} filled /></View>}</View>
       <Txt style={{ fontWeight: '800', fontSize: 14, marginTop: 8 }} numberOfLines={1}>{item.card.name}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }} numberOfLines={1}>{item.card.set.name}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>{cardKindLabel(item.card)}</Txt><Txt muted style={{ fontFamily: mono, fontSize: 10 }}>{LANGUAGE_CODES[item.card.language]} · {collectorNumber(item.card)}</Txt>
       <CardPriceTag card={item.card} finish={item.finish} />
     </Pressable>} />;

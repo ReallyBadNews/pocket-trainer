@@ -55,6 +55,12 @@
         {
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-sensors",
+        {
+          "motionPermission": "Allow Pocket Pokédex to make shiny cards sparkle as you tilt your device."
+        }
       ]
     ],
     "experiments": {
