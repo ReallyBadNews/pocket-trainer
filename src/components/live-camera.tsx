@@ -39,7 +39,8 @@ export function LiveCamera({ mode, layout, language, onCapture, onFallback, onCl
   const busy = useRef(false);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; }; }, []);
-  useEffect(() => { if (permission && !permission.granted && permission.canAskAgain) void requestPermission(); }, [permission?.granted]);
+  // Simulators have no camera, so only real devices are asked for access.
+  useEffect(() => { if (Device.isDevice && permission && !permission.granted && permission.canAskAgain) void requestPermission(); }, [permission?.granted]);
 
   const auto = mode === 'card' && canRecognize && ready && !failed && !found && !shooting;
   useEffect(() => {
