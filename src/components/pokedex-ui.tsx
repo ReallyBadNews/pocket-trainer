@@ -1,4 +1,5 @@
 import { Image } from 'expo-image';
+import * as Haptics from 'expo-haptics';
 import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle, type TextProps } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
@@ -7,7 +8,9 @@ import type { Card, CardBrief } from '@/lib/model';
 
 export const C = { red: '#C93240', redDark: '#8D2431', redLight: '#E95661', screen: '#EDF3DD', paper: '#FAFCF7', ink: '#25382F', muted: '#607266', line: '#D2DDC8', blue: '#57C7E8', gold: '#EAC55A' };
 export const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
-export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock';
+export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock' | 'tools';
+// A light tick makes small toggles feel physical, like pressing a real Pokédex button.
+export const tick = () => { Haptics.selectionAsync().catch(() => {}); };
 export function Icon({ name, size = 24, color = C.ink, filled = false }: { name: IconName; size?: number; color?: string; filled?: boolean }) {
   const paths: Partial<Record<IconName, string>> = {
     dex: 'M5 3h14v18H5z M8 8h8v7H8z M8 18h3', binder: 'M5 3h14v18H5z M9 3v18 M3 7h4 M3 12h4 M3 17h4',
@@ -18,7 +21,7 @@ export function Icon({ name, size = 24, color = C.ink, filled = false }: { name:
     heart: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z',
     check: 'M5 12l4 4L20 5', download: 'M12 3v12 M7 10l5 5 5-5 M3 16v5h18v-5', upload: 'M12 16V4 M7 9l5-5 5 5 M3 16v5h18v-5',
     camera: 'M3 6h4l2-3h6l2 3h4v15H3z M8 13a4 4 0 108 0 4 4 0 00-8 0', photo: 'M3 3h18v18H3z M3 17l6-6 5 5 3-3 4 4',
-    arrow: 'M5 12h14 M13 6l6 6-6 6', lock: 'M7 10V7a5 5 0 0110 0v3 M5 10h14v11H5z',
+    arrow: 'M5 12h14 M13 6l6 6-6 6', tools: 'M4 7h9 M17 7h3 M15 5v4 M4 17h3 M11 17h9 M9 15v4', lock: 'M7 10V7a5 5 0 0110 0v3 M5 10h14v11H5z',
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d={paths[name]} stroke={color} fill={filled && name === 'heart' ? color : 'none'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
@@ -32,13 +35,13 @@ export function Button({ title, onPress, icon, secondary = false, disabled = fal
   </Pressable>;
 }
 export function IconButton({ icon, label, onPress, color = C.ink, filled = false }: { icon: IconName; label: string; onPress: () => void; color?: string; filled?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={onPress} style={({ pressed }) => [ui.iconButton, pressed && { opacity: .5 }]}><Icon name={icon} color={color} filled={filled} /></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.iconButton, pressed && { opacity: .5 }]}><Icon name={icon} color={color} filled={filled} /></Pressable>;
 }
 export function SearchBox({ value, onChange, placeholder = 'Search Pokémon…' }: { value: string; onChange: (text: string) => void; placeholder?: string }) {
   return <View style={ui.search}><Icon name="search" size={19} color={C.muted} /><TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} returnKeyType="search" style={ui.input} />{value ? <IconButton icon="close" label="Clear search" onPress={() => onChange('')} /> : null}</View>;
 }
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={onPress} style={[ui.chip, selected && ui.chipSelected]}><Txt style={{ color: selected ? C.paper : C.muted, fontWeight: '700', fontSize: 13 }}>{label}</Txt></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={[ui.chip, selected && ui.chipSelected]}><Txt style={{ color: selected ? C.paper : C.muted, fontWeight: '700', fontSize: 13 }}>{label}</Txt></Pressable>;
 }
 export function CardArt({ card, style, high = false }: { card: CardBrief | Card; style?: StyleProp<ViewStyle>; high?: boolean }) {
   const local = 'localImage' in card ? card.localImage : undefined;

@@ -9,8 +9,9 @@ import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
 import { fetchCard, speciesById, speciesImage } from '@/lib/catalog';
-import { collectorNumber, addCard, changePrinting, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
-import { exportFile, importFile, keepCardArt } from '@/lib/files';
+import { collectorNumber, changePrinting, defaultFinish, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
+import { exportFile, importFile } from '@/lib/files';
+import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
 import { TRAINER_APPEARANCE_LABELS, TRAINER_HAIR_COLOR_VALUES, TRAINER_SKIN_COLORS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
@@ -22,8 +23,9 @@ export function Sheet({ title, onClose, children, busy = false }: { title: strin
   return <View style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal style={m.sheet}><View style={m.sheetHeader}><Txt style={ui.subtitle}>{title}</Txt>{!busy && <IconButton icon="close" label="Close" onPress={onClose} />}</View>{children}</View></View>;
 }
 
-export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (card: Card, newIds: number[], quantity: number) => void; onBusyChange: (busy: boolean) => void }) {
+export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (added: AddedCards) => void; onBusyChange: (busy: boolean) => void }) {
   const { trainer, updateTrainer } = useCollection();
+  const addCards = useAddCards();
   const [card, setCard] = useState<Card | null>(entry?.card ?? draft ?? null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
@@ -44,7 +46,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     const saved = trainer.entries.find(e => e.card.id === brief.id && e.card.language === brief.language)?.card;
     (saved ? Promise.resolve(saved) : fetchCard(brief)).then(c => {
       if (!active) return;
-      setCard(c); setFinish(c.finishes.length === 2 ? c.finishes[0] : 'unsure');
+      setCard(c); setFinish(defaultFinish(c));
     }).catch(e => active && setError(e instanceof Error ? e.message : 'Unable to load this card. Try again.')).finally(() => active && setLoading(false));
     return () => { active = false; };
   }, [brief.id, brief.language, retry]);
@@ -57,13 +59,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   }
   function save() {
     if (!card) return;
-    run(async () => {
-      const savedCard = await keepCardArt(card);
-      let newIds: number[] = [];
-      await updateTrainer(t => { const before = discoveredIds(t); const next = addCard(t, savedCard, finish, quantity); newIds = pokemonIds(savedCard).filter(id => !before.has(id)); return next; });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-      onAdded(savedCard, newIds, quantity);
-    });
+    run(async () => onAdded(await addCards([{ card, finish, quantity }])));
   }
   return <Sheet title={entry ? 'Inside your binder' : 'Is this your card?'} onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
@@ -164,7 +160,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
   </ScrollView></Sheet>;
 }
 
-export function DiscoveryModal({ card, newIds, quantity, onClose }: { card: Card; newIds: number[]; quantity: number; onClose: () => void }) {
+export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onClose }: { card: Card; newIds: number[]; quantity: number; nextLabel: string; onNext: () => void; onClose: () => void }) {
   const [reduced, setReduced] = useState(true);
   const scale = useRef(new Animated.Value(1)).current;
   useEffect(() => {
@@ -182,7 +178,7 @@ export function DiscoveryModal({ card, newIds, quantity, onClose }: { card: Card
   const discovered = newIds.length > 0;
   const pokemon = speciesById.get(newIds[0]);
   const names = newIds.map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ');
-  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} /><Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>{discovered ? <><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Animated.View></View><Txt style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}<Button title="Keep collecting" icon="scan" onPress={onClose} style={{ alignSelf: 'stretch', marginTop: 12 }} /></ScrollView></Sheet>;
+  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} /><Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>{discovered ? <><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Animated.View></View><Txt style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
 }
 
 const m = StyleSheet.create({

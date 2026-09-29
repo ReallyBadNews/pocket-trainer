@@ -1,23 +1,24 @@
 import Animated, { cancelAnimation, useAnimatedStyle } from 'react-native-reanimated';
 import { ScrollChromeContext, useScrollChromeController } from '@/components/scroll-chrome';
-import { useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { C, Icon, Txt, ui, type IconName, Button } from '@/components/pokedex-ui';
+import { C, Icon, Txt, ui, type IconName, Button, tick } from '@/components/pokedex-ui';
 import { TrainerAvatar } from '@/components/trainer-avatar';
 import { useCollection } from '@/lib/collection-context';
 import { DexScreen, BinderScreen } from './collection-screens';
 import { BadgesScreen } from './badges-screen';
 import { ScanScreen } from './scan-screen';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal } from './collection-modals';
-import type { Card, CardBrief, Entry } from '@/lib/model';
+import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
+import type { AddedCards } from '@/lib/use-add-cards';
 
 const PINNED_CHROME_HEIGHT = 23 + 4 + 26; // Hinge, screen border, and Pokédex strip.
 const BOTTOM_FRAME_HEIGHT = 20;
 
 type Tab = 'dex' | 'binder' | 'scan' | 'badge';
 export default function PocketTrainer() {
-  const { trainer, ready, loadError, retryLoad } = useCollection();
+  const { trainer, ready, loadError, retryLoad, updateTrainer } = useCollection();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const [tab, setTab] = useState<Tab>('dex');
@@ -25,7 +26,9 @@ export default function PocketTrainer() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [selection, setSelection] = useState<{ brief: CardBrief; draft?: Card; entry?: Entry } | null>(null);
   const [speciesId, setSpeciesId] = useState<number | null>(null);
-  const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number } | null>(null);
+  const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number; source: 'card' | 'page' } | null>(null);
+  const [undo, setUndo] = useState<AddedCards | null>(null);
+  const [captureRequest, setCaptureRequest] = useState(0);
   const [scanQuery, setScanQuery] = useState('');
   const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(84);
@@ -42,6 +45,23 @@ export default function PocketTrainer() {
   const bottomStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: (navHeight + BOTTOM_FRAME_HEIGHT) * progress.value }],
   }));
+  function celebrate(added: AddedCards, source: 'card' | 'page') {
+    setSelection(null); setUndo(added);
+    setDiscovery({ card: added.cards[0], newIds: added.newIds, quantity: added.quantity, source });
+  }
+  // The undo offer appears once the celebration closes and fades after a few seconds.
+  const showUndo = !!undo && !modalOpen && undo.trainerId === trainer.id;
+  useEffect(() => {
+    if (!showUndo) return;
+    const timer = setTimeout(() => setUndo(null), 8000);
+    return () => clearTimeout(timer);
+  }, [showUndo]);
+  function undoAdd() {
+    if (!undo) return;
+    const { additions, trainerId } = undo;
+    setUndo(null); tick();
+    updateTrainer(t => undoAdditions(t, additions), trainerId).catch(() => {});
+  }
   const openScan = (query = '') => { setScanQuery(query); setSpeciesId(null); setTab('scan'); };
   return <View style={s.outside}><View style={[s.device, width >= 700 && s.tablet, { paddingTop: insets.top + (width >= 700 ? 10 : 0), paddingLeft: insets.left, paddingRight: insets.right }]}>
     <View style={s.viewport} onLayout={event => { chrome.viewportHeight.value = Math.max(0, event.nativeEvent.layout.height - PINNED_CHROME_HEIGHT); }}>
@@ -56,17 +76,18 @@ export default function PocketTrainer() {
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
-        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} onPageAdded={(card, newIds, quantity) => setDiscovery({ card, newIds, quantity })} />}
+        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>
     <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); } }}>
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
-    {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={(card, newIds, quantity) => { setSelection(null); setDiscovery({ card, newIds, quantity }); }} />}
+    {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={added => celebrate(added, 'card')} />}
     {speciesId !== null && <SpeciesModal id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
-    {discovery && <DiscoveryModal {...discovery} onClose={() => setDiscovery(null)} />}
+    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
     </Modal>
-    <Animated.View style={[s.bottomChrome, bottomStyle]}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan card', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={[s.navItem, item.id === 'scan' && s.scanNav]}><View style={[s.navIcon, tab === item.id && s.navSelected, item.id === 'scan' && s.scanIcon]}><Icon name={item.icon} size={23} color={item.id === 'scan' ? C.redDark : tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 11, fontWeight: '800', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></Animated.View>
+    {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt numberOfLines={1} style={{ flex: 1, color: 'white', fontWeight: '700', fontSize: 14 }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt style={{ color: C.gold, fontWeight: '900', fontSize: 14 }}>Undo</Txt></Pressable></View></View>}
+    <Animated.View style={[s.bottomChrome, bottomStyle]}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan card', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={[s.navItem, item.id === 'scan' && s.scanNav]}><View style={[s.navIcon, tab === item.id && s.navSelected, item.id === 'scan' && s.scanIcon]}><Icon name={item.icon} size={23} color={item.id === 'scan' ? C.redDark : tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 11, fontWeight: '800', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></Animated.View>
     </View>
   </View></View>;
 }
@@ -94,5 +115,8 @@ const s = StyleSheet.create({
   speaker: { flexDirection: 'row', gap: 3 }, speakerLine: { width: 3, height: 9, borderRadius: 2, backgroundColor: '#A5B299' }, power: { height: 6, width: 6, borderRadius: 5, backgroundColor: '#6DAB63' },
   nav: { flexShrink: 0, flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8 }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 63, gap: 1 },
   navIcon: { width: 48, height: 35, alignItems: 'center', justifyContent: 'center', borderRadius: 13 }, navSelected: { backgroundColor: '#A42535' }, scanNav: { marginTop: -2 }, scanIcon: { height: 40, width: 55, backgroundColor: '#F2E9D8', borderBottomWidth: 3, borderBottomColor: '#C8BDA9', borderRadius: 14 },
+  toastSlot: { position: 'absolute', left: 24, right: 24, alignItems: 'center', zIndex: 2 },
+  toast: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', maxWidth: 460, paddingLeft: 14, borderRadius: 14, backgroundColor: C.ink, shadowColor: '#000', shadowOpacity: .25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  undo: { minHeight: 48, minWidth: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 25, gap: 15 },
 });
