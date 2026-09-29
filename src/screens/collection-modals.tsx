@@ -18,6 +18,8 @@ import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { AboutScreen } from './about-screen';
+import { animatedSprite } from '@/lib/pokedex-voice';
+import { usePokedexVoice } from '@/lib/use-pokedex-voice';
 
 export function Sheet({ title, onClose, children, busy = false }: { title: string; onClose: () => void; children: ReactNode; busy?: boolean }) {
   const insets = useSafeAreaInsets();
@@ -93,6 +95,13 @@ function familyNote(ids: number[], discovered: ReadonlySet<number>) {
   return have.length <= 3 ? `You have ${listNames(have)}!` : `You have ${have.length} of ${ids.length} in this family!`;
 }
 
+/** The moving sprite the games show on the Pokédex screen; newer Pokémon without one use their artwork. */
+function AnimatedSprite({ id }: { id: number }) {
+  const [failed, setFailed] = useState(false);
+  const source = animatedSprite(id);
+  return <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={m.sprite}><Image source={failed || !source ? speciesImage(id) : source} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" onError={() => setFailed(true)} /></View>;
+}
+
 export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: { id: number; onClose: () => void; onFindCards: (name: string) => void; onEntry: (entry: Entry) => void; onSpecies: (id: number) => void }) {
   const { trainer } = useCollection();
   const { width } = useWindowDimensions();
@@ -104,6 +113,8 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
   const types = speciesTypes(id);
   const entry = pokedexEntry(id);
   const family = evolutionFamily(id);
+  const voice = usePokedexVoice();
+  const reading = voice.speaking === id;
   const familyIds = family.flat().map(member => member.id);
   // Only Eevee has more than three branches; wrap them into a grid beside it.
   // Tiles share the row (sheet width minus padding, arrows and gaps) so three stages fit a 375pt phone.
@@ -114,11 +125,15 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
     <View style={{ alignItems: 'center', gap: 8 }}><Image accessibilityLabel={owned ? pokemon.en : `${pokemon.en} silhouette`} source={speciesImage(id)} style={{ width: 240, height: 230, opacity: owned ? 1 : .3 }} tintColor={owned ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" /><Txt style={ui.title}>{pokemon.en}</Txt>
       {types.length > 0 && <View accessible accessibilityLabel={`${types.map(typeLabel).join(' and ')} type`} style={ui.row}>{types.map(type => <TypePill key={type} type={type} />)}</View>}
       <Txt muted>{pokemon.ja} · {pokemon.genus}</Txt><View style={m.languageTag}><Txt style={{ fontSize: 12, fontWeight: '700' }}>{owned ? `${cardCount} ${cardCount === 1 ? 'card' : 'cards'} collected` : 'Not discovered yet'}</Txt></View></View>
-    <View accessible accessibilityLabel={owned ? `Pokédex entry. ${entry ?? 'Coming soon.'}` : `Pokédex entry locked. Discover ${pokemon.en} to unlock it.`} style={m.entry}>
+    <View style={m.entry}>
       <View style={m.entryLip}><View style={m.speaker}>{[1, 2, 3].map(n => <View key={n} style={m.speakerLine} />)}</View><Txt style={m.entryLabel}>POKÉDEX ENTRY</Txt><View style={[m.power, !owned && { backgroundColor: '#A5B299' }]} /></View>
       <View style={m.entryScreen}>{owned
-        ? <Txt style={m.entryText}>{entry ?? 'This Pokédex entry is still being written.'}</Txt>
-        : <View style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="lock" size={24} color="#6B7B64" /><View style={{ flex: 1, gap: 2 }}><Txt style={[m.entryText, { fontWeight: '800' }]}>Discover {pokemon.en} to unlock its Pokédex entry!</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19 }}>Scan or add any {pokemon.en} card.</Txt></View></View>}</View>
+        ? <><View accessible accessibilityLabel={`Pokédex entry. ${entry ?? 'Coming soon.'}`} style={[ui.row, { alignItems: 'flex-start', gap: 12 }]}><AnimatedSprite id={id} /><Txt style={[m.entryText, { flex: 1 }]}>{entry ?? 'This Pokédex entry is still being written.'}</Txt></View>
+          <View style={[ui.row, { marginTop: 12, flexWrap: 'wrap' }]}>
+            <Pressable accessibilityRole="button" accessibilityLabel={reading ? 'Stop reading' : `Read ${pokemon.en}'s Pokédex entry aloud`} onPress={() => reading ? voice.stop() : voice.speak(id)} style={({ pressed }) => [m.voiceButton, reading && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={reading ? 'stop' : 'speaker'} size={18} color={reading ? 'white' : C.ink} /><Txt style={[m.voiceText, reading && { color: 'white' }]}>{reading ? 'Stop' : 'Read it to me'}</Txt></Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel={`Play ${pokemon.en}'s cry`} onPress={() => voice.cry(id)} style={({ pressed }) => [m.voiceButton, pressed && { opacity: .7 }]}><Icon name="note" size={18} /><Txt style={m.voiceText}>Hear its cry</Txt></Pressable>
+          </View></>
+        : <View accessible accessibilityLabel={`Pokédex entry locked. Discover ${pokemon.en} to unlock it.`} style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="lock" size={24} color="#6B7B64" /><View style={{ flex: 1, gap: 2 }}><Txt style={[m.entryText, { fontWeight: '800' }]}>Discover {pokemon.en} to unlock its Pokédex entry!</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19 }}>Scan or add any {pokemon.en} card.</Txt></View></View>}</View>
     </View>
     <View style={{ gap: 10 }}><Txt style={ui.subtitle}>Evolution</Txt>{family.length > 1 ? <>
       <View style={m.evolution}>{family.map((stage, i) => <Fragment key={i}>
@@ -220,8 +235,21 @@ export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onCl
   }, [reduced, scale]);
   const discovered = newIds.length > 0;
   const pokemon = speciesById.get(newIds[0]);
+  const voice = usePokedexVoice();
+  // Like the anime Pokédex: the new Pokémon calls out, then its entry is read. VoiceOver users keep control.
+  useEffect(() => {
+    if (!pokemon) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    AccessibilityInfo.isScreenReaderEnabled().then(reader => {
+      if (cancelled || reader) return;
+      void voice.cry(pokemon.id);
+      timer = setTimeout(() => { if (!cancelled) void voice.speak(pokemon.id); }, 1400);
+    });
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [pokemon?.id]);
   const names = newIds.map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ');
-  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} /><Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>{discovered ? <><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Animated.View></View><Txt style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
+  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} /><Animated.View style={{ transform: [{ scale }], alignItems: 'center' }}>{discovered ? <><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Animated.View></View><Txt style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
 }
 
 const m = StyleSheet.create({
@@ -252,7 +280,10 @@ const m = StyleSheet.create({
   entryLip: { height: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 14, borderBottomWidth: 1, borderBottomColor: '#CBD6BE', backgroundColor: '#DDE5D4' },
   entryLabel: { fontWeight: '900', fontSize: 11, lineHeight: 17, color: '#6B7B64', letterSpacing: 2 },
   speaker: { flexDirection: 'row', gap: 3 }, speakerLine: { width: 3, height: 9, borderRadius: 2, backgroundColor: '#A5B299' }, power: { height: 6, width: 6, borderRadius: 5, backgroundColor: '#6DAB63' },
-  entryScreen: { padding: 16, backgroundColor: '#D6E7BD' }, entryText: { fontSize: 16, lineHeight: 24 },
+  entryScreen: { padding: 16, backgroundColor: '#D6E7BD' },
+  voiceButton: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, borderRadius: 12, backgroundColor: '#C3D6A8', borderBottomWidth: 2, borderBottomColor: '#A9BF8D' },
+  voiceActive: { backgroundColor: C.ink, borderBottomColor: '#101A15' }, voiceText: { fontWeight: '800', fontSize: 14 },
+  sprite: { width: 72, height: 72, borderRadius: 10, backgroundColor: '#C8DCAB' }, entryText: { fontSize: 16, lineHeight: 24 },
   evolution: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 16, backgroundColor: '#DDE6D1' },
   stage: { gap: 6, justifyContent: 'center' }, stageTile: { minHeight: 88, alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
   stageCurrent: { backgroundColor: '#F8FAF3', borderColor: '#ADC79F' }, stageName: { fontSize: 11, lineHeight: 15, fontWeight: '800', textAlign: 'center', letterSpacing: -.2 },
