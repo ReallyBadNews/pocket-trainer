@@ -12,6 +12,7 @@ import { ScanScreen } from './scan-screen';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal } from './collection-modals';
 import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
 import type { AddedCards } from '@/lib/use-add-cards';
+import { QuizModal } from './quiz-screen';
 
 const PINNED_CHROME_HEIGHT = 23 + 4 + 26; // Hinge, screen border, and Pokédex strip.
 const BOTTOM_FRAME_HEIGHT = 20;
@@ -29,13 +30,14 @@ export default function PocketTrainer() {
   const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number; source: 'card' | 'page' } | null>(null);
   const [undo, setUndo] = useState<AddedCards | null>(null);
   const [captureRequest, setCaptureRequest] = useState(0);
+  const [quizOpen, setQuizOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState('');
   const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
   const [headerHeight, setHeaderHeight] = useState(84);
   const [navHeight, setNavHeight] = useState(83);
   const chrome = useScrollChromeController(headerHeight, navHeight + BOTTOM_FRAME_HEIGHT);
   const { progress } = chrome;
-  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery);
+  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen);
   useLayoutEffect(() => { cancelAnimation(progress); progress.value = 0; }, [tab, trainer.id, progress]);
   useLayoutEffect(() => {
     chrome.paused.value = modalOpen;
@@ -74,18 +76,19 @@ export default function PocketTrainer() {
     </Animated.View>
     <View style={s.feed}>
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
-        {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
+        {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} onQuiz={() => setQuizOpen(true)} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
         {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>
-    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); } }}>
+    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); } }}>
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
     {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={added => celebrate(added, 'card')} />}
     {/* Keyed by id so tapping an evolution stage opens that entry scrolled to the top. */}
     {speciesId !== null && <SpeciesModal key={speciesId} id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onSpecies={setSpeciesId} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
     {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
+    {quizOpen && <QuizModal onClose={() => setQuizOpen(false)} />}
     </Modal>
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt numberOfLines={1} style={{ flex: 1, color: 'white', fontWeight: '700', fontSize: 14 }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt style={{ color: C.gold, fontWeight: '900', fontSize: 14 }}>Undo</Txt></Pressable></View></View>}
     <Animated.View style={[s.bottomChrome, bottomStyle]}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan card', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={[s.navItem, item.id === 'scan' && s.scanNav]}><View style={[s.navIcon, tab === item.id && s.navSelected, item.id === 'scan' && s.scanIcon]}><Icon name={item.icon} size={23} color={item.id === 'scan' ? C.redDark : tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 11, fontWeight: '800', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></Animated.View>
