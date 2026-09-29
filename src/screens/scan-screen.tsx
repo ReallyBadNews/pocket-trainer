@@ -4,7 +4,7 @@ import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, SearchBox, Txt, ui } from '@/components/pokedex-ui';
 import { fetchCard, needsScanRefinement, scanCandidates, searchCards, setForCard, ENERGY_SEARCHES, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/lib/scanner';
@@ -21,6 +21,7 @@ import { CARD_FILTERS, cardKindLabel, scanTypeHint, type CardFilter } from '@/li
 import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
 import { PageScan } from './page-scan';
+import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 
 export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' }: { onCard: (card: CardBrief, draft?: Card) => void; onAdded: (added: AddedCards, source: 'card' | 'page') => void; captureRequest: number; initialQuery?: string }) {
   const scroll = useChromeScroll();
@@ -30,6 +31,7 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
   const [toolsOpen, setToolsOpen] = useState(false);
   const [quickDismissed, setQuickDismissed] = useState(false);
   const [quickBusy, setQuickBusy] = useState(false);
+  const [liveOpen, setLiveOpen] = useState(false);
   const [manual, setManual] = useState(false);
   // Auto-detect reads the language from each photo; `language` is the one in use.
   const [autoLanguage, setAutoLanguage] = useState(true);
@@ -99,8 +101,10 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
     setAutoLanguage(next === 'auto'); setDetected(null); setLanguage(next === 'auto' ? 'en' : next); setSuggested([]); setNote(null);
     if (original) void runScan(original.uri, next, manualCrop);
   }
-  async function takePhoto(library = false) {
+  async function takePhoto(library = false, system = false) {
     if (busyRef.current) return;
+    if (!library && !system && Platform.OS !== 'web') { setLiveOpen(true); return; }
+    setLiveOpen(false);
     const id = ++generation.current;
     busyRef.current = true; setBusy(true); setError(null); setImproving('done');
     try {
@@ -117,6 +121,16 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
       await readPhoto(asset.uri, scanLanguage, undefined, id);
     } catch (e) { if (alive.current && generation.current === id) setError(e instanceof Error ? e.message : 'The photo could not be read. Try again or search below.'); }
     finally { if (alive.current && generation.current === id) { busyRef.current = false; setBusy(false); setImproving('done'); } }
+  }
+  // The live camera may already have read the card; otherwise the photo goes through the normal reader.
+  function acceptLive(next: LivePhoto, match?: LiveMatch) {
+    setLiveOpen(false); setError(null);
+    setOriginal(next); setPhoto(next.uri); setManualCrop(undefined); setCrop(fullCrop);
+    if (!match) { void runScan(next.uri, scanLanguage); return; }
+    ++generation.current; lastScan.current = match.scan;
+    setLanguage(match.language); setDetected(scanLanguage === 'auto' ? match.language : null);
+    setPhoto(match.scan.photoUri); setCrop(match.scan.crop); setSuggested(match.matches); setQuery('');
+    setQuickDismissed(false); setEnergyHint(false); setImproving('done'); setNote('Check the picture, set, and bottom number before adding.');
   }
   // "Scan another card" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
@@ -163,7 +177,10 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
       setEditing(false); setDragging(false); setManualCrop(selection); void runScan(original.uri, scanLanguage, selection);
     }} />
   </Animated.ScrollView>;
-  return <Animated.FlatList {...scroll} data={sure ? [] : results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
+  const liveCamera = <Modal visible={liveOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setLiveOpen(false)}>
+    {liveOpen && <LiveCamera mode="card" language={scanLanguage} onCapture={acceptLive} onFallback={() => takePhoto(false, true)} onClose={() => setLiveOpen(false)} />}
+  </Modal>;
+  return <><Animated.FlatList {...scroll} data={sure ? [] : results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       {intro}
       {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted style={{ fontSize: 12 }}>{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
@@ -192,7 +209,7 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
       {results.length > 0 && !sure && <Txt muted style={{ fontSize: 12 }}>{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} ${results.length === 1 ? 'result' : 'results'} — tap the card that matches yours` : 'Suggested matches — choose your exact card'}</Txt>}
     </View>}
     ListEmptyComponent={query.trim() ? <View style={s.note}><Txt style={{ fontWeight: '700' }}>No matching cards</Txt><Txt muted style={{ fontSize: 13 }}>Check the language above, or try just the Pokémon name or collector number.</Txt></View> : null}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, gap: 2 }}><Txt style={{ fontWeight: '800' }}>{item.name}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{setForCard(item)?.name ?? item.id}</Txt><Txt muted style={{ fontSize: 11 }}>{cardKindLabel(item)}</Txt><Txt muted style={{ fontSize: 12 }}>#{item.localId} · {LANGUAGE_LABELS[item.language]}</Txt>{!query && <Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />;
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, gap: 2 }}><Txt style={{ fontWeight: '800' }}>{item.name}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{setForCard(item)?.name ?? item.id}</Txt><Txt muted style={{ fontSize: 11 }}>{cardKindLabel(item)}</Txt><Txt muted style={{ fontSize: 12 }}>#{item.localId} · {LANGUAGE_LABELS[item.language]}</Txt>{!query && <Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />{liveCamera}</>;
 }
 const s = StyleSheet.create({
   list: { padding: 20, paddingBottom: 40 },

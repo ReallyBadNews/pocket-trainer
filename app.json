@@ -41,6 +41,14 @@
           "image": "./assets/crafted/pokeball.png",
           "imageWidth": 150
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Pocket Pokédex to photograph your Pokémon cards.",
+          "microphonePermission": false,
+          "recordAudioAndroid": false
+        }
       ]
     ],
     "experiments": {

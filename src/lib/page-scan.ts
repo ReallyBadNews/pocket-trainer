@@ -9,11 +9,12 @@ export const PAGE_LAYOUTS: PageLayout[] = [
   { id: '12', label: '12 pockets', columns: 3, rows: 4 },
 ];
 
-/** Pocket rectangles in reading order when the page fills the photo. */
-export function pocketCrops(layout: PageLayout): Crop[] {
+/** Pocket rectangles in reading order, dividing the page region (the whole photo by default) evenly. */
+export function pocketCrops(layout: PageLayout, region: Crop = [0, 0, 1, 1]): Crop[] {
+  const [x, y, w, h] = region;
   const crops: Crop[] = [];
   for (let row = 0; row < layout.rows; row++) for (let column = 0; column < layout.columns; column++) {
-    crops.push([column / layout.columns, row / layout.rows, 1 / layout.columns, 1 / layout.rows]);
+    crops.push([x + column * w / layout.columns, y + row * h / layout.rows, w / layout.columns, h / layout.rows]);
   }
   return crops;
 }

@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, SearchBox, Txt, ui } from '@/components/pokedex-ui';
 import { fetchCard, setForCard, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, compareCardArtwork, recognizeCard, refineCard } from '@/lib/scanner';
@@ -14,9 +14,11 @@ import { pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
 import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
+import { LiveCamera } from '@/components/live-camera';
+import type { Crop } from '@/lib/scan-types';
 import { PAGE_LAYOUTS, pageSummary, pocketCrops, pocketIncluded, pocketStatus, waitingPocket, type PageLayout, type Pocket } from '@/lib/page-scan';
 
-type Photo = { uri: string; width: number; height: number };
+type Photo = { uri: string; width: number; height: number; region?: Crop };
 const detailKey = (card: CardBrief) => `${card.language}:${card.id}`;
 // Picture comparison downloads reference art. On a full page it must not hold up the next pocket.
 const COMPARE_LIMIT_MS = 3000;
@@ -43,6 +45,7 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
   const [error, setError] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [gridWidth, setGridWidth] = useState(0);
+  const [liveOpen, setLiveOpen] = useState(false);
   const generation = useRef(0);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; }; }, []);
@@ -68,7 +71,7 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
   }
   async function readPage(next: Photo, pageLayout: PageLayout) {
     const id = ++generation.current;
-    const crops = pocketCrops(pageLayout);
+    const crops = pocketCrops(pageLayout, next.region);
     setPockets(crops.map(waitingPocket)); setSelected(null); setError(null); setNote(null);
     if (!canRecognize) { setNote('Page photo ready. Automatic reading works in the installed iPhone/iPad app.'); return; }
     setBusy(true);
@@ -93,9 +96,11 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
     }
     if (isCurrent()) setBusy(false);
   }
-  async function takePhoto(library = false) {
+  async function takePhoto(library = false, system = false) {
     if (busy || adding) return;
     setError(null);
+    if (!library && !system && Platform.OS !== 'web') { setLiveOpen(true); return; }
+    setLiveOpen(false);
     try {
       if (!library) {
         const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -111,6 +116,10 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
     } catch (e) {
       if (alive.current) { setBusy(false); setError(e instanceof Error ? e.message : 'The page could not be read. Try another photo.'); }
     }
+  }
+  function acceptLive(next: Photo) {
+    setLiveOpen(false); setPhoto(next);
+    void readPage(next, layout);
   }
   function changeLayout(next: PageLayout) {
     if (busy || adding || next.id === layout.id) return;
@@ -146,17 +155,24 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
 
   const gap = 8;
   const tileWidth = gridWidth ? Math.floor((gridWidth - 16 - gap * (layout.columns - 1)) / layout.columns) : 0;
-  const pocketAspect = photo ? (photo.width / layout.columns) / (photo.height / layout.rows) : .716;
+  const [rx, ry, rw, rh] = photo?.region ?? [0, 0, 1, 1];
+  const pocketAspect = photo ? (photo.width * rw / layout.columns) / (photo.height * rh / layout.rows) : .716;
   const tileHeight = tileWidth / pocketAspect;
   // Show each pocket's slice of the page right away; the matched card flips in over it.
-  const slice = (index: number, width: number, height: number) => photo && <Image source={photo.uri} contentFit="fill" style={{
-    position: 'absolute', width: width * layout.columns, height: height * layout.rows,
-    left: -(index % layout.columns) * width, top: -Math.floor(index / layout.columns) * height,
-  }} />;
+  const slice = (index: number, width: number, height: number) => {
+    if (!photo) return null;
+    const fullWidth = width * layout.columns / rw, fullHeight = height * layout.rows / rh;
+    return <Image source={photo.uri} contentFit="fill" style={{
+      position: 'absolute', width: fullWidth, height: fullHeight,
+      left: -rx * fullWidth - (index % layout.columns) * width, top: -ry * fullHeight - Math.floor(index / layout.columns) * height,
+    }} />;
+  };
   const active = selected !== null ? pockets[selected] : null;
   const guidePocket = layout.rows > 3 ? 36 : layout.columns === 2 ? 52 : 44;
 
-  return <Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+  return <><Modal visible={liveOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setLiveOpen(false)}>
+    {liveOpen && <LiveCamera mode="page" layout={layout} language={language} onCapture={acceptLive} onFallback={() => takePhoto(false, true)} onClose={() => setLiveOpen(false)} />}
+  </Modal><Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <View style={{ gap: 16 }}>
       {header}
       <View style={{ gap: 8 }}>
@@ -195,7 +211,7 @@ export function PageScan({ header, language, captureRequest, onAdded }: { header
         <Button title={summary.ready ? `Add ${summary.ready} ${summary.ready === 1 ? 'card' : 'cards'} to binder` : 'No cards ready yet'} icon="plus" disabled={!summary.ready} busy={adding} onPress={addPage} />
       </View>}
     </View>
-  </Animated.ScrollView>;
+  </Animated.ScrollView></>;
 }
 
 function PocketPanel({ index, pocket, slice, aspect, onChoose, onSkip, onClose }: { index: number; pocket: Pocket; slice: ReactNode; aspect: number; onChoose: (card: CardBrief) => void; onSkip: () => void; onClose: () => void }) {
