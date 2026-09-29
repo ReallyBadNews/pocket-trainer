@@ -19,7 +19,7 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
 - Delete a saved printing and all its copies with confirmation from card details.
 - Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.
-- Favorites, extra-copy counts, six collection milestones and discovery animations.
+- Favorites, extra-copy counts, 22 achievement badges and discovery animations. Starter challenges cover all 27 Grass, Fire and Water starters and their 81 species across Kanto–Paldea, with a badge for each region. Eevee’s family, legendary birds, Kanto fossils, the original 151 and collection milestones have their own goals. Expand a species checklist to see what’s missing and find its cards; any printing or language counts. Progress follows each trainer’s current collection, including existing cards and imported backups.
 - Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
 - Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
 - Export/import the family's collections as JSON. Imports add independent profile copies and preserve existing data.

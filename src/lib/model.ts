@@ -1,5 +1,7 @@
 import { pokemonIds } from './card-kind';
 import { isLanguage, type Language } from './languages';
+import type { Badge } from './badges';
+export { BADGES } from './badges';
 export type { Language } from './languages';
 export type Finish = 'normal' | 'holo' | 'reverse' | 'firstEdition' | 'firstEditionHolo' | 'firstEditionReverse' | 'wPromo' | 'unsure';
 export type CardBrief = { id: string; localId: string; name: string; image?: string; localImage?: string; language: Language; category?: string; trainerType?: string; energyType?: string; tagTeam?: boolean };
@@ -75,16 +77,14 @@ export function changePrinting(trainer: Trainer, key: string, finish: Finish): T
   return { ...trainer, entries: trainer.entries.flatMap(e => e.key === key ? [updated] : e.key === nextKey ? [] : [e]) };
 }
 
-export const BADGES = [
-  { id: 'first', name: 'First discovery', description: 'Discover your first Pokémon', target: 1, kind: 'species' },
-  { id: 'ten', name: 'Field researcher', description: 'Discover 10 Pokémon', target: 10, kind: 'species' },
-  { id: 'fifty', name: 'Pokémon explorer', description: 'Discover 50 Pokémon', target: 50, kind: 'species' },
-  { id: 'hundred', name: 'Binder builder', description: 'Collect 100 cards', target: 100, kind: 'cards' },
-  { id: 'world', name: 'World collector', description: 'Collect cards in two languages', target: 2, kind: 'languages' },
-  { id: 'sixhundred', name: 'Collection champion', description: 'Collect 600 cards', target: 600, kind: 'cards' },
-] as const;
-export function badgeProgress(trainer: Trainer, badge: typeof BADGES[number]): number {
-  const count = badge.kind === 'species' ? discoveredIds(trainer).size : badge.kind === 'cards' ? totalCards(trainer) : new Set(trainer.entries.map(e => e.card.language)).size;
+export function badgeProgress(trainer: Trainer, badge: Badge, discovered = discoveredIds(trainer)): number {
+  let count: number;
+  switch (badge.kind) {
+    case 'species': count = discovered.size; break;
+    case 'species-set': count = badge.speciesIds.filter(id => discovered.has(id)).length; break;
+    case 'cards': count = totalCards(trainer); break;
+    case 'languages': count = new Set(trainer.entries.map(e => e.card.language)).size; break;
+  }
   return Math.min(count, badge.target);
 }
 
