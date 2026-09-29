@@ -9,7 +9,7 @@ import { useCollection } from '@/lib/collection-context';
 import { DexScreen, BinderScreen } from './collection-screens';
 import { BadgesScreen } from './badges-screen';
 import { ScanScreen } from './scan-screen';
-import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal } from './collection-modals';
+import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal, WishlistModal } from './collection-modals';
 import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
 import type { AddedCards } from '@/lib/use-add-cards';
 import { QuizModal } from './quiz-screen';
@@ -30,7 +30,8 @@ export default function PocketTrainer() {
   const [profileOpen, setProfileOpen] = useState(false);
   const [selection, setSelection] = useState<{ brief: CardBrief; draft?: Card; entry?: Entry } | null>(null);
   const [speciesId, setSpeciesId] = useState<number | null>(null);
-  const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number; source: 'card' | 'page' } | null>(null);
+  const [discovery, setDiscovery] = useState<{ card: Card; newIds: number[]; quantity: number; granted: number; source: 'card' | 'page' } | null>(null);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const [undo, setUndo] = useState<AddedCards | null>(null);
   const [captureRequest, setCaptureRequest] = useState(0);
   const [quizOpen, setQuizOpen] = useState(false);
@@ -42,7 +43,7 @@ export default function PocketTrainer() {
   const [navHeight, setNavHeight] = useState(83);
   const chrome = useScrollChromeController(headerHeight, navHeight + BOTTOM_FRAME_HEIGHT);
   const { progress } = chrome;
-  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || checklist);
+  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || checklist || wishlistOpen);
   useLayoutEffect(() => { cancelAnimation(progress); progress.value = 0; }, [tab, trainer.id, progress]);
   useLayoutEffect(() => {
     chrome.paused.value = modalOpen;
@@ -54,7 +55,7 @@ export default function PocketTrainer() {
   }));
   function celebrate(added: AddedCards, source: 'card' | 'page') {
     setSelection(null); setUndo(added);
-    setDiscovery({ card: added.cards[0], newIds: added.newIds, quantity: added.quantity, source });
+    setDiscovery({ card: added.cards[0], newIds: added.newIds, quantity: added.quantity, granted: added.granted, source });
   }
   // The undo offer appears once the celebration closes and fades after a few seconds.
   const showUndo = !!undo && !modalOpen && undo.trainerId === trainer.id;
@@ -83,18 +84,19 @@ export default function PocketTrainer() {
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} onQuiz={() => setQuizOpen(true)} />}
         {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
-        {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} onSet={setChecklist} view={binderView} onViewChange={setBinderView} />}
+        {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} onSet={setChecklist} view={binderView} onViewChange={setBinderView} onWishlist={() => setWishlistOpen(true)} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>
-    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); setChecklist(null); } }}>
-    {/* The checklist stays mounted under a card it opened, so closing that card returns to the same spot. */}
+    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); setChecklist(null); setWishlistOpen(false); } }}>
+    {/* The checklist and wishlist stay mounted under a card they opened, so closing that card returns to the same spot. */}
     {checklist && <View style={selection || discovery ? s.hidden : s.fill}><SetChecklistModal set={checklist} onClose={() => setChecklist(null)} onEntry={entry => setSelection({ brief: entry.card, entry })} onCard={brief => setSelection({ brief })} /></View>}
+    {wishlistOpen && <View style={selection || discovery ? s.hidden : s.fill}><WishlistModal onClose={() => setWishlistOpen(false)} onCard={brief => setSelection({ brief })} onFind={() => { setWishlistOpen(false); openScan(); }} /></View>}
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
     {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={added => celebrate(added, 'card')} />}
     {/* Keyed by id so tapping an evolution stage opens that entry scrolled to the top. */}
     {speciesId !== null && <SpeciesModal key={speciesId} id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onSpecies={setSpeciesId} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
-    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setChecklist(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
+    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setWishlistOpen(false); setChecklist(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
     {quizOpen && <QuizModal onClose={() => setQuizOpen(false)} />}
     </Modal>
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt numberOfLines={1} style={{ flex: 1, color: 'white', fontWeight: '700', fontSize: 14 }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt style={{ color: C.gold, fontWeight: '900', fontSize: 14 }}>Undo</Txt></Pressable></View></View>}
