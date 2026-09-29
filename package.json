@@ -52,6 +52,7 @@
     "export:web": "expo export --platform web",
     "export:ios": "expo export --platform ios --output-dir dist-ios",
     "catalog:refresh": "python3 scripts/refresh-catalog.py",
+    "species:refresh": "python3 scripts/refresh-species.py",
     "preview:serve": "python3 scripts/serve-preview.py"
   },
   "private": true

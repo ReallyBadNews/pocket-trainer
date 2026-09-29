@@ -22,6 +22,7 @@ The browser preview supports catalog search, card review, collecting, favorites,
 - Scan and filter Pokémon, Trainer, Item, Energy, Stadium and TAG TEAM cards. Pokémon cards unlock their species entries, including every partner on a TAG TEAM; non-Pokémon cards count toward the binder and collection badges.
 - Delete a saved printing and all its copies with confirmation from card details.
 - Tap card artwork or a scan photo for a full-screen viewer with pinch zoom (1–5×), panning in a clean viewer styled to match the Pokédex.
+- Each Pokédex entry shows the Pokémon's types, its English Pokédex text once it is discovered, and its whole evolution family, including baby Pokémon and branches like Eevee's. Tap a stage to jump to it. The Pokédex tab counts discovered Pokémon by type; tap a type to show only that type.
 - Favorites, extra-copy counts, 22 achievement badges and discovery animations. Starter challenges cover all 27 Grass, Fire and Water starters and their 81 species across Kanto–Paldea, with a badge for each region. Eevee’s family, legendary birds, Kanto fossils, the original 151 and collection milestones have their own goals. Expand a species checklist to see what’s missing and find its cards; any printing or language counts. Progress follows each trainer’s current collection, including existing cards and imported backups.
 - Estimated USD values on scan matches, card details and the binder, plus a total for each trainer's collection. Duplicate copies count; missing prices and unconfirmed printings are labeled.
 - Sort the binder by highest/lowest price, recently added or printings needing confirmation. Filter pending printings directly from the collection value panel.
@@ -49,7 +50,7 @@ Build 8 includes card deletion, fitted-image pan limits and the cleaned-up Poké
 
 ## Data, photos and offline use
 
-The app bundles compact card indexes and Pokémon species names. New card details and artwork are fetched from TCGdex when first opened. Added card metadata is saved locally; on native devices, the app also attempts to save its card artwork in app documents. A failed image download does not block saving the collection. Search and saved collection metadata work offline. Uncached artwork and previously unseen card details require internet access.
+The app bundles compact card indexes, Pokémon species names, and species types, evolution links and English Pokédex text. New card details and artwork are fetched from TCGdex when first opened. Added card metadata is saved locally; on native devices, the app also attempts to save its card artwork in app documents. A failed image download does not block saving the collection. Search and saved collection metadata work offline. Uncached artwork and previously unseen card details require internet access.
 
 Photo recognition uses Apple's on-device Vision models and deterministic catalog-ranking rules, with no LLM or photo uploads. Automatic suggestions always require review, and foil/edition choices are manual. The scanner isolates cards when edges are detectable and publishes suggestions after two OCR passes. Clear matches skip additional work; uncertain matches get extra text reading and optional local picture comparison while suggestions remain usable. Crop adjustment and language changes rerun recognition; card-type filters reuse the recognized text. The shared native core and ranking tests correctly matched public reference cards and the supplied Wugtrio binder screenshot; physical iPhone validation remains necessary. See [how scanning works](docs/scanning.md) and [performance measurements](docs/scan-performance.md) for the pipeline and limits.
 
@@ -59,7 +60,10 @@ Refresh the public catalog with:
 
 ```sh
 pnpm catalog:refresh
+pnpm species:refresh
 ```
+
+`pnpm species:refresh` runs `scripts/refresh-species.py` (Python 3 standard library only) to rebuild `src/data/species-details.json` (about 149 KB) from [PokéAPI's CSV data](https://github.com/PokeAPI/pokeapi/tree/master/data/v2/csv): each species' default-form types, what it evolves from, and its English Pokédex text from the newest game that has one. The output is deterministic, so a rerun only changes when PokéAPI does.
 
 TCGdex language coverage varies; some cards have no artwork or incomplete metadata. Physical cards are filtered separately from Pokémon TCG Pocket. Current sources and snapshot counts are recorded in `src/data/catalog-meta.json`.
 
@@ -81,4 +85,4 @@ The preview's user LaunchAgent is `com.reallybadnews.pokedex-preview`; it runs t
 
 ## Credits
 
-Card metadata and images: [TCGdex](https://tcgdex.dev/). Pokémon names and artwork: [PokéAPI](https://pokeapi.co/). Pokémon is owned by its respective rights holders. This is an unofficial family fan project.
+Card metadata and images: [TCGdex](https://tcgdex.dev/). Pokémon names, types, evolutions, Pokédex text and artwork: [PokéAPI](https://pokeapi.co/). Pokémon is owned by its respective rights holders. This is an unofficial family fan project.

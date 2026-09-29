@@ -3,7 +3,7 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { C, CardArt, Chip, Icon, Progress, SearchBox, Txt, Button, mono, ui } from '@/components/pokedex-ui';
+import { C, CardArt, Chip, Icon, Progress, SearchBox, Txt, TypePill, Button, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, cardKindLabel, type CardFilter } from '@/lib/card-kind';
@@ -12,6 +12,7 @@ import { collectorNumber, discoveredIds, duplicateCards, totalCards, type Entry 
 import { CardPriceTag, CollectionValue } from '@/components/card-values';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
+import { speciesTypes, typeCounts, typeLabel, TYPE_COLORS, type PokemonType } from '@/lib/species-details';
 
 export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void }) {
   const scroll = useChromeScroll();
@@ -21,7 +22,11 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
   const { width } = useWindowDimensions();
   const columns = width >= 900 ? 5 : width >= 650 ? 4 : 2;
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
-  const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!query || normalize(`${LANGUAGES.map(lang => s[lang] ?? '').join('')}${s.id}`).includes(normalize(query)))), [query, filter, discovered]);
+  const types = useMemo(() => typeCounts(discovered), [discovered]);
+  const [typeFilter, setTypeFilter] = useState<PokemonType | null>(null);
+  // A type disappears from the readout if its last card is deleted; stop filtering by it too.
+  const activeType = types.some(t => t.type === typeFilter) ? typeFilter : null;
+  const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!activeType || speciesTypes(s.id).includes(activeType)) && (!query || normalize(`${LANGUAGES.map(lang => s[lang] ?? '').join('')}${s.id}`).includes(normalize(query)))), [query, filter, discovered, activeType]);
   return <Animated.FlatList {...scroll} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} columnWrapperStyle={{ gap: 10 }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your Pokédex</Txt><Txt muted>Every card starts a discovery.</Txt></View><View style={s.counter}><Txt style={s.counterNumber}>{String(discovered.size).padStart(3, '0')}</Txt><Txt muted style={{ fontSize: 10, lineHeight: 16 }}>discovered</Txt></View></View>
@@ -33,8 +38,13 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
       <CollectionValue entries={trainer.entries} compact onNeedsPrinting={onNeedsPrinting} />
       <SearchBox value={query} onChange={setQuery} placeholder="Find a Pokémon by name or number" />
       <View style={ui.row}>{['All Pokémon', 'Discovered', 'Kanto'].map(label => <Chip key={label} label={label} selected={filter === label} onPress={() => setFilter(label)} />)}</View>
+      {types.length > 0 && <View style={s.types}>
+        <View style={ui.between}><Txt style={{ fontWeight: '700', fontSize: 13 }}>Your types</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{activeType ? `Showing ${typeLabel(activeType)} Pokémon` : 'Tap a type to explore'}</Txt></View>
+        <View style={s.typeBar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{types.map(t => <View key={t.type} style={{ flex: t.count, backgroundColor: TYPE_COLORS[t.type], opacity: activeType && activeType !== t.type ? .3 : 1 }} />)}</View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>{types.map(t => <TypePill key={t.type} type={t.type} count={t.count} selected={activeType === t.type} onPress={() => setTypeFilter(activeType === t.type ? null : t.type)} />)}</ScrollView>
+      </View>}
     </View>}
-    ListEmptyComponent={<View style={s.empty}><Txt style={ui.subtitle}>{query ? 'No Pokémon found' : 'Your first discovery is waiting'}</Txt><Txt muted style={{ textAlign: 'center' }}>{query ? 'Try an English, Japanese, Korean or Chinese name, or a Pokédex number.' : 'Add a Pokémon card to bring its entry to life.'}</Txt></View>}
+    ListEmptyComponent={<View style={s.empty}><Txt style={ui.subtitle}>{query || activeType ? 'No Pokémon found' : 'Your first discovery is waiting'}</Txt><Txt muted style={{ textAlign: 'center' }}>{query ? 'Try an English, Japanese, Korean or Chinese name, or a Pokédex number.' : activeType ? `No ${typeLabel(activeType)} Pokémon here. Try another type or filter.` : 'Add a Pokémon card to bring its entry to life.'}</Txt></View>}
     renderItem={({ item }) => {
       const owned = discovered.has(item.id);
       return <Pressable accessibilityRole="button" accessibilityLabel={`${item.en}, number ${item.id}, ${owned ? 'discovered' : 'not yet discovered'}`} onPress={() => onSpecies(item.id)} style={({ pressed }) => [s.pokemon, { flex: 1 / columns }, owned && s.pokemonOwned, pressed && { opacity: .7 }]}>
@@ -101,6 +111,8 @@ const s = StyleSheet.create({
   adventureCopy: { flex: 1, paddingVertical: 20, paddingLeft: 18, zIndex: 1 },
   deviceArt: { width: '44%', height: 224, marginLeft: -25, marginRight: -8, transform: [{ rotate: '8deg' }] },
   readout: { flexDirection: 'row', alignItems: 'center', gap: 18, paddingVertical: 4 }, readoutDivider: { width: 1, height: 38, backgroundColor: '#C5D2B7' },
+  // 2px gaps keep neighbouring type colors distinct in the stacked bar.
+  types: { gap: 8 }, typeBar: { flexDirection: 'row', gap: 2, height: 10, borderRadius: 5, overflow: 'hidden' },
   pokemon: { backgroundColor: '#E6EDDB', borderRadius: 14, padding: 11, marginBottom: 10, borderWidth: 1, borderColor: '#D8E1CD', overflow: 'hidden' },
   pokemonOwned: { backgroundColor: '#FCFDF9', borderColor: '#ADC79F' }, dexNumber: { fontFamily: mono, fontSize: 11, lineHeight: 18, color: '#7B8D73' },
   sprite: { width: '100%', height: 108, marginVertical: 4 }, ownedDot: { backgroundColor: '#679255', borderRadius: 10, padding: 3 },

@@ -4,6 +4,7 @@ import { useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle, type TextProps } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
+import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
 import type { Card, CardBrief } from '@/lib/model';
 
 export const C = { red: '#C93240', redDark: '#8D2431', redLight: '#E95661', screen: '#EDF3DD', paper: '#FAFCF7', ink: '#25382F', muted: '#607266', line: '#D2DDC8', blue: '#57C7E8', gold: '#EAC55A' };
@@ -43,6 +44,13 @@ export function SearchBox({ value, onChange, placeholder = 'Search Pokémon…' 
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
   return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={[ui.chip, selected && ui.chipSelected]}><Txt style={{ color: selected ? C.paper : C.muted, fontWeight: '700', fontSize: 13 }}>{label}</Txt></Pressable>;
 }
+// Read-only pills sit inside a labeled row; pass onPress for a 44pt filter chip with its own label.
+export function TypePill({ type, count, selected = false, onPress }: { type: PokemonType; count?: number; selected?: boolean; onPress?: () => void }) {
+  const color = typeTextColor(type), label = typeLabel(type);
+  const content = <><Txt style={{ color, fontWeight: '800', fontSize: 13, lineHeight: 18 }}>{label}</Txt>{count !== undefined && <Txt style={{ color, fontFamily: mono, fontWeight: '700', fontSize: 12, lineHeight: 18 }}>{count}</Txt>}{selected && <Icon name="check" size={15} color={color} />}</>;
+  if (!onPress) return <View style={[ui.typePill, { backgroundColor: TYPE_COLORS[type] }]}>{content}</View>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${label}${count !== undefined ? `, ${count} discovered` : ''}. ${selected ? `Showing only ${label} Pokémon. Tap to show all` : `Show ${label} Pokémon`}`} accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [ui.typePill, ui.typeChip, { backgroundColor: TYPE_COLORS[type] }, selected && { borderColor: C.ink }, pressed && { opacity: .75 }]}>{content}</Pressable>;
+}
 export function CardArt({ card, style, high = false }: { card: CardBrief | Card; style?: StyleProp<ViewStyle>; high?: boolean }) {
   const local = 'localImage' in card ? card.localImage : undefined;
   const base = cardImage(card, high)?.replace(/\/(?:low|high)\.webp$/, '');
@@ -76,6 +84,8 @@ export const ui = StyleSheet.create({
   input: { flex: 1, minWidth: 0, minHeight: 48, color: C.ink, fontSize: 15 },
   chip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 15, borderRadius: 22, borderWidth: 1, borderColor: C.line },
   chipSelected: { backgroundColor: C.ink, borderColor: C.ink },
+  typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28, paddingHorizontal: 12, borderRadius: 14 },
+  typeChip: { minHeight: 44, borderRadius: 22, borderWidth: 3, borderColor: 'transparent' },
   cardArt: { aspectRatio: 0.716, overflow: 'hidden', borderRadius: 8, backgroundColor: '#E0E7D8' },
   artFallback: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 10, gap: 6 },
   progress: { height: 7, borderRadius: 4, overflow: 'hidden', backgroundColor: '#D4DEC7' },
