@@ -1,8 +1,8 @@
 import { Image } from 'expo-image';
-import Svg, { Circle, G, Path } from 'react-native-svg';
+import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import type { BadgeEmblem } from '@/lib/badges';
 
-const COLORS = { starters: '#4B8756', eevee: '#A56D40', birds: '#477D9E', fossil: '#927744', dex: '#B7464F' };
+const COLORS = { starters: '#4B8756', eevee: '#A56D40', birds: '#477D9E', fossil: '#927744', dex: '#B7464F', binder: '#4F6CA6' };
 
 export function AchievementEmblem({ emblem, earned }: { emblem: BadgeEmblem; earned: boolean }) {
   if (emblem === 'medal') return <Image source={require('../../assets/crafted/badge.png')} style={{ width: 76, height: 84, opacity: earned ? 1 : .4 }} contentFit="contain" />;
@@ -25,6 +25,8 @@ export function AchievementEmblem({ emblem, earned }: { emblem: BadgeEmblem; ear
       {emblem === 'birds' && <Path d="M20 24L27 40 38 48 49 40 56 24 43 31 38 22 33 31ZM27 40L24 32M49 40L52 32M38 34V48" />}
       {emblem === 'fossil' && <Path d="M49 48C29 59 18 38 26 26 35 12 55 24 51 38 48 49 32 47 31 37 30 29 40 26 44 33 47 38 39 42 37 36M27 27L32 31M23 36L31 37M28 46L34 43M38 51L39 45" />}
       {emblem === 'dex' && <><Circle cx={38} cy={35} r={17} /><Path d="M21 35H32M44 35H55" /><Circle cx={38} cy={35} r={6} /></>}
+      {/* A full 9-pocket binder page. */}
+      {emblem === 'binder' && [0, 1, 2].flatMap(row => [0, 1, 2].map(col => <Rect key={`${row}${col}`} x={25.5 + col * 9} y={21.5 + row * 9.5} width={7} height={8} rx={1.5} strokeWidth={1.8} fill={color} fillOpacity={earned ? .35 : .15} />))}
     </G>}
   </Svg>;
 }

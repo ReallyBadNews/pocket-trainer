@@ -2,6 +2,7 @@ import { pokemonIds } from './card-kind';
 import { isLanguage, type Language } from './languages';
 import type { Badge } from './badges';
 import { QUIZ_LENGTH } from './quiz';
+import { completedSetCount } from './set-progress';
 export { BADGES } from './badges';
 export type { Language } from './languages';
 export type Finish = 'normal' | 'holo' | 'reverse' | 'firstEdition' | 'firstEditionHolo' | 'firstEditionReverse' | 'wPromo' | 'unsure';
@@ -93,13 +94,15 @@ export function changePrinting(trainer: Trainer, key: string, finish: Finish): T
   return { ...trainer, entries: trainer.entries.flatMap(e => e.key === key ? [updated] : e.key === nextKey ? [] : [e]) };
 }
 
-export function badgeProgress(trainer: Trainer, badge: Badge, discovered = discoveredIds(trainer)): number {
+/** Screens pass `completedSets` from the bundled catalog; without it, sets use the totals saved on each card. */
+export function badgeProgress(trainer: Trainer, badge: Badge, discovered = discoveredIds(trainer), completedSets?: number): number {
   let count: number;
   switch (badge.kind) {
     case 'species': count = discovered.size; break;
     case 'species-set': count = badge.speciesIds.filter(id => discovered.has(id)).length; break;
     case 'cards': count = totalCards(trainer); break;
     case 'languages': count = new Set(trainer.entries.map(e => e.card.language)).size; break;
+    case 'sets': count = completedSets ?? completedSetCount(trainer); break;
   }
   return Math.min(count, badge.target);
 }

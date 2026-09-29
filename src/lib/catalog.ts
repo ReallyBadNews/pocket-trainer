@@ -15,6 +15,7 @@ import imageOverrides from '../data/image-overrides.json';
 const artOverrides = imageOverrides as Partial<Record<Language, Record<string, string>>>;
 import { collectorTotal, type Card, type CardBrief, type Finish, type Language } from './model';
 import { fetchCardData, supplementalCards } from './card-api';
+import type { SetCatalog } from './set-progress';
 import { DAY, parseCardPricing } from './pricing';
 
 export const species = speciesData as ({ id: number; genus: string } & Record<Language, string>)[];
@@ -36,6 +37,24 @@ const setMaps = {
   'zh-tw': new Map((traditionalSets as SetBrief[]).map(s => [s.id, s])),
 };
 export const setForCard = (card: CardBrief) => setMaps[card.language].get(card.id.slice(0, card.id.lastIndexOf('-')));
+let setIndex: { cards: Map<string, CardBrief[]>; ids: Map<string, string> } | undefined;
+function catalogSetIndex() {
+  if (setIndex) return setIndex;
+  const cards = new Map<string, CardBrief[]>(), ids = new Map<string, string>();
+  for (const card of allCards) {
+    const key = `${card.language}:${card.id.slice(0, card.id.lastIndexOf('-'))}`;
+    const list = cards.get(key);
+    if (list) list.push(card); else cards.set(key, [card]);
+  }
+  for (const language of LANGUAGES) for (const id of setMaps[language].keys()) if (!ids.has(`${language}:${id.toLowerCase()}`)) ids.set(`${language}:${id.toLowerCase()}`, id);
+  return setIndex = { cards, ids };
+}
+/** Built on first use. Manual set codes are upper case, so SV4A still finds SV4a. */
+export const catalogSet: SetCatalog = (language, setId) => {
+  const { cards, ids } = catalogSetIndex();
+  const set = setMaps[language].get(setId) ?? setMaps[language].get(ids.get(`${language}:${setId.toLowerCase()}`) ?? '');
+  return set && { id: set.id, name: set.name, official: set.cardCount.official, cards: cards.get(`${language}:${set.id}`) ?? [] };
+};
 export const cardImage = (card: CardBrief, high = false) => {
   const base = card.image ?? artOverrides[card.language]?.[card.id];
   return base ? `${base}/${high ? 'high' : 'low'}.webp` : undefined;

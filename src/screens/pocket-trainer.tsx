@@ -13,6 +13,9 @@ import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal } from './collec
 import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
 import type { AddedCards } from '@/lib/use-add-cards';
 import { QuizModal } from './quiz-screen';
+import { SetChecklistModal } from './set-checklist';
+import type { SetProgress } from '@/lib/set-progress';
+import type { BinderView } from '@/components/binder-pages';
 
 const PINNED_CHROME_HEIGHT = 23 + 4 + 26; // Hinge, screen border, and Pokédex strip.
 const BOTTOM_FRAME_HEIGHT = 20;
@@ -33,11 +36,13 @@ export default function PocketTrainer() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState('');
   const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
+  const [binderView, setBinderView] = useState<BinderView>('grid');
+  const [checklist, setChecklist] = useState<SetProgress | null>(null);
   const [headerHeight, setHeaderHeight] = useState(84);
   const [navHeight, setNavHeight] = useState(83);
   const chrome = useScrollChromeController(headerHeight, navHeight + BOTTOM_FRAME_HEIGHT);
   const { progress } = chrome;
-  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen);
+  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || checklist);
   useLayoutEffect(() => { cancelAnimation(progress); progress.value = 0; }, [tab, trainer.id, progress]);
   useLayoutEffect(() => {
     chrome.paused.value = modalOpen;
@@ -77,17 +82,19 @@ export default function PocketTrainer() {
     <View style={s.feed}>
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} onQuiz={() => setQuizOpen(true)} />}
-        {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
         {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
+        {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} onSet={setChecklist} view={binderView} onViewChange={setBinderView} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>
-    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); } }}>
+    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); setChecklist(null); } }}>
+    {/* The checklist stays mounted under a card it opened, so closing that card returns to the same spot. */}
+    {checklist && <View style={selection || discovery ? s.hidden : s.fill}><SetChecklistModal set={checklist} onClose={() => setChecklist(null)} onEntry={entry => setSelection({ brief: entry.card, entry })} onCard={brief => setSelection({ brief })} /></View>}
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
     {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={added => celebrate(added, 'card')} />}
     {/* Keyed by id so tapping an evolution stage opens that entry scrolled to the top. */}
     {speciesId !== null && <SpeciesModal key={speciesId} id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onSpecies={setSpeciesId} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
-    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
+    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setChecklist(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
     {quizOpen && <QuizModal onClose={() => setQuizOpen(false)} />}
     </Modal>
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt numberOfLines={1} style={{ flex: 1, color: 'white', fontWeight: '700', fontSize: 14 }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt style={{ color: C.gold, fontWeight: '900', fontSize: 14 }}>Undo</Txt></Pressable></View></View>}
@@ -123,4 +130,5 @@ const s = StyleSheet.create({
   toast: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', maxWidth: 460, paddingLeft: 14, borderRadius: 14, backgroundColor: C.ink, shadowColor: '#000', shadowOpacity: .25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   undo: { minHeight: 48, minWidth: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 25, gap: 15 },
+  fill: { flex: 1 }, hidden: { display: 'none' },
 });

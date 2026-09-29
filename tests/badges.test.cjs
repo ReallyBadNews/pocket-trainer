@@ -113,3 +113,23 @@ test('discovery milestones count species, card milestones count copies and all p
   const multilingual = ['ja', 'ko', 'zh-cn'].reduce((t, language) => addCard(t, card(1, { language }), 'normal', 1), trainer);
   assert.equal(badgeProgress(multilingual, badge('world')), 2);
 });
+
+test('Set master needs every numbered card in one set; copies, other languages and secret rares do not fill gaps', () => {
+  const b = badge('set-master');
+  assert.equal(b.group, 'Collection milestones');
+  const setCard = (n, overrides = {}) => card(25, { id: `mini-${n}`, localId: String(n).padStart(3, '0'), set: { id: 'mini', name: 'Mini set', total: 3 }, ...overrides });
+  let trainer = addCard(freshCollection().trainers[0], setCard(1), 'normal', 5);
+  trainer = addCard(trainer, setCard(1), 'holo', 1);
+  trainer = addCard(trainer, setCard(2), 'normal', 1);
+  trainer = addCard(trainer, setCard(4), 'normal', 1); // A secret rare: 004/003.
+  assert.equal(badgeProgress(trainer, b), 0);
+  assert.equal(badgeProgress(addCard(trainer, setCard(3, { language: 'ja' }), 'normal', 1), b), 0);
+  trainer = addCard(trainer, setCard(3), 'reverse', 1);
+  assert.equal(badgeProgress(trainer, b), 1);
+  assert.equal(badgeProgress(parseCollection(portableBackup({ ...freshCollection(), trainers: [trainer] })).trainers[0], b), 1);
+  // Screens pass the catalog-aware count; progress stays capped at the target.
+  assert.equal(badgeProgress(trainer, b, undefined, 0), 0);
+  assert.equal(badgeProgress(trainer, b, undefined, 4), 1);
+  trainer = updateQuantity(trainer, 'en:mini-3:reverse', 0);
+  assert.equal(badgeProgress(trainer, b), 0);
+});

@@ -9,7 +9,7 @@ import type { Card, CardBrief } from '@/lib/model';
 
 export const C = { red: '#C93240', redDark: '#8D2431', redLight: '#E95661', screen: '#EDF3DD', paper: '#FAFCF7', ink: '#25382F', muted: '#607266', line: '#D2DDC8', blue: '#57C7E8', gold: '#EAC55A' };
 export const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
-export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock' | 'tools' | 'bolt' | 'speaker' | 'note' | 'stop';
+export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock' | 'tools' | 'bolt' | 'speaker' | 'note' | 'stop' | 'grid';
 // A light tick makes small toggles feel physical, like pressing a real Pokédex button.
 export const tick = () => { Haptics.selectionAsync().catch(() => {}); };
 export function Icon({ name, size = 24, color = C.ink, filled = false }: { name: IconName; size?: number; color?: string; filled?: boolean }) {
@@ -22,7 +22,7 @@ export function Icon({ name, size = 24, color = C.ink, filled = false }: { name:
     heart: 'M20.8 4.6a5.5 5.5 0 00-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 00-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 000-7.8z',
     check: 'M5 12l4 4L20 5', download: 'M12 3v12 M7 10l5 5 5-5 M3 16v5h18v-5', upload: 'M12 16V4 M7 9l5-5 5 5 M3 16v5h18v-5',
     camera: 'M3 6h4l2-3h6l2 3h4v15H3z M8 13a4 4 0 108 0 4 4 0 00-8 0', photo: 'M3 3h18v18H3z M3 17l6-6 5 5 3-3 4 4',
-    arrow: 'M5 12h14 M13 6l6 6-6 6', tools: 'M4 7h9 M17 7h3 M15 5v4 M4 17h3 M11 17h9 M9 15v4', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', speaker: 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 010 6 M18.5 6.5a8 8 0 010 11', note: 'M9 18V5l11-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0z M20 16a3 3 0 11-6 0 3 3 0 016 0z', stop: 'M7 7h10v10H7z', lock: 'M7 10V7a5 5 0 0110 0v3 M5 10h14v11H5z',
+    arrow: 'M5 12h14 M13 6l6 6-6 6', tools: 'M4 7h9 M17 7h3 M15 5v4 M4 17h3 M11 17h9 M9 15v4', bolt: 'M13 2L4 14h7l-1 8 9-12h-7z', speaker: 'M4 9h4l5-4v14l-5-4H4z M16 9a4 4 0 010 6 M18.5 6.5a8 8 0 010 11', note: 'M9 18V5l11-2v13 M9 18a3 3 0 11-6 0 3 3 0 016 0z M20 16a3 3 0 11-6 0 3 3 0 016 0z', stop: 'M7 7h10v10H7z', grid: 'M4 4h7v7H4z M13 4h7v7h-7z M4 13h7v7H4z M13 13h7v7h-7z', lock: 'M7 10V7a5 5 0 0110 0v3 M5 10h14v11H5z',
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d={paths[name]} stroke={color} fill={filled && name === 'heart' ? color : 'none'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
