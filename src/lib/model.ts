@@ -35,19 +35,26 @@ export const trainerAppearanceFor = (index: number): TrainerAppearance => ({
   outfit: TRAINER_OUTFITS[index % TRAINER_OUTFITS.length],
   headwear: index % 3 === 0 ? 'cap' : index % 3 === 1 ? 'none' : 'headband',
 });
-/** `quizBest` is the trainer's best Who's That Pokémon? score, out of QUIZ_LENGTH. */
-export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number };
+/** A catalog card the trainer hopes to find. Keyed by language + id, so any printing grants it. */
+export type Wish = { key: string; card: CardBrief; dexIds: number[]; addedAt: string };
+export const WISHLIST_LIMIT = 200;
+/**
+ * `quizBest` is the trainer's best Who's That Pokémon? score, out of QUIZ_LENGTH.
+ * `wishlist` is optional so trainers created by older code still type-check; parseCollection always fills it.
+ */
+export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number; wishlist?: Wish[] };
 export type Collection = { version: 1; activeId: string; trainers: Trainer[] };
 
 export const FINISH_LABELS: Record<Finish, string> = {
   normal: 'Regular', holo: 'Holo', reverse: 'Reverse holo', firstEdition: '1st edition', firstEditionHolo: '1st edition holo', firstEditionReverse: '1st edition reverse', wPromo: 'W promo', unsure: 'Not sure yet',
 };
 export const TRAINER_COLORS = TRAINER_OUTFITS.map(outfit => TRAINER_OUTFIT_COLORS[outfit]);
-export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [] }] });
+export const freshCollection = (): Collection => ({ version: 1, activeId: 'trainer-1', trainers: [{ id: 'trainer-1', name: 'Trainer 1', color: TRAINER_COLORS[0], appearance: trainerAppearanceFor(0), entries: [], wishlist: [] }] });
 /** Printed totals share the number's width: 001/066, and Gem Pack 17 07/07. */
 export const collectorTotal = (localId: string, total: number) => String(total).padStart(/^\d+$/.test(localId.split(' ').pop()!) ? localId.split(' ').pop()!.length : 1, '0');
 export const collectorNumber = (card: Card) => `${card.localId}/${card.set.total ? collectorTotal(card.localId, card.set.total) : '?'}`;
 export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:${card.id}:${finish}`;
+export const wishKey = (card: CardBrief) => `${card.language}:${card.id}`;
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap(e => pokemonIds(e.card)));
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);
 export const duplicateCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + Math.max(0, e.quantity - 1), 0);
@@ -57,7 +64,9 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
   const key = entryKey(card, finish);
   const existing = trainer.entries.find(e => e.key === key);
   if (existing && existing.quantity + quantity > 999) throw new Error('You can save up to 999 copies of one printing.');
-  return { ...trainer, entries: existing
+  // Wish granted: any printing of a wished card takes it off the wishlist.
+  const wishlist = trainer.wishlist?.filter(w => w.key !== wishKey(card));
+  return { ...trainer, ...(wishlist ? { wishlist } : {}), entries: existing
     ? trainer.entries.map(e => e.key === key ? { ...e, card: { ...card, localImage: card.localImage ?? e.card.localImage }, quantity: e.quantity + quantity } : e)
     : [{ key, card, finish, quantity, favorite: false, addedAt: new Date().toISOString() }, ...trainer.entries] };
 }
@@ -118,6 +127,30 @@ const isRecord = (value: unknown): value is Record<string, unknown> => !!value &
 const str = (v: unknown, max = 300): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
 const safeImage = (v: unknown): v is string => typeof v === 'string' && /^https:\/\/assets\.tcgdex\.net\//.test(v) && v.length < 500;
 
+/** Wishes are a nice-to-have: a bad one is dropped instead of rejecting the whole binder. */
+function parseWishlist(value: unknown): Wish[] {
+  if (!Array.isArray(value)) return [];
+  const wishes = new Map<string, Wish>();
+  for (const w of value) {
+    if (wishes.size >= WISHLIST_LIMIT) break;
+    if (!isRecord(w) || !isRecord(w.card) || !str(w.addedAt) || !Number.isFinite(Date.parse(w.addedAt))) continue;
+    const c = w.card;
+    if (!str(c.id, 100) || !str(c.localId, 50) || !str(c.name) || !isLanguage(c.language) || (c.image !== undefined && !safeImage(c.image))) continue;
+    const card: CardBrief = {
+      id: c.id, localId: c.localId, name: c.name, language: c.language,
+      ...(safeImage(c.image) ? { image: c.image } : {}),
+      ...(str(c.category, 50) ? { category: c.category } : {}),
+      ...(str(c.trainerType, 50) ? { trainerType: c.trainerType } : {}),
+      ...(str(c.energyType, 50) ? { energyType: c.energyType } : {}),
+      ...(typeof c.tagTeam === 'boolean' ? { tagTeam: c.tagTeam } : {}),
+    };
+    const dexIds = Array.isArray(w.dexIds) ? [...new Set(w.dexIds.filter((n): n is number => Number.isInteger(n) && n > 0 && n < 10000))].slice(0, 10) : [];
+    const key = wishKey(card);
+    if (!wishes.has(key)) wishes.set(key, { key, card, dexIds, addedAt: w.addedAt });
+  }
+  return [...wishes.values()];
+}
+
 /** Reject invalid backups before changing any saved data. Rebuild objects to discard unknown fields. */
 export function parseCollection(raw: string): Collection {
   if (raw.length > 20_000_000) throw new Error('This backup is too large.');
@@ -165,14 +198,15 @@ export function parseCollection(raw: string): Collection {
     });
     if (new Set(entries.map(e => e.key)).size !== entries.length) return invalid();
     // A bad game score should never block a backup; drop it instead.
-    return { id: t.id, name: t.name, color: t.color, appearance, entries, ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}) };
+    return { id: t.id, name: t.name, color: t.color, appearance, entries, ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}), wishlist: parseWishlist(t.wishlist) };
   });
   if (new Set(trainers.map(t => t.id)).size !== trainers.length || !trainers.some(t => t.id === data.activeId)) return invalid();
   return { version: 1, activeId: data.activeId as string, trainers };
 }
 
+const portableWishes = (t: Trainer) => (t.wishlist ?? []).map(w => ({ ...w, card: { ...w.card, localImage: undefined } }));
 export function portableBackup(collection: Collection): string {
-  return JSON.stringify({ ...collection, trainers: collection.trainers.map(t => ({ ...t, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })) })) }, null, 2);
+  return JSON.stringify({ ...collection, trainers: collection.trainers.map(t => ({ ...t, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })), wishlist: portableWishes(t) })) }, null, 2);
 }
 
 /** Import adds independent profiles, preserving every existing collection. */
@@ -183,7 +217,7 @@ export function mergeBackup(current: Collection, incoming: Collection, suffix = 
     let id = `${t.id}-import-${suffix}-${i}`;
     while (ids.has(id)) id += '-copy';
     ids.add(id);
-    return { ...t, id, name: `${t.name.slice(0, 23)} (import)`, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })) };
+    return { ...t, id, name: `${t.name.slice(0, 23)} (import)`, entries: t.entries.map(e => ({ ...e, card: { ...e.card, localImage: undefined } })), wishlist: portableWishes(t) };
   });
   return { ...current, trainers: [...current.trainers, ...trainers] };
 }

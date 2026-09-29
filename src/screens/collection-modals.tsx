@@ -2,14 +2,15 @@ import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Pressable, ScrollView, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, FlatList, Pressable, ScrollView, Share, StyleSheet, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, C, CardArt, Chip, ErrorNotice, Icon, IconButton, TypePill, Txt, mono, ui } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
-import { fetchCard, speciesById, speciesImage } from '@/lib/catalog';
-import { collectorNumber, changePrinting, defaultFinish, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type TrainerAppearance } from '@/lib/model';
+import { fetchCard, setForCard, speciesById, speciesImage } from '@/lib/catalog';
+import { collectorNumber, changePrinting, defaultFinish, discoveredIds, FINISH_LABELS, mergeBackup, parseCollection, portableBackup, totalCards, TRAINER_HAIR_COLORS, TRAINER_HAIR_STYLES, TRAINER_HEADWEAR, TRAINER_OUTFITS, TRAINER_OUTFIT_COLORS, TRAINER_SKIN_TONES, trainerAppearanceFor, updateQuantity, type Card, type CardBrief, type Entry, type Finish, type Trainer, type TrainerAppearance } from '@/lib/model';
+import { isWished, removeWish, restoreWish, toggleWish, wishesForSpecies, wishesOf, wishlistShareText, type Wish } from '@/lib/wishlist';
 import { exportFile, importFile } from '@/lib/files';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
@@ -42,6 +43,11 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [finish, setFinish] = useState<Finish>(entry?.finish ?? 'unsure');
   const [removing, setRemoving] = useState(false);
   const liveEntry = entry ? trainer.entries.find(e => e.key === entry.key) : undefined;
+  const wished = isWished(trainer, brief);
+  // Manual drafts have no catalog identity to reopen later, and owned cards are already granted.
+  const canWish = !draft && (wished || !trainer.entries.some(e => e.card.id === brief.id && e.card.language === brief.language));
+  const [wishing, setWishing] = useState(false);
+  const [wishError, setWishError] = useState<string | null>(null);
   const priceClient = usePricing([brief], 0);
   const printingChoices: Finish[] = [...new Set([...(card?.finishes ?? []), ...(priceClient.snapshots[priceKey(brief)]?.finishes ?? [])].filter(f => f !== 'unsure')), 'unsure'];
   useEffect(() => {
@@ -67,6 +73,13 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     if (!card) return;
     run(async () => onAdded(await addCards([{ card, finish, quantity }])));
   }
+  async function toggleWished() {
+    if (!card || wishing || guard.current) return;
+    setWishing(true); setWishError(null);
+    try { await updateTrainer(t => toggleWish(t, card, pokemonIds(card))); Haptics.selectionAsync().catch(() => {}); }
+    catch (e) { setWishError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'); }
+    finally { setWishing(false); }
+  }
   return <Sheet title={entry ? 'Inside your binder' : 'Is this your card?'} onClose={onClose} busy={busy}><ScrollView contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
     <ErrorNotice text={error} />
@@ -84,7 +97,8 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
         {removing && <View style={m.removeBox}><Txt style={{ fontWeight: '800' }}>Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt style={{ fontSize: 13 }}>This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt><View style={ui.row}><Button title="Keep it" disabled={busy} onPress={() => setRemoving(false)} secondary style={{ flex: 1 }} /><Button title="Delete card" onPress={() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); })} busy={busy} style={{ flex: 1 }} /></View></View>}
         {card.description && <View style={m.note}><Txt style={{ fontSize: 14 }}>{card.description}</Txt></View>}
         <Button title="Done" onPress={onClose} secondary disabled={busy} />
-      </> : <><View style={ui.between}><Txt style={ui.subtitle}>How many copies?</Txt><View style={m.stepper}><IconButton icon="minus" label="Fewer copies" onPress={() => !busy && setQuantity(n => Math.max(1, n - 1))} /><Txt style={m.stepperNumber}>{quantity}</Txt><IconButton icon="plus" label="More copies" onPress={() => !busy && setQuantity(n => Math.min(999, n + 1))} /></View></View><Button title={`Add ${quantity === 1 ? 'to binder' : `${quantity} to binder`}`} icon="plus" onPress={save} busy={busy} /></>}
+      </> : <><View style={ui.between}><Txt style={ui.subtitle}>How many copies?</Txt><View style={m.stepper}><IconButton icon="minus" label="Fewer copies" onPress={() => !busy && setQuantity(n => Math.max(1, n - 1))} /><Txt style={m.stepperNumber}>{quantity}</Txt><IconButton icon="plus" label="More copies" onPress={() => !busy && setQuantity(n => Math.min(999, n + 1))} /></View></View><Button title={`Add ${quantity === 1 ? 'to binder' : `${quantity} to binder`}`} icon="plus" onPress={save} busy={busy} />
+        {canWish && <><WishButton wished={wished} disabled={busy || wishing} onPress={toggleWished} /><ErrorNotice text={wishError} /><Txt muted style={{ fontSize: 12, lineHeight: 18, textAlign: 'center' }}>{wished ? 'When you get it, add it to your binder. Wish granted!' : 'Don’t have it yet? Wish for it and share your list with family.'}</Txt></>}</>}
     </>}
   </ScrollView></Sheet>;
 }
@@ -112,6 +126,7 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
   const entries = trainer.entries.filter(e => pokemonIds(e.card).includes(id));
   const owned = entries.length > 0;
   const cardCount = entries.reduce((n, e) => n + e.quantity, 0);
+  const wished = wishesForSpecies(trainer, id).length;
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const types = speciesTypes(id);
   const entry = pokedexEntry(id);
@@ -152,6 +167,7 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
       <Txt style={{ textAlign: 'center', fontWeight: '700', fontSize: 14 }}>{familyNote(familyIds, discovered)}</Txt>
     </> : <Txt muted>{pokemon.en} doesn’t evolve. It’s one of a kind!</Txt>}</View>
     <Button title={`Find ${pokemon.en} cards`} icon="search" onPress={() => onFindCards(pokemon.en)} />
+    {wished > 0 && <View style={[m.wishBadge, { alignSelf: 'center' }]}><Icon name="star" size={16} color={WISH.star} filled /><Txt style={m.wishBadgeText}>{wished} {pokemon.en} {wished === 1 ? 'card' : 'cards'} on your wishlist</Txt></View>}
     {owned && <><Txt style={ui.subtitle}>Your {pokemon.en} cards</Txt><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{entries.map(e => <Pressable accessibilityRole="button" accessibilityLabel={`Open ${e.card.name} ${e.card.id}`} key={e.key} onPress={() => onEntry(e)} style={{ width: '46%', marginBottom: 8 }}><CardArt card={e.card} /><Txt style={{ fontSize: 12, marginTop: 5, fontWeight: '700' }}>{LANGUAGE_CODES[e.card.language]} · #{e.card.localId} · ×{e.quantity}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{e.card.set.name}</Txt><CardPriceTag card={e.card} finish={e.finish} /></Pressable>)}</View></>}
   </ScrollView></Sheet>;
 }
@@ -212,7 +228,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     {collection.trainers.map(t => <Pressable accessibilityRole="button" accessibilityLabel={`Switch to ${t.name}`} key={t.id} disabled={busy} onPress={() => run(async () => { await transact(c => ({ ...c, activeId: t.id })); setName(t.name); setDraft(t.appearance); })} style={[m.profile, t.id === trainer.id && { borderColor: C.ink, backgroundColor: '#DEE7D2' }]}><TrainerAvatar appearance={t.appearance} size={48} /><View style={{ flex: 1 }}><Txt style={{ fontWeight: '800' }}>{t.name}</Txt><Txt muted style={{ fontSize: 12 }}>{totalCards(t)} cards · {discoveredIds(t).size} Pokémon</Txt></View>{t.id === trainer.id && <Icon name="check" size={21} />}</Pressable>)}
     <Pressable accessibilityRole="button" accessibilityLabel={`Open trainer builder for ${trainer.name}`} disabled={busy} onPress={() => { setDraft(trainer.appearance); setBuilding(true); }} style={({ pressed }) => [m.builderInvite, { borderColor: trainer.color }, pressed && { opacity: .7 }]}><TrainerAvatar appearance={trainer.appearance} size={82} /><View style={{ flex: 1, gap: 3 }}><Txt style={ui.subtitle}>Build {trainer.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 18 }}>Choose their hair, skin tone, field jacket, and headwear.</Txt><Txt style={{ color: C.redDark, fontWeight: '800', fontSize: 13 }}>Open trainer builder</Txt></View><Icon name="arrow" size={20} color={C.redDark} /></Pressable>
     <Txt style={ui.subtitle}>Trainer name</Txt><TextInput accessibilityLabel="Trainer name" value={name} onChangeText={setName} maxLength={32} style={m.input} editable={!busy} /><Button title="Save name" secondary disabled={!name.trim() || name.trim() === trainer.name} busy={busy} onPress={() => run(async () => { await updateTrainer(t => ({ ...t, name: name.trim() })); setNote('Trainer name saved.'); })} />
-    <Txt style={ui.subtitle}>Add another trainer</Txt><TextInput accessibilityLabel="New trainer name" placeholder="Choose a trainer name" placeholderTextColor={C.muted} value={newName} onChangeText={setNewName} maxLength={32} style={m.input} editable={!busy} /><Button title="Add trainer" icon="plus" disabled={!newName.trim() || collection.trainers.length >= 20} busy={busy} onPress={() => run(async () => { await transact(c => { if (c.trainers.length >= 20) throw new Error('This device already has 20 trainers.'); const appearance = trainerAppearanceFor(c.trainers.length); return { ...c, trainers: [...c.trainers, { id: `trainer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: newName.trim(), color: TRAINER_OUTFIT_COLORS[appearance.outfit], appearance, entries: [] }] }; }); setNewName(''); setNote('New trainer added. Tap their name to start collecting.'); })} />
+    <Txt style={ui.subtitle}>Add another trainer</Txt><TextInput accessibilityLabel="New trainer name" placeholder="Choose a trainer name" placeholderTextColor={C.muted} value={newName} onChangeText={setNewName} maxLength={32} style={m.input} editable={!busy} /><Button title="Add trainer" icon="plus" disabled={!newName.trim() || collection.trainers.length >= 20} busy={busy} onPress={() => run(async () => { await transact(c => { if (c.trainers.length >= 20) throw new Error('This device already has 20 trainers.'); const appearance = trainerAppearanceFor(c.trainers.length); return { ...c, trainers: [...c.trainers, { id: `trainer-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, name: newName.trim(), color: TRAINER_OUTFIT_COLORS[appearance.outfit], appearance, entries: [], wishlist: [] }] }; }); setNewName(''); setNote('New trainer added. Tap their name to start collecting.'); })} />
     <View style={m.divider} /><Txt style={ui.subtitle}>Keep your collection safe</Txt><Txt muted style={{ fontSize: 13 }}>Save a family backup to Files or share it to another device. Importing adds copies of the trainers and keeps your current collections.</Txt>
     <Button title="Export family backup" icon="download" secondary busy={busy} onPress={() => run(() => exportFile(portableBackup(collection)))} />
     <Button title="Import a backup" icon="upload" secondary busy={busy} onPress={() => run(async () => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); setNote(`Imported ${incoming.trainers.length} trainer profile${incoming.trainers.length === 1 ? '' : 's'}.`); })} />
@@ -221,7 +237,56 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
   </ScrollView></Sheet>;
 }
 
-export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onClose }: { card: Card; newIds: number[]; quantity: number; nextLabel: string; onNext: () => void; onClose: () => void }) {
+const WISH = { star: '#B98310', ink: '#664C0E', fill: '#F7ECC8', line: '#E0C676' };
+function WishButton({ wished, disabled, onPress }: { wished: boolean; disabled: boolean; onPress: () => void }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={wished ? 'On your wishlist' : 'Add to wishlist'} accessibilityHint={wished ? 'Takes this card off your wishlist' : 'Saves this card to a list you can share with family'} accessibilityState={{ selected: wished, disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [ui.button, ui.secondary, wished && m.wishOn, disabled && { opacity: .5 }, pressed && { opacity: .75, transform: [{ translateY: 1 }] }]}>
+    <Icon name="star" size={20} color={wished ? WISH.star : C.ink} filled={wished} /><Txt style={{ color: wished ? WISH.ink : C.ink, fontWeight: '800', fontSize: 15 }}>{wished ? 'On your wishlist' : 'Add to wishlist'}</Txt>
+  </Pressable>;
+}
+
+function WishTile({ wish, columns, onOpen, onRemove }: { wish: Wish; columns: number; onOpen: () => void; onRemove: () => void }) {
+  const { card } = wish;
+  const set = setForCard(card)?.name;
+  return <View style={{ flex: 1 / columns, marginBottom: 18 }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`${card.name}, ${set ? `${set}, ` : ''}number ${card.localId}, ${LANGUAGE_LABELS[card.language]}`} accessibilityHint="Opens the card so you can add it when you get it" onPress={onOpen} style={({ pressed }) => pressed ? { opacity: .7 } : undefined}>
+      <CardArt card={card} /><Txt style={{ fontWeight: '800', fontSize: 14, marginTop: 8 }} numberOfLines={1}>{card.name}</Txt><Txt muted style={{ fontSize: 11, lineHeight: 17 }} numberOfLines={1}>{set ?? card.id}</Txt><Txt muted style={{ fontFamily: mono, fontSize: 10 }}>{LANGUAGE_CODES[card.language]} · #{card.localId}</Txt>
+    </Pressable>
+    <CardPriceTag card={card} printingHint={false} />
+    {/* A sibling, not a child, of the tile button so VoiceOver can reach it. */}
+    <Pressable accessibilityRole="button" accessibilityLabel={`Remove ${card.name} from your wishlist`} onPress={onRemove} style={({ pressed }) => [m.wishRemove, pressed && { opacity: .6 }]}><View style={m.wishRemoveDot}><Icon name="close" size={16} /></View></Pressable>
+  </View>;
+}
+
+export function WishlistModal({ onClose, onCard, onFind }: { onClose: () => void; onCard: (card: CardBrief) => void; onFind: () => void }) {
+  const { trainer, updateTrainer } = useCollection();
+  const wishes = wishesOf(trainer);
+  const { width } = useWindowDimensions();
+  const columns = Math.min(600, width - 24) - 40 >= 440 ? 3 : 2;
+  const [removed, setRemoved] = useState<{ wish: Wish; index: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [shareFailed, setShareFailed] = useState(false);
+  function change(update: (t: Trainer) => Trainer) {
+    setError(null);
+    updateTrainer(update).catch(e => setError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'));
+  }
+  async function share() {
+    setShareFailed(false);
+    try { await Share.share({ message: wishlistShareText(trainer.name, wishes) }, { subject: `${trainer.name}'s Pokémon card wishlist`, dialogTitle: 'Share your wishlist' }); }
+    // Some browsers cannot share; show the list so a grown-up can copy it. Cancelling is not an error.
+    catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) setShareFailed(true); }
+  }
+  return <Sheet title="Your wishlist" onClose={onClose}><FlatList key={columns} data={wishes} numColumns={columns} keyExtractor={w => w.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={m.wishList}
+    ListHeaderComponent={<View style={{ gap: 14, marginBottom: wishes.length ? 18 : 0 }}>
+      {wishes.length > 0 && <><Txt muted style={{ fontSize: 14 }}>{wishes.length} {wishes.length === 1 ? 'card' : 'cards'} {trainer.name} hopes to find. When you get one, tap it and add it to your binder.</Txt><Button title="Share my wishlist" icon="upload" onPress={share} /><Txt muted style={{ fontSize: 11, lineHeight: 17 }}>Prices are ungraded estimates to help grown-ups shop.</Txt></>}
+      {removed && <View style={[m.note, ui.between, { paddingVertical: 4 }]}><Txt style={{ flex: 1, fontSize: 14 }}>Removed {removed.wish.card.name}.</Txt><Pressable accessibilityRole="button" accessibilityLabel={`Undo. Put ${removed.wish.card.name} back on your wishlist`} onPress={() => { const { wish, index } = removed; setRemoved(null); change(t => restoreWish(t, wish, index)); }} style={{ minHeight: 44, minWidth: 44, justifyContent: 'center' }}><Txt style={{ fontWeight: '800', textDecorationLine: 'underline' }}>Undo</Txt></Pressable></View>}
+      <ErrorNotice text={error} />
+      {shareFailed && wishes.length > 0 && <View style={[m.note, { gap: 6 }]}><Txt style={{ fontWeight: '800' }}>Sharing isn’t available here.</Txt><Txt muted style={{ fontSize: 13 }}>Copy this list instead:</Txt><Txt selectable style={{ fontSize: 13, lineHeight: 20 }}>{wishlistShareText(trainer.name, wishes)}</Txt></View>}
+    </View>}
+    ListEmptyComponent={<View style={m.wishEmpty}><View style={m.wishEmptyStar}><Icon name="star" size={46} color={WISH.star} filled /></View><Txt style={ui.subtitle}>No wishes yet</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 320 }}>Find a card you’d love to get, then tap “Add to wishlist.” Your wishes show up here, ready to share with family.</Txt><Button title="Find cards to wish for" icon="search" onPress={onFind} style={{ alignSelf: 'stretch' }} /></View>}
+    renderItem={({ item, index }) => <WishTile wish={item} columns={columns} onOpen={() => onCard(item.card)} onRemove={() => { setRemoved({ wish: item, index }); change(t => removeWish(t, item.key)); }} />} /></Sheet>;
+}
+
+export function DiscoveryModal({ card, newIds, quantity, granted = 0, nextLabel, onNext, onClose }: { card: Card; newIds: number[]; quantity: number; granted?: number; nextLabel: string; onNext: () => void; onClose: () => void }) {
   const [revealed, setRevealed] = useState(false);
   const discovered = newIds.length > 0;
   const pokemon = speciesById.get(newIds[0]);
@@ -239,7 +304,7 @@ export function DiscoveryModal({ card, newIds, quantity, nextLabel, onNext, onCl
     return () => { cancelled = true; clearTimeout(timer); };
   }, [pokemon?.id, revealed]);
   const names = newIds.map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ');
-  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} />{discovered ? <CatchReveal onReveal={() => setRevealed(true)}><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></CatchReveal> : <><Confetti count={18} /><Reanimated.View entering={ZoomIn.springify().damping(12)}>{isShiny(card) ? <HoloShine style={{ width: 185, marginVertical: 20 }}><CardArt card={card} /></HoloShine> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Reanimated.View></>}</View>{discovered && !revealed ? <Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>Who’s inside?</Txt> : <><Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}</>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
+  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center', paddingVertical: 25 }]}><View style={m.discoveryStage}><View style={m.discoveryRing} />{discovered ? <CatchReveal onReveal={() => setRevealed(true)}><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></CatchReveal> : <><Confetti count={18} /><Reanimated.View entering={ZoomIn.springify().damping(12)}>{isShiny(card) ? <HoloShine style={{ width: 185, marginVertical: 20 }}><CardArt card={card} /></HoloShine> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Reanimated.View></>}</View>{discovered && !revealed ? <Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>Who’s inside?</Txt> : <><Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt style={{ textAlign: 'center', fontWeight: '700' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? `You brought ${newIds.length === 1 ? 'a new entry' : `${newIds.length} new entries`} to life in your Pokédex.${quantity > 1 ? ` ${quantity} cards saved.` : ''}` : `${quantity} ${quantity === 1 ? 'card' : 'cards'} saved. Your collection keeps growing.`}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt style={{ fontFamily: mono, fontSize: 12 }}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}{granted > 0 && <View style={m.wishBadge}><Icon name="star" size={18} color={WISH.star} filled /><Txt style={m.wishBadgeText}>{granted === 1 ? 'Wish granted! It’s off your wishlist.' : `${granted} wishes granted! They’re off your wishlist.`}</Txt></View>}</>}<Button title={nextLabel} icon="camera" onPress={onNext} style={{ alignSelf: 'stretch', marginTop: 12 }} /><Button title="Done" secondary onPress={onClose} style={{ alignSelf: 'stretch' }} /></ScrollView></Sheet>;
 }
 
 const m = StyleSheet.create({
@@ -277,5 +342,12 @@ const m = StyleSheet.create({
   evolution: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, padding: 10, borderRadius: 16, backgroundColor: '#DDE6D1' },
   stage: { gap: 6, justifyContent: 'center' }, stageTile: { minHeight: 88, alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
   stageCurrent: { backgroundColor: '#F8FAF3', borderColor: '#ADC79F' }, stageName: { fontSize: 11, lineHeight: 15, fontWeight: '800', textAlign: 'center', letterSpacing: -.2 },
+  wishOn: { backgroundColor: WISH.fill, borderBottomColor: WISH.line },
+  wishBadge: { flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 13, paddingVertical: 8, borderRadius: 12, backgroundColor: WISH.fill, borderWidth: 1, borderColor: WISH.line },
+  wishBadgeText: { color: WISH.ink, fontWeight: '800', fontSize: 13, flexShrink: 1 },
+  wishList: { padding: 20, paddingBottom: 26 },
+  wishRemove: { position: 'absolute', top: 0, right: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+  wishRemoveDot: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFFE8', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.line },
+  wishEmpty: { alignItems: 'center', gap: 12, paddingVertical: 20 }, wishEmptyStar: { width: 92, height: 92, borderRadius: 46, backgroundColor: WISH.fill, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: WISH.line },
   discoveryStage: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 290 }, discoveryRing: { position: 'absolute', width: 265, height: 265, borderRadius: 140, backgroundColor: '#D6E7BD', borderWidth: 16, borderColor: '#E3EDCD' },
 });

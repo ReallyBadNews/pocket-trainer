@@ -18,6 +18,7 @@ import { speciesTypes, typeCounts, typeLabel, TYPE_COLORS, type PokemonType } fr
 import { QuizInvite } from './quiz-screen';
 import { setProgress, type SetProgress } from '@/lib/set-progress';
 import { BINDER_VIEWS, BinderPages, type BinderView } from '@/components/binder-pages';
+import { wishesOf } from '@/lib/wishlist';
 
 export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void; onQuiz: () => void }) {
   const scroll = useChromeScroll();
@@ -62,12 +63,13 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onSc
     }} />;
 }
 
-export function BinderScreen({ onScan, onEntry, onSet, onlyNeedsPrinting, onNeedsPrintingChange, view, onViewChange }: {
-  onScan: () => void; onEntry: (entry: Entry) => void; onSet: (set: SetProgress) => void; onlyNeedsPrinting: boolean; onNeedsPrintingChange: (value: boolean) => void;
+export function BinderScreen({ onScan, onEntry, onSet, onWishlist, onlyNeedsPrinting, onNeedsPrintingChange, view, onViewChange }: {
+  onScan: () => void; onEntry: (entry: Entry) => void; onSet: (set: SetProgress) => void; onWishlist: () => void; onlyNeedsPrinting: boolean; onNeedsPrintingChange: (value: boolean) => void;
   view: BinderView; onViewChange: (view: BinderView) => void;
 }) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
+  const wishCount = wishesOf(trainer).length;
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState('All cards');
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
@@ -87,6 +89,7 @@ export function BinderScreen({ onScan, onEntry, onSet, onlyNeedsPrinting, onNeed
   return <Animated.FlatList {...scroll} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: 14 }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}
     ListHeaderComponent={<View style={s.header}>
       <View style={ui.between}><View><Txt style={ui.title}>Your card binder</Txt><Txt muted>{totalCards(trainer)} cards · {trainer.entries.length} printings · {duplicateCards(trainer)} {duplicateCards(trainer) === 1 ? 'extra' : 'extras'}</Txt></View><Pressable accessibilityRole="button" accessibilityLabel="Add a card" onPress={onScan} style={s.addButton}><Icon name="plus" color="white" /></Pressable></View>
+      <Pressable accessibilityRole="button" accessibilityLabel={`Wishlist, ${wishCount} ${wishCount === 1 ? 'card' : 'cards'}`} onPress={onWishlist} style={({ pressed }) => [s.wishButton, pressed && { opacity: .7 }]}><Icon name="star" size={19} color="#B98310" filled /><Txt style={{ color: '#664C0E', fontWeight: '800', fontSize: 14 }}>Wishlist ({wishCount})</Txt><Icon name="arrow" size={15} color="#664C0E" /></Pressable>
       <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(true); }} />
       <YourSets sets={sets} onSet={onSet} />
       <SearchBox value={query} onChange={setQuery} placeholder="Search your cards" />
@@ -149,6 +152,7 @@ const s = StyleSheet.create({
   pokemonOwned: { backgroundColor: '#FCFDF9', borderColor: '#ADC79F' }, dexNumber: { fontFamily: mono, fontSize: 11, lineHeight: 18, color: '#7B8D73' },
   sprite: { width: '100%', height: 108, marginVertical: 4 }, ownedDot: { backgroundColor: '#679255', borderRadius: 10, padding: 3 },
   empty: { alignItems: 'center', justifyContent: 'center', paddingVertical: 38, gap: 12 },
+  wishButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 44, paddingHorizontal: 14, borderRadius: 12, backgroundColor: '#F7ECC8', borderWidth: 1, borderColor: '#E0C676', marginTop: -6 },
   addButton: { width: 46, height: 46, borderRadius: 14, backgroundColor: C.red, justifyContent: 'center', alignItems: 'center' },
   tools: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, alignItems: 'center' },
   sortButton: { flexDirection: 'row', alignItems: 'center', gap: 9, borderWidth: 1, borderColor: '#C0CDB3', borderRadius: 10, paddingHorizontal: 11, minHeight: 42, backgroundColor: '#F5F8EE' },

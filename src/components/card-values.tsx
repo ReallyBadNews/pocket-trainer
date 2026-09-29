@@ -15,14 +15,14 @@ function PriceAmount({ value, small = false }: { value: { low: number; high: num
   </View>;
 }
 
-export function CardPriceTag({ card, finish = 'unsure', enabled = true }: { card: CardBrief; finish?: Finish; enabled?: boolean }) {
+export function CardPriceTag({ card, finish = 'unsure', enabled = true, printingHint = true }: { card: CardBrief; finish?: Finish; enabled?: boolean; printingHint?: boolean }) {
   const client = usePricing([card], 10, enabled);
   const key = priceKey(card), snapshot = client.snapshots[key];
   const quote = quotePrice(snapshot, finish, client.fx);
   const waiting = !client.ready || client.pending.has(key) || (!client.fx && client.pending.has('fx') && !!snapshot?.prices.some(p => p.currency === 'EUR'));
   return <View style={{ marginTop: 7, gap: 2 }}>
     {quote ? <><PriceAmount value={quote} small /><Txt muted style={s.tagCaption}>Est. USD{quote.converted ? ' · from EUR' : ''}{quote.stale ? ' · cached' : ''}</Txt></> : <Txt muted style={s.tagCaption}>{waiting ? 'Looking up value…' : snapshot || client.errors.has(key) ? 'Price unavailable' : enabled ? 'Value pending' : 'Value after matching'}</Txt>}
-    {finish === 'unsure' && <Txt style={s.attentionCaption}>Needs printing</Txt>}
+    {printingHint && finish === 'unsure' && <Txt style={s.attentionCaption}>Needs printing</Txt>}
   </View>;
 }
 
