@@ -12,13 +12,12 @@ import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { identifyProgressively } from '@/lib/scan-pipeline';
 import { pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
-import { keepCardArt } from '@/lib/files';
-import { addCard, discoveredIds, type Card, type CardBrief } from '@/lib/model';
+import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
+import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { PAGE_LAYOUTS, pageSummary, pocketCrops, pocketIncluded, pocketStatus, waitingPocket, type PageLayout, type Pocket } from '@/lib/page-scan';
 
 type Photo = { uri: string; width: number; height: number };
 const detailKey = (card: CardBrief) => `${card.language}:${card.id}`;
-const defaultFinish = (card: Card) => card.finishes.length === 2 ? card.finishes[0] : 'unsure';
 // Picture comparison downloads reference art. On a full page it must not hold up the next pocket.
 const COMPARE_LIMIT_MS = 3000;
 function quickCompare(uri: string, candidates: ScanCandidate[]) {
@@ -30,9 +29,10 @@ function quickCompare(uri: string, candidates: ScanCandidate[]) {
 }
 
 /** Read every pocket of one binder page, then add the confirmed cards together. */
-export function PageScan({ header, language, onAdded }: { header: ReactNode; language: ScanLanguage; onAdded: (card: Card, newIds: number[], quantity: number) => void }) {
+export function PageScan({ header, language, captureRequest, onAdded }: { header: ReactNode; language: ScanLanguage; captureRequest: number; onAdded: (added: AddedCards) => void }) {
   const scroll = useChromeScroll();
-  const { trainer, updateTrainer } = useCollection();
+  const { trainer } = useCollection();
+  const addCards = useAddCards();
   const [layout, setLayout] = useState<PageLayout>(PAGE_LAYOUTS[0]);
   const [photo, setPhoto] = useState<Photo | null>(null);
   const [pockets, setPockets] = useState<Pocket[]>([]);
@@ -46,6 +46,13 @@ export function PageScan({ header, language, onAdded }: { header: ReactNode; lan
   const generation = useRef(0);
   const alive = useRef(true);
   useEffect(() => { alive.current = true; return () => { alive.current = false; generation.current++; }; }, []);
+  // "Scan the next page" from the celebration opens the camera straight away.
+  const handledCapture = useRef(captureRequest);
+  useEffect(() => {
+    if (captureRequest === handledCapture.current) return;
+    handledCapture.current = captureRequest;
+    void takePhoto();
+  }, [captureRequest]);
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const summary = pageSummary(pockets);
 
@@ -124,21 +131,14 @@ export function PageScan({ header, language, onAdded }: { header: ReactNode; lan
     try {
       const cards = await Promise.all(chosen.map(async card => {
         const full = details[detailKey(card)] ?? await fetchCard(card);
-        return keepCardArt({ ...full, ...(card.localImage ? { localImage: card.localImage } : {}) });
+        return { card: { ...full, ...(card.localImage ? { localImage: card.localImage } : {}) }, finish: defaultFinish(full), quantity: 1 };
       }));
-      let newIds: number[] = [];
-      await updateTrainer(t => {
-        const before = discoveredIds(t);
-        const next = cards.reduce((current, card) => addCard(current, card, defaultFinish(card), 1), t);
-        newIds = [...new Set(cards.flatMap(pokemonIds))].filter(id => !before.has(id));
-        return next;
-      });
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
+      const added = await addCards(cards);
       if (!alive.current) return;
       generation.current++;
       setPhoto(null); setPockets([]); setSelected(null);
       setNote(`${cards.length} ${cards.length === 1 ? 'card' : 'cards'} added. Turn the page and scan the next one!`);
-      onAdded(cards[0], newIds, cards.length);
+      onAdded(added);
     } catch (e) {
       if (alive.current) setError(e instanceof Error ? e.message : 'These cards could not be added. Check your connection and try again.');
     } finally { if (alive.current) setAdding(false); }

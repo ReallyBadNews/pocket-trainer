@@ -59,6 +59,20 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
     : [{ key, card, finish, quantity, favorite: false, addedAt: new Date().toISOString() }, ...trainer.entries] };
 }
 
+/** With exactly one known printing, pick it; otherwise leave it for the collector to confirm. */
+export const defaultFinish = (card: Card): Finish => card.finishes.length === 2 ? card.finishes[0] : 'unsure';
+
+export type Addition = { key: string; quantity: number };
+/** Take back copies that were just added, keeping any other changes made since. */
+export function undoAdditions(trainer: Trainer, additions: Addition[]): Trainer {
+  const removed = new Map<string, number>();
+  for (const a of additions) removed.set(a.key, (removed.get(a.key) ?? 0) + a.quantity);
+  return { ...trainer, entries: trainer.entries.flatMap(e => {
+    const quantity = e.quantity - (removed.get(e.key) ?? 0);
+    return quantity > 0 ? [{ ...e, quantity }] : [];
+  }) };
+}
+
 export function updateQuantity(trainer: Trainer, key: string, quantity: number): Trainer {
   if (!Number.isInteger(quantity) || quantity < 0 || quantity > 999) throw new Error('Invalid quantity.');
   return { ...trainer, entries: trainer.entries.flatMap(e => e.key !== key ? [e] : quantity ? [{ ...e, quantity }] : []) };
