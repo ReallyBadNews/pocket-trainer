@@ -10,7 +10,7 @@ Pod::Spec.new do |s|
   s.source = { :git => 'https://github.com/ReallyBadNews/pokedex.git' }
   s.static_framework = true
   s.dependency 'ExpoModulesCore'
-  s.frameworks = 'Vision', 'CoreImage', 'ImageIO'
+  s.frameworks = 'Vision', 'CoreImage', 'ImageIO', 'AVFoundation', 'CoreMedia'
   s.source_files = '**/*.swift'
   s.swift_version = '5.9'
 end
