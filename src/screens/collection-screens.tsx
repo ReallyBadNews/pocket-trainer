@@ -15,8 +15,9 @@ import { isShiny } from '@/lib/shine';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
 import { speciesTypes, typeCounts, typeLabel, TYPE_COLORS, type PokemonType } from '@/lib/species-details';
+import { QuizInvite } from './quiz-screen';
 
-export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void }) {
+export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void; onQuiz: () => void }) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
   const [query, setQuery] = useState('');
@@ -36,6 +37,7 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting }: { onScan: () =
         <View style={s.adventureCopy}><Txt style={{ fontSize: 22, fontWeight: '900', lineHeight: 28, letterSpacing: -.5 }}>{discovered.size ? 'Who will you\ndiscover next?' : 'Your adventure\nstarts here.'}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19, marginTop: 7, maxWidth: 250 }}>{discovered.size ? 'A new card. A new story for your Pokédex.' : 'Turn the cards you love into a world to explore.'}</Txt><Button title={discovered.size ? 'Scan a card' : 'Add your first card'} onPress={onScan} icon="scan" style={{ alignSelf: 'flex-start', marginTop: 16, paddingHorizontal: 13 }} /></View>
         <Image source={require('../../assets/crafted/device.png')} style={s.deviceArt} contentFit="contain" accessibilityLabel="Custom red Pokédex device" />
       </View>
+      <QuizInvite onPlay={onQuiz} />
       <View style={s.readout}><View style={{ flex: 1 }}><View style={ui.between}><Txt style={{ fontWeight: '700', fontSize: 13 }}>Pokémon discovered</Txt><Txt style={{ fontFamily: mono, fontSize: 12 }}>{discovered.size} / {species.length.toLocaleString()}</Txt></View><View style={{ marginTop: 8 }}><Progress value={discovered.size} total={species.length} /></View></View><View style={s.readoutDivider} /><View><Txt style={{ fontSize: 23, lineHeight: 27, fontWeight: '900' }}>{totalCards(trainer)}</Txt><Txt muted style={{ fontSize: 11 }}>cards in binder</Txt></View></View>
       <CollectionValue entries={trainer.entries} compact onNeedsPrinting={onNeedsPrinting} />
       <SearchBox value={query} onChange={setQuery} placeholder="Find a Pokémon by name or number" />

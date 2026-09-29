@@ -1,6 +1,7 @@
 import { pokemonIds } from './card-kind';
 import { isLanguage, type Language } from './languages';
 import type { Badge } from './badges';
+import { QUIZ_LENGTH } from './quiz';
 export { BADGES } from './badges';
 export type { Language } from './languages';
 export type Finish = 'normal' | 'holo' | 'reverse' | 'firstEdition' | 'firstEditionHolo' | 'firstEditionReverse' | 'wPromo' | 'unsure';
@@ -33,7 +34,8 @@ export const trainerAppearanceFor = (index: number): TrainerAppearance => ({
   outfit: TRAINER_OUTFITS[index % TRAINER_OUTFITS.length],
   headwear: index % 3 === 0 ? 'cap' : index % 3 === 1 ? 'none' : 'headband',
 });
-export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[] };
+/** `quizBest` is the trainer's best Who's That Pokémon? score, out of QUIZ_LENGTH. */
+export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number };
 export type Collection = { version: 1; activeId: string; trainers: Trainer[] };
 
 export const FINISH_LABELS: Record<Finish, string> = {
@@ -102,6 +104,13 @@ export function badgeProgress(trainer: Trainer, badge: Badge, discovered = disco
   return Math.min(count, badge.target);
 }
 
+const isQuizScore = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= QUIZ_LENGTH;
+/** Keeps only a trainer's best score; a lower or equal score leaves them unchanged. */
+export function recordQuizScore(trainer: Trainer, score: number): Trainer {
+  if (!isQuizScore(score)) throw new Error('Invalid quiz score.');
+  return score > (trainer.quizBest ?? 0) ? { ...trainer, quizBest: score } : trainer;
+}
+
 const isRecord = (value: unknown): value is Record<string, unknown> => !!value && typeof value === 'object' && !Array.isArray(value);
 const str = (v: unknown, max = 300): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
 const safeImage = (v: unknown): v is string => typeof v === 'string' && /^https:\/\/assets\.tcgdex\.net\//.test(v) && v.length < 500;
@@ -152,7 +161,8 @@ export function parseCollection(raw: string): Collection {
       return { key: e.key as string, card, finish, quantity: e.quantity, favorite: e.favorite, addedAt: e.addedAt };
     });
     if (new Set(entries.map(e => e.key)).size !== entries.length) return invalid();
-    return { id: t.id, name: t.name, color: t.color, appearance, entries };
+    // A bad game score should never block a backup; drop it instead.
+    return { id: t.id, name: t.name, color: t.color, appearance, entries, ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}) };
   });
   if (new Set(trainers.map(t => t.id)).size !== trainers.length || !trainers.some(t => t.id === data.activeId)) return invalid();
   return { version: 1, activeId: data.activeId as string, trainers };
