@@ -8,7 +8,7 @@ import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, cardKindLabel, type CardFilter } from '@/lib/card-kind';
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
-import { collectorNumber, BADGES, badgeProgress, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
+import { collectorNumber, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
 import { CardPriceTag, CollectionValue } from '@/components/card-values';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries, type BinderSort } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
@@ -93,16 +93,6 @@ export function BinderScreen({ onScan, onEntry, onlyNeedsPrinting, onNeedsPrinti
     </Pressable>} />;
 }
 
-export function BadgesScreen() {
-  const scroll = useChromeScroll();
-  const { trainer } = useCollection();
-  const earned = BADGES.filter(b => badgeProgress(trainer, b) >= b.target).length;
-  return <Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}><View style={s.header}><Txt style={ui.title}>Little wins. Big adventures.</Txt><Txt muted>{earned} of {BADGES.length} badges earned. Every discovery counts.</Txt></View>{BADGES.map(b => {
-    const progress = badgeProgress(trainer, b); const unlocked = progress >= b.target;
-    return <View key={b.id} style={[s.badgeRow, unlocked && { backgroundColor: '#F7ECCC', borderColor: '#DBC786' }]}><Image source={require('../../assets/crafted/badge.png')} style={{ width: 90, height: 100, opacity: unlocked ? 1 : .3 }} contentFit="contain" /><View style={{ flex: 1, gap: 4 }}><Txt style={{ fontWeight: '800', fontSize: 17 }}>{b.name}</Txt><Txt muted style={{ fontSize: 13, lineHeight: 19 }}>{b.description}</Txt><View style={{ marginVertical: 5 }}><Progress value={progress} total={b.target} color={unlocked ? '#A98428' : C.muted} /></View><Txt muted style={{ fontSize: 11 }}>{unlocked ? 'Badge earned!' : `${progress} / ${b.target}`}</Txt></View>{unlocked && <Icon name="check" color="#9B7828" size={20} />}</View>;
-  })}</Animated.ScrollView>;
-}
-
 const s = StyleSheet.create({
   list: { padding: 20, paddingBottom: 32 }, header: { gap: 17, marginBottom: 18 },
   counter: { alignItems: 'center', backgroundColor: '#DCE6CD', borderRadius: 11, paddingHorizontal: 12, paddingVertical: 8 },
@@ -124,5 +114,4 @@ const s = StyleSheet.create({
   sortOption: { minHeight: 44, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   quantity: { position: 'absolute', bottom: 8, right: 8, backgroundColor: C.ink, paddingHorizontal: 9, borderRadius: 7 },
   favorite: { position: 'absolute', top: 7, right: 7, backgroundColor: 'white', borderRadius: 20, padding: 6 },
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderWidth: 1, borderColor: C.line, padding: 12, marginBottom: 12, backgroundColor: '#F5F8EE', borderRadius: 17 },
 });

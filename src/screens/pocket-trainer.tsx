@@ -6,7 +6,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { C, Icon, Txt, ui, type IconName, Button } from '@/components/pokedex-ui';
 import { TrainerAvatar } from '@/components/trainer-avatar';
 import { useCollection } from '@/lib/collection-context';
-import { DexScreen, BinderScreen, BadgesScreen } from './collection-screens';
+import { DexScreen, BinderScreen } from './collection-screens';
+import { BadgesScreen } from './badges-screen';
 import { ScanScreen } from './scan-screen';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal } from './collection-modals';
 import type { Card, CardBrief, Entry } from '@/lib/model';
@@ -56,7 +57,7 @@ export default function PocketTrainer() {
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} />}
         {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} />}
-        {tab === 'badge' && <BadgesScreen />}
+        {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
     </View>
     <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); } }}>
