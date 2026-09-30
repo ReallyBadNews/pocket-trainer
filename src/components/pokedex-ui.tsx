@@ -1,6 +1,6 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { Children, useState, type ReactNode } from 'react';
+import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
@@ -87,12 +87,23 @@ export function CardArt({ card, style, high = false }: { card: CardBrief | Card;
   const sources = [...new Set([...(high ? [cardImage(card, true), local] : [local, cardImage(card)]), base ? `${base}/${high ? 'low' : 'high'}.webp` : undefined, base ? `${base}/high.png` : undefined].filter((uri): uri is string => !!uri))];
   return <CardArtImage key={`${card.language}:${card.id}:${sources.join('|')}`} name={card.name} sources={sources} style={style} />;
 }
+// A set checklist starts dozens of downloads at once, and on a phone one dropped connection fails them together.
+// Pause between tries so a blip doesn't use up every fallback, and go round the list again before showing "No artwork".
+const ART_RETRY_MS = [400, 2000, 6000];
 function CardArtImage({ name, sources, style }: { name: string; sources: string[]; style?: StyleProp<ViewStyle> }) {
   const [attempt, setAttempt] = useState(0);
   const [width, setWidth] = useState(65);
-  const uri = sources[attempt];
+  const retry = useRef<ReturnType<typeof setTimeout>>(undefined);
+  useEffect(() => () => clearTimeout(retry.current), []);
+  const round = Math.floor(attempt / sources.length);
+  const uri = round < ART_RETRY_MS.length ? sources[attempt % sources.length] : undefined;
+  const failed = () => {
+    const next = attempt + 1;
+    if (next >= sources.length * ART_RETRY_MS.length) setAttempt(next);
+    else retry.current = setTimeout(() => setAttempt(next), ART_RETRY_MS[round]);
+  };
   return <View onLayout={e => setWidth(e.nativeEvent.layout.width)} style={[ui.cardArt, style]}>{uri
-    ? <Image key={uri} accessibilityLabel={`${name} card`} source={uri} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" onError={() => setAttempt(current => current + 1)} />
+    ? <Image key={attempt} accessibilityLabel={`${name} card`} source={uri} style={{ width: '100%', height: '100%' }} contentFit="contain" cachePolicy="memory-disk" onError={failed} />
     : <View accessibilityLabel={`Artwork unavailable for ${name}`} style={[ui.artFallback, { padding: width < 90 ? 4 : 10, gap: 3 }]}><Icon name="binder" size={width < 90 ? 22 : 30} color={C.muted} />{width >= 90 && <Txt numberOfLines={2} style={{ textAlign: 'center', fontSize: 12, lineHeight: 16 }}>{name}</Txt>}<Txt muted numberOfLines={2} style={{ fontSize: width < 90 ? 9 : 11, lineHeight: 13, textAlign: 'center' }}>No artwork</Txt></View>}</View>;
 }
 export function Progress({ value, total, color = C.ink }: { value: number; total: number; color?: string }) {
