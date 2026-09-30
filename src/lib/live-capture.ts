@@ -7,7 +7,7 @@ export const LIVE_FRAME_GAP_MS = 350;
 export type LiveHint = 'looking' | 'closer' | 'steady' | 'glare';
 export const LIVE_HINTS: Record<LiveHint, string> = {
   looking: 'Put one card inside the frame',
-  closer: 'Move a little closer so the card fills the frame',
+  closer: 'Move closer',
   steady: 'Hold still… reading the name and number',
   glare: 'Tilt the card a little to get rid of shine',
 };

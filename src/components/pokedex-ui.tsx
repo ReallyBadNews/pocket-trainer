@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type StyleProp, type ViewStyle, type TextProps } from 'react-native';
+import { Children, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
 import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
@@ -9,6 +9,11 @@ import type { Card, CardBrief } from '@/lib/model';
 
 export const C = { red: '#C93240', redDark: '#8D2431', redLight: '#E95661', screen: '#EDF3DD', paper: '#FAFCF7', ink: '#25382F', muted: '#607266', line: '#D2DDC8', blue: '#57C7E8', gold: '#EAC55A' };
 export const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
+/** One spacing and corner scale for the whole app: screens pad `xl`, sections sit `lg` apart, rows use `sm`/`md`. */
+export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 } as const;
+export const R = { sm: 8, md: 12, lg: 16, xl: 24, pill: 999 } as const;
+/** Every tappable thing dims a little while held, so it feels like it heard the finger. */
+export const pressFx = ({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> => pressed ? { opacity: .7 } : null;
 export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock' | 'tools' | 'bolt' | 'speaker' | 'note' | 'stop' | 'grid' | 'star';
 // A light tick makes small toggles feel physical, like pressing a real Pokédex button.
 export const tick = () => { Haptics.selectionAsync().catch(() => {}); };
@@ -27,30 +32,54 @@ export function Icon({ name, size = 24, color = C.ink, filled = false }: { name:
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d={paths[name]} stroke={color} fill={filled && (name === 'heart' || name === 'star') ? color : 'none'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
-export function Txt({ children, style, muted = false, ...props }: TextProps & { muted?: boolean }) {
-  return <Text {...props} style={[ui.text, muted && { color: C.muted }, style]}>{children}</Text>;
+export function Txt({ children, style, muted = false, maxFontSizeMultiplier = 1.4, ...props }: TextProps & { muted?: boolean }) {
+  // Small text would otherwise inherit the 22pt body line height and look double spaced.
+  const own = StyleSheet.flatten(style) as TextStyle | undefined;
+  const leading = own?.fontSize && own.lineHeight === undefined ? { lineHeight: Math.round(own.fontSize * 1.3) } : null;
+  return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...props} style={[ui.text, muted && { color: C.muted }, style, leading]}>{children}</Text>;
 }
-export function Button({ title, onPress, icon, secondary = false, disabled = false, busy = false, style }: { title: string; onPress: () => void; icon?: IconName; secondary?: boolean; disabled?: boolean; busy?: boolean; style?: StyleProp<ViewStyle> }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={onPress} style={({ pressed }) => [ui.button, secondary && ui.secondary, style, (disabled || busy) && { opacity: .5 }, pressed && { opacity: .75, transform: [{ translateY: 1 }] }]}>
-    {busy ? <ActivityIndicator color={secondary ? C.ink : 'white'} /> : icon && <Icon name={icon} color={secondary ? C.ink : 'white'} size={20} />}
-    <Txt style={{ color: secondary ? C.ink : 'white', fontWeight: '800', fontSize: 15 }}>{title}</Txt>
+/** `large` (56pt) is for the main thing to do on a screen; `medium` (48pt) sits in rows and panels. Labels shrink a little rather than spill into the padding. */
+export function Button({ title, onPress, icon, secondary = false, disabled = false, busy = false, size = 'large', style }: { title: string; onPress: () => void; icon?: IconName; secondary?: boolean; disabled?: boolean; busy?: boolean; size?: 'large' | 'medium'; style?: StyleProp<ViewStyle> }) {
+  const color = secondary ? C.ink : 'white', large = size === 'large';
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.button, !large && ui.buttonMedium, secondary && ui.secondary, style, (disabled || busy) && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
+    {busy ? <ActivityIndicator color={color} /> : icon && <Icon name={icon} color={color} size={large ? 22 : 19} />}
+    <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} maxFontSizeMultiplier={1.2} style={{ flexShrink: 1, color, fontWeight: '800', fontSize: large ? 17 : 15, textAlign: 'center' }}>{title}</Txt>
   </Pressable>;
 }
-export function IconButton({ icon, label, onPress, color = C.ink, filled = false }: { icon: IconName; label: string; onPress: () => void; color?: string; filled?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.iconButton, pressed && { opacity: .5 }]}><Icon name={icon} color={color} filled={filled} /></Pressable>;
+/** Buttons side by side when they fit, stacked full width when they don't. */
+export function ButtonRow({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+  return <View style={[ui.buttonRow, style]}>{Children.map(children, child => child ? <View style={ui.buttonSlot}>{child}</View> : null)}</View>;
+}
+/** A quiet text action (like "Clear filters") that is still easy to hit. */
+export function LinkButton({ title, onPress, color = C.ink, style }: { title: string; onPress: () => void; color?: string; style?: StyleProp<ViewStyle> }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} hitSlop={4} onPress={() => { tick(); onPress(); }} style={state => [ui.link, style, pressFx(state)]}><Txt style={{ color, fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' }}>{title}</Txt></Pressable>;
+}
+/** Two to four choices where exactly one is on, like Grid / Pages. `dark` is for the camera. */
+export function Segmented<T extends string>({ options, value, onChange, dark = false, label, style }: { options: readonly { id: T; label: string; icon?: IconName }[]; value: T; onChange: (value: T) => void; dark?: boolean; label?: string; style?: StyleProp<ViewStyle> }) {
+  return <View accessibilityRole="tablist" accessibilityLabel={label} style={[ui.segmented, dark && ui.segmentedDark, style]}>{options.map(option => {
+    const selected = option.id === value, color = selected ? (dark ? C.ink : C.paper) : dark ? 'white' : C.ink;
+    return <Pressable key={option.id} accessibilityRole="tab" accessibilityLabel={option.label} accessibilityState={{ selected }} onPress={() => { if (!selected) { tick(); onChange(option.id); } }} style={state => [ui.segment, selected && (dark ? ui.segmentSelectedDark : ui.segmentSelected), !selected && pressFx(state)]}>
+      {option.icon && <Icon name={option.icon} size={20} color={color} />}
+      <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} maxFontSizeMultiplier={1.2} style={{ flexShrink: 1, color, fontSize: 15, fontWeight: '800' }}>{option.label}</Txt>
+    </Pressable>;
+  })}</View>;
+}
+/** `round` gives the icon a soft circle, used for every close and back button so they all look alike. */
+export function IconButton({ icon, label, onPress, color = C.ink, filled = false, round = false, dark = false }: { icon: IconName; label: string; onPress: () => void; color?: string; filled?: boolean; round?: boolean; dark?: boolean }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={round ? 4 : 0} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.iconButton, round && ui.iconRound, round && dark && ui.iconRoundDark, pressed && { opacity: .6 }]}><Icon name={icon} color={dark ? 'white' : color} filled={filled} size={round ? 22 : 24} /></Pressable>;
 }
 export function SearchBox({ value, onChange, placeholder = 'Search Pokémon…' }: { value: string; onChange: (text: string) => void; placeholder?: string }) {
   return <View style={ui.search}><Icon name="search" size={19} color={C.muted} /><TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} returnKeyType="search" style={ui.input} />{value ? <IconButton icon="close" label="Clear search" onPress={() => onChange('')} /> : null}</View>;
 }
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={[ui.chip, selected && ui.chipSelected]}><Txt style={{ color: selected ? C.paper : C.muted, fontWeight: '700', fontSize: 13 }}>{label}</Txt></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={state => [ui.chip, selected && ui.chipSelected, !selected && pressFx(state)]}><Txt numberOfLines={1} maxFontSizeMultiplier={1.25} style={{ color: selected ? C.paper : C.ink, fontWeight: '700', fontSize: 14 }}>{label}</Txt></Pressable>;
 }
 // Read-only pills sit inside a labeled row; pass onPress for a 44pt filter chip with its own label.
 export function TypePill({ type, count, selected = false, onPress }: { type: PokemonType; count?: number; selected?: boolean; onPress?: () => void }) {
   const color = typeTextColor(type), label = typeLabel(type);
   const content = <><Txt style={{ color, fontWeight: '800', fontSize: 13, lineHeight: 18 }}>{label}</Txt>{count !== undefined && <Txt style={{ color, fontFamily: mono, fontWeight: '700', fontSize: 12, lineHeight: 18 }}>{count}</Txt>}{selected && <Icon name="check" size={15} color={color} />}</>;
   if (!onPress) return <View style={[ui.typePill, { backgroundColor: TYPE_COLORS[type] }]}>{content}</View>;
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${label}${count !== undefined ? `, ${count} discovered` : ''}. ${selected ? `Showing only ${label} Pokémon. Tap to show all` : `Show ${label} Pokémon`}`} accessibilityState={{ selected }} onPress={onPress} style={({ pressed }) => [ui.typePill, ui.typeChip, { backgroundColor: TYPE_COLORS[type] }, selected && { borderColor: C.ink }, pressed && { opacity: .75 }]}>{content}</Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${label}${count !== undefined ? `, ${count} discovered` : ''}. ${selected ? `Showing only ${label} Pokémon. Tap to show all` : `Show ${label} Pokémon`}`} accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.typePill, ui.typeChip, { backgroundColor: TYPE_COLORS[type] }, selected && { borderColor: C.ink }, pressed && { opacity: .75 }]}>{content}</Pressable>;
 }
 export function CardArt({ card, style, high = false }: { card: CardBrief | Card; style?: StyleProp<ViewStyle>; high?: boolean }) {
   const local = 'localImage' in card ? card.localImage : undefined;
@@ -78,9 +107,20 @@ export const ui = StyleSheet.create({
   subtitle: { fontSize: 19, lineHeight: 25, fontWeight: '800', letterSpacing: -.3 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  button: { minHeight: 50, borderRadius: 14, backgroundColor: C.red, paddingHorizontal: 18, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, borderBottomWidth: 3, borderBottomColor: C.redDark },
+  button: { minHeight: 56, borderRadius: 16, backgroundColor: C.red, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderBottomWidth: 3, borderBottomColor: C.redDark },
+  buttonMedium: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, gap: 7 },
   secondary: { backgroundColor: '#E3EAD9', borderBottomColor: '#C7D2BB' },
+  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  buttonSlot: { flexGrow: 1 },
+  link: { minHeight: 44, justifyContent: 'center' },
+  segmented: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 16, backgroundColor: '#E3EAD9', borderWidth: 1, borderColor: '#C7D2BB' },
+  segmentedDark: { backgroundColor: '#FFFFFF1F', borderColor: '#FFFFFF33' },
+  segment: { flex: 1, minHeight: 48, borderRadius: 12, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  segmentSelected: { backgroundColor: C.ink },
+  segmentSelectedDark: { backgroundColor: 'white' },
   iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+  iconRound: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#CFDCC2' },
+  iconRoundDark: { backgroundColor: '#FFFFFF2E' },
   search: { flexDirection: 'row', alignItems: 'center', paddingLeft: 15, paddingRight: 4, minHeight: 48, backgroundColor: '#FFFFFFA8', borderWidth: 1, borderColor: C.line, borderRadius: 12, gap: 10 },
   input: { flex: 1, minWidth: 0, minHeight: 48, color: C.ink, fontSize: 15 },
   chip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 15, borderRadius: 22, borderWidth: 1, borderColor: C.line },

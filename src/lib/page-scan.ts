@@ -4,9 +4,9 @@ import type { Crop } from './scan-types';
 
 export type PageLayout = { id: '9' | '4' | '12'; label: string; columns: number; rows: number };
 export const PAGE_LAYOUTS: PageLayout[] = [
-  { id: '9', label: '9 pockets', columns: 3, rows: 3 },
-  { id: '4', label: '4 pockets', columns: 2, rows: 2 },
-  { id: '12', label: '12 pockets', columns: 3, rows: 4 },
+  { id: '9', label: '9 cards', columns: 3, rows: 3 },
+  { id: '4', label: '4 cards', columns: 2, rows: 2 },
+  { id: '12', label: '12 cards', columns: 3, rows: 4 },
 ];
 
 /** Pocket rectangles in reading order, dividing the page region (the whole photo by default) evenly. */

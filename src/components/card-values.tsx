@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { C, Icon, Txt, ui } from './pokedex-ui';
+import { StyleSheet, View } from 'react-native';
+import { Button, C, LinkButton, S, Txt, ui } from './pokedex-ui';
 import { usePricing } from '@/lib/use-pricing';
 import { collectionValue, priceKey, quoteLabel, quotePrice, usd } from '@/lib/pricing';
 import { needsPrinting } from '@/lib/binder-order';
@@ -44,7 +44,7 @@ export function CardValuePanel({ card, finish, quantity }: { card: CardBrief; fi
       {(client.errors.has(key) || (quote.converted && client.errors.has('fx'))) && <Txt muted style={s.small}>Refresh failed. Showing the saved estimate.</Txt>}
     </> : <Txt muted style={s.small}>{waiting ? 'You can keep collecting while prices load.' : failed ? 'Could not refresh prices. Check your connection and retry.' : 'No matching price is available for this printing. It stays in your binder and is left out of the value total.'}</Txt>}
     <Txt muted style={s.small}>Ungraded market estimate. Condition affects what a buyer will pay.</Txt>
-    <Pressable accessibilityRole="button" accessibilityLabel="Refresh card price" disabled={waiting} onPress={() => { void client.ensure([card], () => true, 0, true); void client.ensureFx(true); }} style={s.link}><Txt style={s.linkText}>{waiting ? 'Updating…' : 'Refresh price'}</Txt></Pressable>
+    {waiting ? <Txt muted style={s.updating}>Updating…</Txt> : <LinkButton title="Refresh price" onPress={() => { void client.ensure([card], () => true, 0, true); void client.ensureFx(true); }} style={{ alignSelf: 'flex-start' }} />}
   </View>;
 }
 
@@ -62,12 +62,12 @@ export function CollectionValue({ entries, compact = false, onNeedsPrinting }: {
     {value.priced || !total ? <PriceAmount value={value} /> : <Txt muted style={s.emptyAmount}>{checking || unresolved ? 'Looking up prices…' : 'Not priced yet'}</Txt>}
     <Txt muted style={s.small}>{total ? `${value.priced} of ${total} copies priced${checking || unresolved ? ' · updating…' : ''}` : 'Add a card to start your collection.'}</Txt>
     {value.missing > 0 && <Txt muted style={s.small}>{value.missing} {value.missing === 1 ? 'copy is' : 'copies are'} not included yet.</Txt>}
-    {toConfirm > 0 && (onNeedsPrinting ? <Pressable accessibilityRole="button" accessibilityLabel={`Confirm ${toConfirm} ${toConfirm === 1 ? 'printing' : 'printings'}`} onPress={onNeedsPrinting} style={s.attentionLink}><Txt style={s.attentionText}>Confirm {toConfirm} {toConfirm === 1 ? 'printing' : 'printings'}</Txt><Icon name="arrow" size={15} color="#786037" /></Pressable> : <Txt style={s.attentionCaption}>{toConfirm} {toConfirm === 1 ? 'printing needs' : 'printings need'} confirmation.</Txt>)}
+    {toConfirm > 0 && (onNeedsPrinting ? <Button size="medium" secondary icon="check" title={`Confirm ${toConfirm} ${toConfirm === 1 ? 'printing' : 'printings'}`} onPress={onNeedsPrinting} style={s.attentionButton} /> : <Txt style={s.attentionCaption}>{toConfirm} {toConfirm === 1 ? 'printing needs' : 'printings need'} confirmation.</Txt>)}
     {value.stale > 0 && <Txt muted style={s.small}>Includes cached prices. Refresh for the latest available estimates.</Txt>}
     {entries.some(e => client.errors.has(priceKey(e.card))) && <Txt muted style={s.small}>Some prices could not refresh. Saved estimates are kept.</Txt>}
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap' }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={details ? 'Hide value details' : 'How collection value is calculated'} onPress={() => setDetails(v => !v)} style={s.link}><Txt style={s.linkText}>{details ? 'Hide details' : 'About estimates'}</Txt></Pressable>
-      {!!total && <Pressable accessibilityRole="button" accessibilityLabel="Refresh collection prices" disabled={checking} onPress={() => { void client.ensure(cards, () => true, 20, true); void client.ensureFx(true); }} style={s.link}><Txt style={s.linkText}>{checking ? 'Updating…' : 'Refresh prices'}</Txt></Pressable>}
+    <View style={s.links}>
+      <LinkButton title={details ? 'Hide details' : 'About estimates'} onPress={() => setDetails(v => !v)} />
+      {!!total && (checking ? <Txt muted style={s.updating}>Updating…</Txt> : <LinkButton title="Refresh prices" onPress={() => { void client.ensure(cards, () => true, 20, true); void client.ensureFx(true); }} />)}
     </View>
     {details && <Txt muted style={s.small}>Each saved copy counts once, including Trainers and Energy. TAG TEAM cards count once toward the total. TCGdex supplies TCGplayer market prices and Cardmarket trends. Euro prices are converted using Frankfurter exchange rates. Unconfirmed printings use the range of available prices. Missing prices are excluded. These are ungraded estimates; condition, fees and buyer demand affect sale prices.</Txt>}
   </View>;
@@ -76,16 +76,16 @@ export function CollectionValue({ entries, compact = false, onNeedsPrinting }: {
 const s = StyleSheet.create({
   panel: { backgroundColor: '#E0E9D3', borderRadius: 14, padding: 16, gap: 7 },
   collection: { backgroundColor: '#DFE9CE', borderColor: '#B7C99D', borderWidth: 1, borderRadius: 13, padding: 16, gap: 6 },
-  heading: { fontSize: 13, fontWeight: '600' }, currency: { fontSize: 11, lineHeight: 17 },
+  heading: { fontSize: 14, fontWeight: '700' }, currency: { fontSize: 12 },
   amountRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 6, rowGap: 0 },
   rangeEnd: { flexDirection: 'row', alignItems: 'baseline', gap: 6, maxWidth: '100%' },
   amount: { color: C.ink, fontSize: 28, lineHeight: 36, fontWeight: '600', letterSpacing: -.5, fontVariant: ['tabular-nums'], flexShrink: 1 },
   rangeDash: { color: '#7A8C73', fontSize: 25, lineHeight: 36, fontWeight: '400' },
-  tagAmount: { fontSize: 17, lineHeight: 23, letterSpacing: -.25 }, tagCaption: { fontSize: 10, lineHeight: 15 },
+  tagAmount: { fontSize: 17, lineHeight: 23, letterSpacing: -.25 }, tagCaption: { fontSize: 11, lineHeight: 15 },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
-  source: { fontSize: 12, lineHeight: 18, fontWeight: '500' }, small: { fontSize: 11, lineHeight: 18 },
-  attentionCaption: { fontSize: 10, lineHeight: 16, color: '#786037', fontWeight: '500' },
-  attentionLink: { minHeight: 40, flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'flex-start' },
-  attentionText: { fontSize: 12, lineHeight: 18, color: '#786037', fontWeight: '600' },
-  link: { minHeight: 40, justifyContent: 'center', paddingRight: 10 }, linkText: { fontSize: 11, fontWeight: '500', color: C.ink, textDecorationLine: 'underline' },
+  source: { fontSize: 12, lineHeight: 18, fontWeight: '500' }, small: { fontSize: 12, lineHeight: 18 },
+  attentionCaption: { fontSize: 11, lineHeight: 16, color: '#786037', fontWeight: '600' },
+  attentionButton: { alignSelf: 'flex-start', marginTop: S.xs },
+  links: { flexDirection: 'row', justifyContent: 'space-between', flexWrap: 'wrap', columnGap: S.lg },
+  updating: { fontSize: 14, lineHeight: 44 },
 });

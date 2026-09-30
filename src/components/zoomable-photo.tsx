@@ -4,16 +4,17 @@ import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-g
 import Animated, { useAnimatedStyle, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { boundPhotoOffset as bound, fitPhoto } from '@/lib/photo-geometry';
-import { C, IconButton, Txt } from './pokedex-ui';
+import { C, IconButton, pressFx, Txt } from './pokedex-ui';
 
-export function ZoomablePhoto({ label, children, aspectRatio, renderPhoto }: {
-  label: string; children: ReactNode; aspectRatio: number; renderPhoto: (width: number, height: number) => ReactNode;
+/** `dark` lightens the "Tap to zoom" hint for photos shown on a dark panel. */
+export function ZoomablePhoto({ label, children, aspectRatio, renderPhoto, dark = false }: {
+  label: string; children: ReactNode; aspectRatio: number; renderPhoto: (width: number, height: number) => ReactNode; dark?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={`Enlarge ${label}`} accessibilityHint="Opens a photo viewer with pinch to zoom" onPress={() => setOpen(true)} style={{ alignItems: 'center' }}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Enlarge ${label}`} accessibilityHint="Opens a photo viewer with pinch to zoom" onPress={() => setOpen(true)} style={state => [{ alignItems: 'center' }, pressFx(state)]}>
       {children}
-      <Txt style={{ fontSize: 12, color: '#526B50', marginTop: 6 }}>Tap to zoom</Txt>
+      <Txt style={{ fontSize: 13, fontWeight: '600', color: dark ? '#A0B296' : '#526B50', marginTop: 6 }}>Tap to zoom</Txt>
     </Pressable>
     <Modal visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
       {open && <PhotoViewer key={aspectRatio} aspectRatio={aspectRatio} label={label} onClose={() => setOpen(false)} renderPhoto={renderPhoto} />}
@@ -54,7 +55,7 @@ function PhotoViewer({ label, onClose, aspectRatio, renderPhoto }: {
   const animated = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }] }));
   function reset() { scale.value = 1; x.value = 0; y.value = 0; }
   return <GestureHandlerRootView style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 12) }]}>
-    <View style={styles.header}><Txt numberOfLines={2} style={styles.title}>{label}</Txt><View style={styles.close}><IconButton icon="close" label="Close photo viewer" color={C.paper} onPress={onClose} /></View></View>
+    <View style={styles.header}><Txt numberOfLines={2} style={styles.title}>{label}</Txt><IconButton round dark icon="close" label="Close photo viewer" onPress={onClose} /></View>
     <View style={styles.screen}>
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
       <View collapsable={false} style={styles.viewport} onLayout={e => { setSize(e.nativeEvent.layout); reset(); }}>
@@ -70,8 +71,7 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.red },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 16, minHeight: 68 },
   title: { color: C.paper, flex: 1, fontSize: 18, lineHeight: 24, fontWeight: '800', letterSpacing: -.3 },
-  close: { borderRadius: 14, backgroundColor: C.redDark },
   screen: { flex: 1, marginHorizontal: 12, borderRadius: 20, borderWidth: 4, borderColor: C.redDark, backgroundColor: C.screen, overflow: 'hidden', paddingTop: 12 },
   viewport: { flex: 1, overflow: 'hidden', marginHorizontal: 10 },
-  hint: { color: C.muted, textAlign: 'center', fontSize: 12, lineHeight: 18, paddingVertical: 12 },
+  hint: { color: C.muted, textAlign: 'center', fontSize: 14, paddingVertical: 12 },
 });

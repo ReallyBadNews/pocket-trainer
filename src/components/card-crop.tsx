@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import { Button, C, Txt, ui } from './pokedex-ui';
+import { Button, ButtonRow, C, S, Txt, ui } from './pokedex-ui';
 import { fullCrop, resizeCrop, type Crop } from '@/lib/scan-types';
 
 export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
@@ -24,9 +24,9 @@ export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
     onPanResponderTerminationRequest: () => false,
   })), []);
   const [x, y, w, h] = crop;
-  return <View style={{ gap: 14 }}>
+  return <View style={{ gap: S.lg }}>
     <Txt style={ui.subtitle}>Which card are we reading?</Txt>
-    <Txt muted style={{ fontSize: 13 }}>Drag the four dots around one whole card. Keep its name and bottom number inside.</Txt>
+    <Txt muted style={{ fontSize: 14 }}>Drag the four dots around one whole card. Keep its name and bottom number inside.</Txt>
     <View style={s.stage} onLayout={event => setAvailable(Math.max(80, event.nativeEvent.layout.width - 44))}>
       <View style={{ width, height }}>
         <Image source={photo.uri} style={{ width, height }} contentFit="fill" accessibilityLabel="Original photo with adjustable card selection" />
@@ -39,7 +39,7 @@ export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
       </View>
     </View>
     <Button title="Read this card" icon="scan" onPress={() => onConfirm(crop)} />
-    <View style={ui.row}><Button title="Whole photo" secondary onPress={() => setCrop(fullCrop)} style={{ flex: 1 }} /><Button title="Cancel" secondary onPress={onCancel} style={{ flex: 1 }} /></View>
+    <ButtonRow><Button size="medium" title="Reset" secondary onPress={() => setCrop(fullCrop)} /><Button size="medium" title="Back" secondary onPress={onCancel} /></ButtonRow>
   </View>;
 }
 const s = StyleSheet.create({

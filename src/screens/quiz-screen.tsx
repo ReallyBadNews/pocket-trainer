@@ -59,7 +59,7 @@ export function QuizInvite({ onPlay }: { onPlay: () => void }) {
       <Txt accessibilityRole="header" style={q.inviteTitle}>Who’s That{'\n'}Pokémon?</Txt>
       <Txt muted style={{ fontSize: 13, lineHeight: 19, marginTop: 6 }}>{own ? 'Guess the shadow! 10 quick questions from your Pokédex.' : 'Guess the shadow! Play with the first 151 Pokémon.'}</Txt>
       {!!trainer.quizBest && <Txt style={q.inviteBest}>Best score: {trainer.quizBest}/{QUIZ_LENGTH}</Txt>}
-      <Button title="Play" onPress={onPlay} style={{ alignSelf: 'flex-start', marginTop: 14, paddingHorizontal: 30 }} />
+      <Button title="Play" onPress={onPlay} style={{ alignSelf: 'flex-start', marginTop: 14 }} />
     </View>
     <View accessible accessibilityRole="image" accessibilityLabel="A mystery Pokémon shadow" style={q.teaser}>
       <View style={q.teaserCircle}><Burst tone="mystery" style={q.teaserBurst} /><Image source={speciesImage(teaser)} tintColor={SHADOW} style={q.teaserArt} contentFit="contain" cachePolicy="memory-disk" /></View>
@@ -70,7 +70,7 @@ export function QuizInvite({ onPlay }: { onPlay: () => void }) {
 
 export function QuizModal({ onClose }: { onClose: () => void }) {
   const [game, setGame] = useState(0);
-  return <Sheet title="Who’s That Pokémon?" onClose={onClose}><QuizGame key={game} onAgain={() => setGame(n => n + 1)} onDone={onClose} /></Sheet>;
+  return <Sheet title="Who’s That Pokémon?" onClose={onClose} dismissible={false}><QuizGame key={game} onAgain={() => setGame(n => n + 1)} onDone={onClose} /></Sheet>;
 }
 
 function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void }) {
@@ -163,7 +163,7 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
   const name = nameOf(question.answer);
   const uri = speciesImage(question.answer);
   return <ScrollView ref={scroll} contentContainerStyle={q.content}>
-    {round.fallback && <Txt muted style={q.note}>{FALLBACK_NOTE}</Txt>}
+    {round.fallback && index === 0 && <Txt muted style={q.note}>{FALLBACK_NOTE}</Txt>}
     <View style={ui.row}>
       <Txt style={q.count}>{index + 1}/{round.questions.length}</Txt>
       <View style={{ flex: 1 }}><Progress value={index + (answered ? 1 : 0)} total={round.questions.length} /></View>
@@ -187,8 +187,8 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
       const option = nameOf(id);
       const state = !answered ? 'idle' : id === question.answer ? 'right' : id === picked ? 'wrong' : 'dim';
       return <Pressable key={id} accessibilityRole="button" accessibilityLabel={state === 'right' ? `${option}, the right answer` : state === 'wrong' ? `${option}, your guess` : option} accessibilityState={{ disabled: answered, selected: id === picked }} disabled={answered} onPress={() => choose(id)} style={({ pressed }) => [q.choice, state === 'right' && q.right, state === 'wrong' && q.wrong, state === 'dim' && { opacity: .45 }, pressed && { opacity: .75, transform: [{ translateY: 2 }] }]}>
-        {state === 'right' && <Icon name="check" color="white" size={20} />}{state === 'wrong' && <Icon name="close" color="white" size={20} />}
-        <Txt numberOfLines={2} adjustsFontSizeToFit style={[q.choiceText, (state === 'right' || state === 'wrong') && { color: 'white' }]}>{option}</Txt>
+        <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} maxFontSizeMultiplier={1.25} style={[q.choiceText, (state === 'right' || state === 'wrong') && { color: 'white' }]}>{option}</Txt>
+        {(state === 'right' || state === 'wrong') && <View style={q.choiceMark}><Icon name={state === 'right' ? 'check' : 'close'} color="white" size={18} /></View>}
       </Pressable>;
     })}</View>
     {answered && <Button title={index + 1 < round.questions.length ? 'Next Pokémon' : 'See my score'} onPress={next} />}
@@ -196,9 +196,9 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
 }
 
 const q = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 26, gap: 14 }, fill: { width: '100%', height: '100%' },
+  content: { padding: 20, paddingBottom: 26, gap: 16 }, fill: { width: '100%', height: '100%' },
   note: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
-  count: { fontFamily: mono, fontSize: 13, fontWeight: '700', minWidth: 38 },
+  count: { fontFamily: mono, fontSize: 13, fontWeight: '700', minWidth: 44 },
   scoreChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, minHeight: 32, borderRadius: 16, backgroundColor: '#F7ECCC' },
   stage: { borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#23658C' },
   burst: { position: 'absolute', width: 820, height: 820, left: '50%', top: '50%', marginLeft: -410, marginTop: -410 },
@@ -209,13 +209,15 @@ const q = StyleSheet.create({
   pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: '#DCE6D0' }, pillGold: { backgroundColor: '#F3DB8E' },
   pillText: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
   choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  choice: { flexGrow: 1, flexBasis: '46%', minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: '#B8C6AC', backgroundColor: '#FCFDF9' },
+  choice: { flexGrow: 1, flexBasis: '46%', minHeight: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 8, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: '#B8C6AC', backgroundColor: '#FCFDF9' },
   right: { backgroundColor: '#4E9444', borderColor: '#356E2E' }, wrong: { backgroundColor: C.red, borderColor: C.redDark },
-  choiceText: { fontSize: 17, lineHeight: 22, fontWeight: '800', textAlign: 'center', flexShrink: 1 },
+  choiceText: { alignSelf: 'stretch', fontSize: 17, lineHeight: 22, fontWeight: '800', textAlign: 'center' },
+  // The answer mark floats in the corner so the name never moves or re-wraps when it appears.
+  choiceMark: { position: 'absolute', top: 8, right: 8 },
   endStage: { width: '100%', height: 150, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#B98A22' },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   score: { fontFamily: mono, fontSize: 44, lineHeight: 52, fontWeight: '800' }, scoreOf: { fontFamily: mono, fontSize: 22, color: C.muted },
-  invite: { backgroundColor: '#D8EAF1', borderRadius: 19, minHeight: 180, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 18, paddingRight: 14, borderWidth: 1, borderColor: '#B7D3E0' },
+  invite: { backgroundColor: '#D8EAF1', borderRadius: 19, minHeight: 180, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 18, borderWidth: 1, borderColor: '#B7D3E0' },
   inviteCopy: { flex: 1 }, inviteTitle: { fontSize: 22, fontWeight: '900', lineHeight: 28, letterSpacing: -.5 },
   inviteBest: { fontFamily: mono, fontSize: 12, fontWeight: '700', marginTop: 6 },
   teaser: { width: 132, height: 132 },
