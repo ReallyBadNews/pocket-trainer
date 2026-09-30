@@ -1,13 +1,33 @@
 # Automated iOS builds
 
-EAS Workflows builds every push to `dev` and `main`, including PR merges:
+EAS Workflows runs on every push to `dev` and `main`, including PR merges:
 
 | Branch | Profile | Result |
 | --- | --- | --- |
-| `dev` | `development` | Ad hoc iOS development client for registered devices; run `pnpm start` to load the app. |
-| `main` | `production` | Store-signed iOS app uploaded to App Store Connect / TestFlight. |
+| `dev` | `development` | Ad hoc iOS development client for registered devices, built only when native code or config changed; run `pnpm start` to load the app. |
+| `main` | `production` | Store-signed iOS app uploaded to App Store Connect / TestFlight on every push. |
 
-Both workflows run a frozen-lockfile install, type checking and tests before building. Failed checks prevent the build; failed production builds prevent submission. The submit job uses the exact build ID from that run. Tests and their TypeScript configuration must remain in the EAS source archive.
+Both workflows run a frozen-lockfile install, type checking and tests first. Failed checks stop the workflow; failed production builds prevent submission. The submit job uses the exact build ID from that run. Tests and their TypeScript configuration must remain in the EAS source archive.
+
+## When `dev` builds a new development client
+
+A development client only contains native code. JavaScript changes load from Metro, so an existing client keeps working until native code or config changes. After the checks pass, the `dev` workflow:
+
+1. Calculates the project's iOS [fingerprint](https://docs.expo.dev/versions/v57.0.0/sdk/fingerprint/), a hash of everything that ends up in the native app.
+2. Looks for a finished iOS `development` build (ad hoc, `internal` distribution) with the same fingerprint. If a matching build is still in progress from an earlier push, it waits for that build instead of starting a second one.
+3. If it finds one, it skips the build and shows a **Reuse existing iOS development client** step with a link to that build. Keep the installed client and run `pnpm start`.
+4. If it finds none, it builds a new development client as before. Install it from the build page or with `eas build:dev`.
+
+The fingerprint changes, and a new client is built, when any of these change:
+
+- Native dependencies or their versions (`package.json` / `pnpm-lock.yaml`), including Expo SDK upgrades.
+- `app.json` (plugins, permissions, icon, splash screen, version and so on) and the images it points to.
+- The local native module in `modules/card-scanner`.
+- `eas.json`, `.easignore`, `.gitignore` or the `scripts` in `package.json`.
+
+Changes under `src/`, `tests/` and `docs/` do not change the fingerprint. Production and TestFlight builds are never reused here: they can share the same fingerprint, but the lookup only matches the `development` profile.
+
+To check locally whether a change needs a new client, compare `npx @expo/fingerprint fingerprint:generate --platform ios` on both commits, or compare the hash with the **Fingerprint** shown on the latest development build's page.
 
 The existing `preview` profile remains available for standalone ad hoc installs without Metro. All profiles use the same bundle identifier, so development, preview and TestFlight installations replace one another on a device.
 
@@ -44,11 +64,13 @@ eas workflow:run .eas/workflows/development.yml
 eas workflow:run .eas/workflows/testflight.yml
 ```
 
-These commands create real builds, and the TestFlight workflow uploads its result. Workflow logs and installation links are on the Expo project's Workflows page. A successful upload still requires Apple processing and any applicable beta review before testers can install it.
+The TestFlight workflow always creates a real build and uploads it. The development workflow only creates a build when no development client matches the current fingerprint. Workflow logs and installation links are on the Expo project's Workflows page. A successful upload still requires Apple processing and any applicable beta review before testers can install it.
 
 ## References
 
 - [EAS Workflows and GitHub connection](https://docs.expo.dev/eas/workflows/get-started/)
+- [Skip unnecessary development builds with fingerprints](https://docs.expo.dev/tutorial/cicd/development-builds/)
+- [Fingerprint and get-build workflow jobs](https://docs.expo.dev/eas/workflows/pre-packaged-jobs/)
 - [EAS iOS submission and API-key setup](https://docs.expo.dev/submit/ios/)
 - [Remote version management](https://docs.expo.dev/build-reference/app-versions/)
 - [Apple TestFlight setup](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)
