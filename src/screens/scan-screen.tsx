@@ -27,7 +27,18 @@ const MATCH_NOTE = 'Do the picture and bottom number match? Tap your card.';
 const OOPS = "Oops! That didn't work. Try again.";
 const MODES = [{ id: 'card', label: 'One card', icon: 'scan' }, { id: 'page', label: 'Binder page', icon: 'binder' }] as const;
 
-export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' }: { onCard: (card: CardBrief, draft?: Card) => void; onAdded: (added: AddedCards, source: 'card' | 'page') => void; captureRequest: number; initialQuery?: string }) {
+type ScanScreenProps = { onCard: (card: CardBrief, draft?: Card) => void; onAdded: (added: AddedCards, source: 'card' | 'page') => void; captureRequest: number; initialQuery?: string; sessionId: number };
+type LanguageChoice = { autoLanguage: boolean; setAutoLanguage: (auto: boolean) => void; language: Language; setLanguage: (language: Language) => void };
+
+export function ScanScreen({ sessionId, ...props }: ScanScreenProps) {
+  // Auto-detect reads the language from each photo; `language` is the one in use.
+  const [autoLanguage, setAutoLanguage] = useState(true);
+  const [language, setLanguage] = useState<Language>('en');
+  // Keep the language between cards; a saved card starts a fresh scan session.
+  return <ScanSession key={sessionId} {...props} autoLanguage={autoLanguage} setAutoLanguage={setAutoLanguage} language={language} setLanguage={setLanguage} />;
+}
+
+function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoLanguage, setAutoLanguage, language, setLanguage }: Omit<ScanScreenProps, 'sessionId'> & LanguageChoice) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
   const addCards = useAddCards();
@@ -39,11 +50,8 @@ export function ScanScreen({ onCard, onAdded, captureRequest, initialQuery = '' 
   // A page photo taken after switching modes inside the card camera, for the page reader.
   const [pagePhoto, setPagePhoto] = useState<LivePhoto | null>(null);
   const [manual, setManual] = useState(false);
-  // Auto-detect reads the language from each photo; `language` is the one in use.
-  const [autoLanguage, setAutoLanguage] = useState(true);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [detected, setDetected] = useState<Language | null>(null);
-  const [language, setLanguage] = useState<Language>('en');
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
   const [improving, setImproving] = useState<ScanStage>('done');
   const generation = useRef(0);

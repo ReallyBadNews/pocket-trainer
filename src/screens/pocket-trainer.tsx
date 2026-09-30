@@ -36,6 +36,7 @@ export default function PocketTrainer() {
   const [captureRequest, setCaptureRequest] = useState(0);
   const [quizOpen, setQuizOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState('');
+  const [scanSession, setScanSession] = useState(0);
   const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
   const [binderView, setBinderView] = useState<BinderView>('grid');
   const [checklist, setChecklist] = useState<SetProgress | null>(null);
@@ -55,6 +56,8 @@ export default function PocketTrainer() {
   }));
   function celebrate(added: AddedCards, source: 'card' | 'page') {
     setSelection(null); setUndo(added);
+    // A saved card clears the old photo, matches and search. Page scans reset themselves and stay on the page reader.
+    if (source === 'card') { setScanQuery(''); setScanSession(session => session + 1); }
     setDiscovery({ card: added.cards[0], newIds: added.newIds, quantity: added.quantity, granted: added.granted, source });
   }
   // The undo offer appears once the celebration closes and fades after a few seconds.
@@ -83,7 +86,7 @@ export default function PocketTrainer() {
     <View style={s.feed}>
       {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
         {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} onQuiz={() => setQuizOpen(true)} />}
-        {tab === 'scan' && <ScanScreen initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
+        {tab === 'scan' && <ScanScreen sessionId={scanSession} initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
         {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} onSet={setChecklist} view={binderView} onViewChange={setBinderView} onWishlist={() => setWishlistOpen(true)} />}
         {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
       </View></ScrollChromeContext.Provider>}
