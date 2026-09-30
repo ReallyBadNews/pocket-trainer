@@ -2,12 +2,14 @@ import { Image } from 'expo-image';
 import Svg, { Circle, G, Path, Rect } from 'react-native-svg';
 import type { BadgeEmblem } from '@/lib/badges';
 
+// Drawn on a 76×84 grid and shown a little smaller so badge names get more room.
+const SIZE = { width: 64, height: 71 };
 const COLORS = { starters: '#4B8756', eevee: '#A56D40', birds: '#477D9E', fossil: '#927744', dex: '#B7464F', binder: '#4F6CA6' };
 
 export function AchievementEmblem({ emblem, earned }: { emblem: BadgeEmblem; earned: boolean }) {
-  if (emblem === 'medal') return <Image source={require('../../assets/crafted/badge.png')} style={{ width: 76, height: 84, opacity: earned ? 1 : .4 }} contentFit="contain" />;
+  if (emblem === 'medal') return <Image source={require('../../assets/crafted/badge.png')} style={{ ...SIZE, opacity: earned ? 1 : .4 }} contentFit="contain" />;
   const color = earned ? COLORS[emblem] : '#879781';
-  return <Svg width={76} height={84} viewBox="0 0 76 84" accessible={false}>
+  return <Svg {...SIZE} viewBox="0 0 76 84" accessible={false}>
     <Path d="M22 55L16 81 30 75 38 82 42 57M38 57L46 82 55 75 66 79 55 53" fill={color} opacity={earned ? .85 : .3} />
     <Path d="M38 3L49 8 61 10 66 22 72 33 66 45 62 57 49 61 38 67 26 61 14 57 10 45 4 33 10 21 14 10 27 8Z" fill={earned ? '#EAC55A' : '#D6DECB'} stroke={earned ? '#A98428' : '#A9B59C'} strokeWidth={2} />
     <Circle cx={38} cy={35} r={24} fill={earned ? '#FFF9E6' : '#F0F4E8'} stroke={color} strokeWidth={2} />

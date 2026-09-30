@@ -62,10 +62,10 @@ function Tile({ slot, onEntry, onCard }: { slot: SetSlot; onEntry: (entry: Entry
 const c = StyleSheet.create({
   list: { flexGrow: 0, flexShrink: 1 }, content: { paddingBottom: 26 },
   header: { padding: 20, paddingBottom: 14, gap: 10 }, filters: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 2 },
-  row: { flexDirection: 'row', gap: 10, paddingHorizontal: 16, marginBottom: 12 }, tile: { flex: 1, minWidth: 0 },
+  row: { flexDirection: 'row', gap: 10, paddingHorizontal: 20, marginBottom: 12 }, tile: { flex: 1, minWidth: 0 },
   unknown: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6ECDD', borderWidth: 1, borderStyle: 'dashed', borderColor: '#C4D0B7' },
   check: { position: 'absolute', top: 4, right: 4, backgroundColor: '#679255', borderRadius: 10, padding: 3 },
   number: { fontFamily: mono, fontSize: 11, lineHeight: 17, fontWeight: '700', textAlign: 'center', marginTop: 3 },
-  bonus: { marginHorizontal: 16, marginTop: 6, marginBottom: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line, gap: 2 },
+  bonus: { marginHorizontal: 20, marginTop: 6, marginBottom: 12, paddingTop: 12, borderTopWidth: 1, borderTopColor: C.line, gap: 2 },
   empty: { alignItems: 'center', gap: 10, padding: 30 },
 });

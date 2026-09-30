@@ -1,9 +1,10 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, C, Txt, ui } from '@/components/pokedex-ui';
+import { C, Txt, ui } from '@/components/pokedex-ui';
 
-export function AboutScreen({ onBack }: { onBack: () => void }) {
+/** Shown inside the Settings sheet; the sheet's back arrow returns to Settings. */
+export function AboutScreen() {
   const version = Application.nativeApplicationVersion ?? (Platform.OS === 'web' ? Constants.expoConfig?.version : null) ?? 'Unavailable';
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
 
@@ -15,7 +16,6 @@ export function AboutScreen({ onBack }: { onBack: () => void }) {
       <View style={s.row}><Txt muted>Build number</Txt><Txt selectable style={s.value}>{build}</Txt></View>
     </View>
     <Txt muted style={{ fontSize: 13 }}>Use these numbers to check which app is installed when testing an update.</Txt>
-    <Button title="Back to settings" secondary onPress={onBack} />
   </ScrollView>;
 }
 

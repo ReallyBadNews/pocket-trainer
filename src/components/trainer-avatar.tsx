@@ -25,8 +25,8 @@ export const TRAINER_APPEARANCE_LABELS = {
   skinTone: { porcelain: 'Porcelain', peach: 'Peach', golden: 'Golden', brown: 'Brown', deep: 'Deep' },
   hairStyle: { short: 'Short', spiky: 'Spiky', bob: 'Bob', ponytail: 'Ponytail' },
   hairColor: { ink: 'Ink', chestnut: 'Chestnut', auburn: 'Auburn', gold: 'Gold', blue: 'Indigo' },
-  outfit: { red: 'Pokédex red', blue: 'Water blue', green: 'Field green', violet: 'Violet', gold: 'Badge gold' },
-  headwear: { none: 'No headwear', cap: 'Field cap', headband: 'Headband' },
+  outfit: { red: 'Red', blue: 'Water blue', green: 'Field green', violet: 'Violet', gold: 'Badge gold' },
+  headwear: { none: 'None', cap: 'Cap', headband: 'Headband' },
 } as const;
 
 // Metro requires literal asset paths. These aligned transparent renders were
