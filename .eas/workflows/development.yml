@@ -10,6 +10,9 @@ defaults:
     node: '24.14.0'
     pnpm: '11.18.0'
 
+# A development client only has to be rebuilt when native code or config
+# changes. JS-only pushes reuse the last development build with the same
+# native fingerprint and load the new JS from Metro.
 jobs:
   checks:
     name: Typecheck and test
@@ -19,10 +22,50 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  fingerprint:
+    name: Fingerprint
+    needs: [checks]
+    type: fingerprint
+    # Must match the environment of the `development` build profile. It has no
+    # explicit `environment` in eas.json, so EAS uses `development` because
+    # `developmentClient` is true.
+    environment: development
+
+  get_ios_build:
+    name: Check for an existing iOS development build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      platform: ios
+      # Production/TestFlight builds share the same fingerprint, so only match
+      # ad hoc development clients.
+      profile: development
+      distribution: internal
+      # Reuse a matching build that an earlier push is still building instead
+      # of starting a duplicate.
+      wait_for_in_progress: true
+
   build_ios:
     name: Build iOS development client
-    needs: [checks]
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
     type: build
     params:
       platform: ios
       profile: development
+
+  reuse_ios:
+    name: Reuse existing iOS development client
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: doc
+    params:
+      md: |
+        # No new development client needed
+
+        Native code and config have not changed since this development build, so no new build was started. Keep using the installed development client and run `pnpm start` to load the latest JavaScript.
+
+        - Build: [${{ needs.get_ios_build.outputs.build_id }}](https://expo.dev/accounts/reallybadnews/projects/pokedex/builds/${{ needs.get_ios_build.outputs.build_id }})
+        - Built from commit: `${{ needs.get_ios_build.outputs.git_commit_hash }}`
+        - iOS fingerprint: `${{ needs.get_ios_build.outputs.fingerprint_hash }}`
