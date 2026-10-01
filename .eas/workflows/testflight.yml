@@ -1,8 +1,25 @@
 name: iOS TestFlight release
 
+# A new binary only goes to TestFlight when native code or config changes.
+# JS-only merges are published as an EAS Update to the TestFlight build that
+# already has the same native fingerprint; it applies on the app's next cold start.
 on:
   push:
     branches: ['main']
+    # Changes that never reach the app don't need a release. Run
+    # `eas workflow:run .eas/workflows/testflight.yml --ref main` to release anyway.
+    paths:
+      - '**'
+      - '!docs/**'
+      - '!tests/**'
+      - '!scripts/**'
+      - '!.eas/**'
+      - '!**/*.md'
+
+# Merges that land close together release once, from the newest commit.
+concurrency:
+  cancel_in_progress: true
+  group: ${{ workflow.filename }}-${{ github.ref }}
 
 defaults:
   image: sdk-57
@@ -19,9 +36,28 @@ jobs:
       - run: pnpm typecheck
       - run: pnpm test
 
+  fingerprint:
+    name: Fingerprint
+    needs: [checks]
+    type: fingerprint
+    environment: production
+
+  get_ios_build:
+    name: Check for an existing TestFlight build
+    needs: [fingerprint]
+    type: get-build
+    params:
+      fingerprint_hash: ${{ needs.fingerprint.outputs.ios_fingerprint_hash }}
+      platform: ios
+      # Development clients share the fingerprint, so only match store builds.
+      profile: production
+      distribution: store
+      wait_for_in_progress: true
+
   build_ios:
     name: Build iOS for TestFlight
-    needs: [checks]
+    needs: [get_ios_build]
+    if: ${{ !needs.get_ios_build.outputs.build_id }}
     type: build
     params:
       platform: ios
@@ -34,3 +70,13 @@ jobs:
     params:
       build_id: ${{ needs.build_ios.outputs.build_id }}
       profile: production
+
+  publish_ios_update:
+    name: Publish update to TestFlight build
+    needs: [get_ios_build]
+    if: ${{ needs.get_ios_build.outputs.build_id }}
+    type: update
+    environment: production
+    params:
+      channel: production
+      platform: ios
