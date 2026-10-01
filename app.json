@@ -3,6 +3,12 @@
     "name": "Pocket Pokédex",
     "slug": "pokedex",
     "version": "1.0.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3117e7c1-f742-49bd-afc2-6fa9f790b0c7"
+    },
     "orientation": "default",
     "icon": "./assets/crafted/app-icon.png",
     "scheme": "pokedex",

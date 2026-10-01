@@ -5,9 +5,22 @@ EAS Workflows runs on every push to `dev` and `main`, including PR merges:
 | Branch | Profile | Result |
 | --- | --- | --- |
 | `dev` | `development` | Ad hoc iOS development client for registered devices, built only when native code or config changed; run `pnpm start` to load the app. |
-| `main` | `production` | Store-signed iOS app uploaded to App Store Connect / TestFlight on every push. |
+| `main` | `production` | Store-signed iOS app uploaded to TestFlight when native code or config changed; otherwise an EAS Update to the TestFlight build already installed. |
 
 Both workflows run a frozen-lockfile install, type checking and tests first. Failed checks stop the workflow; failed production builds prevent submission. The submit job uses the exact build ID from that run. Tests and their TypeScript configuration must remain in the EAS source archive.
+
+Each iOS build uses EAS build credit (about $2 on the Starter plan), so both workflows only build when native code changes. Workflow jobs and updates are far cheaper. There is no `preview` profile any more: TestFlight covers standalone installs.
+
+## What a merge to `main` does
+
+1. Calculates the iOS [fingerprint](https://docs.expo.dev/versions/v57.0.0/sdk/fingerprint/), a hash of everything that ends up in the native app.
+2. Looks for a `production` (App Store, `store` distribution) build with the same fingerprint, waiting for one that is still building.
+3. **No match:** builds the app and uploads it to TestFlight, as before.
+4. **Match:** skips the build and publishes the new JavaScript as an [EAS Update](https://docs.expo.dev/eas-update/introduction/) on the `production` channel. That build was made with `runtimeVersion: { policy: "fingerprint" }`, so only builds with the same native code accept the update.
+
+The TestFlight app checks for an update every time it starts and downloads it in the background without delaying launch. The update applies on the **next** cold start: open the app, wait a few seconds, swipe it away, and open it again. TestFlight still shows the build number of the installed binary; the update does not change it.
+
+Merges that only touch `docs/`, `tests/`, `scripts/`, `.eas/` or Markdown files don't start the workflow at all (`on.push.paths`). If several merges land close together, the newest run cancels the older in-progress ones (`concurrency`). Because cancellation can stop an older run during **Upload to TestFlight**, check the Workflows page if two merges land within a few minutes; if a build finished but was never uploaded, upload it with `eas submit --platform ios --id <build id>`.
 
 ## When `dev` builds a new development client
 
@@ -25,11 +38,11 @@ The fingerprint changes, and a new client is built, when any of these change:
 - The local native module in `modules/card-scanner`.
 - `eas.json`, `.easignore`, `.gitignore` or the `scripts` in `package.json`.
 
-Changes under `src/`, `tests/` and `docs/` do not change the fingerprint. Production and TestFlight builds are never reused here: they can share the same fingerprint, but the lookup only matches the `development` profile.
+Changes under `src/`, `tests/` and `docs/` do not change the fingerprint. Production and TestFlight builds are never reused here, and development clients are never treated as TestFlight builds: they can share the same fingerprint, but each lookup only matches its own profile.
 
 To check locally whether a change needs a new client, compare `npx @expo/fingerprint fingerprint:generate --platform ios` on both commits, or compare the hash with the **Fingerprint** shown on the latest development build's page.
 
-The existing `preview` profile remains available for standalone ad hoc installs without Metro. All profiles use the same bundle identifier, so development, preview and TestFlight installations replace one another on a device.
+Both profiles use the same bundle identifier, so development and TestFlight installations replace one another on a device.
 
 ## One-time account setup
 
@@ -64,13 +77,15 @@ eas workflow:run .eas/workflows/development.yml
 eas workflow:run .eas/workflows/testflight.yml
 ```
 
-The TestFlight workflow always creates a real build and uploads it. The development workflow only creates a build when no development client matches the current fingerprint. Workflow logs and installation links are on the Expo project's Workflows page. A successful upload still requires Apple processing and any applicable beta review before testers can install it.
+Both workflows only build when no build of their profile matches the current fingerprint. A manual TestFlight run with unchanged native code publishes an update instead of uploading a build. To force a new TestFlight binary, run `eas build --platform ios --profile production --auto-submit`. Workflow logs and installation links are on the Expo project's Workflows page. A successful upload still requires Apple processing and any applicable beta review before testers can install it.
 
 ## References
 
 - [EAS Workflows and GitHub connection](https://docs.expo.dev/eas/workflows/get-started/)
 - [Skip unnecessary development builds with fingerprints](https://docs.expo.dev/tutorial/cicd/development-builds/)
-- [Fingerprint and get-build workflow jobs](https://docs.expo.dev/eas/workflows/pre-packaged-jobs/)
+- [Fingerprint, get-build and update workflow jobs](https://docs.expo.dev/eas/workflows/pre-packaged-jobs/)
+- [Deploy to production: build or update](https://docs.expo.dev/eas/workflows/examples/deploy-to-production/)
+- [expo-updates (SDK 57)](https://docs.expo.dev/versions/v57.0.0/sdk/updates/)
 - [EAS iOS submission and API-key setup](https://docs.expo.dev/submit/ios/)
 - [Remote version management](https://docs.expo.dev/build-reference/app-versions/)
 - [Apple TestFlight setup](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/)
