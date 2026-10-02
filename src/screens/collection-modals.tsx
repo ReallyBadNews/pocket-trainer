@@ -1,4 +1,4 @@
-import { ZoomablePhoto } from '@/components/zoomable-photo';
+import { CardInspection } from '@/components/card-inspection';
 import { Image } from 'expo-image';
 import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, TextInput, View, useWindowDimensions } from 'react-native';
@@ -88,7 +88,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
     {card && <>
-      <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}>{isShiny(card, finish) ? <HoloShine style={{ width: 160, maxWidth: '100%' }}><CardArt key={card.id} card={card} high /></HoloShine> : <CardArt key={card.id} card={card} high style={{ width: 160, maxWidth: '100%' }} />}</ZoomablePhoto></View>
+      <View style={m.cardHero}><CardInspection card={card} finish={finish} disabled={busy}><CardArt key={card.id} card={card} high style={{ width: 160, maxWidth: '100%' }} /></CardInspection></View>
       <View style={{ gap: S.xs }}>
         <View style={ui.between}><View style={{ flex: 1, minWidth: 0 }}><Txt variant="title">{card.name}</Txt>{card.language !== 'en' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton disabled={busy} icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
         <Txt variant="caption" muted>{card.set.name} · {LANGUAGE_LABELS[card.language]}</Txt>

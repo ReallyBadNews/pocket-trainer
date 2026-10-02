@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
+import { Image } from 'expo-image';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { C, S, Txt } from '@/components/pokedex-ui';
 
@@ -10,6 +11,7 @@ export function AboutScreen({ children }: { children?: ReactNode }) {
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
 
   return <ScrollView contentContainerStyle={s.content}>
+    <Image source={require('../../assets/crafted/device.png')} contentFit="contain" style={s.device} accessibilityLabel="Our handcrafted 3D Pokédex" />
     <Txt accessibilityRole="header" variant="title">Pocket Pokédex</Txt>
     <Txt muted>Your Pokémon cards, collected in one place.</Txt>
     <View style={s.details}>
@@ -23,6 +25,7 @@ export function AboutScreen({ children }: { children?: ReactNode }) {
 
 const s = StyleSheet.create({
   content: { padding: S.xl, paddingBottom: 26, gap: S.lg },
+  device: { alignSelf: 'center', width: 190, height: 154 },
   details: { gap: S.sm },
   row: { minHeight: 44, paddingVertical: S.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   value: { fontWeight: '600', flexShrink: 1 },
