@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { C, R, S, Txt } from '@/components/pokedex-ui';
+import { C, S, Txt } from '@/components/pokedex-ui';
 
 /** Shown inside the Settings sheet; the sheet's back arrow returns to Settings. */
 export function AboutScreen() {
@@ -21,7 +21,7 @@ export function AboutScreen() {
 
 const s = StyleSheet.create({
   content: { padding: S.xl, paddingBottom: 26, gap: S.lg },
-  details: { backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: S.lg, gap: S.lg },
-  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: S.md },
+  details: { gap: S.sm },
+  row: { minHeight: 44, paddingVertical: S.sm, flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   value: { fontWeight: '600', flexShrink: 1 },
 });

@@ -34,7 +34,7 @@ export function CardValuePanel({ card, finish, quantity }: { card: CardBrief; fi
   const waiting = !client.ready || client.pending.has(key) || (!client.fx && client.pending.has('fx'));
   const failed = client.errors.has(key) || (!quote && client.errors.has('fx'));
   return <View style={s.panel}>
-    <ActionRow title={details ? 'Hide value details' : 'Estimated value'} value={quote ? `${quoteLabel(quote)} USD` : waiting ? 'Updating…' : 'Unavailable'} onPress={() => setDetails(open => !open)} />
+    <ActionRow expanded={details} title={details ? 'Hide value details' : 'Estimated value'} value={quote ? `${quoteLabel(quote)} USD` : waiting ? 'Updating…' : 'Unavailable'} onPress={() => setDetails(open => !open)} />
     {details && <View style={s.valueDetails}>
     {quote ? <>
       <Txt variant="caption" style={s.source}>{quote.sources.map(source => `${source} ${source === 'TCGplayer' ? 'market' : 'trend'}`).join(' / ')}{quote.converted ? ' · converted from EUR' : ''}</Txt>

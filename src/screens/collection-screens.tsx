@@ -3,7 +3,7 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { ActionRow, C, CardArt, CardCaption, ChoiceMenu, Icon, Progress, S, SearchBox, ToolbarAction, Txt, Button, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
+import { C, CardArt, CardCaption, ChoiceMenu, Icon, IconButton, Progress, S, SearchBox, ToolbarAction, Txt, Button, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { catalogSet, species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, type CardFilter } from '@/lib/card-kind';
@@ -38,15 +38,14 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onSc
   // A type disappears from the readout if its last card is deleted; stop filtering by it too.
   const activeType = types.some(t => t.type === typeFilter) ? typeFilter : null;
   const visible = useMemo(() => species.filter(s => (filter !== 'Discovered' || discovered.has(s.id)) && (filter !== 'Kanto' || s.id <= 151) && (!activeType || speciesTypes(s.id).includes(activeType)) && (!query || normalize(`${LANGUAGES.map(lang => s[lang] ?? '').join('')}${s.id}`).includes(normalize(query)))), [query, filter, discovered, activeType]);
-  return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} columnWrapperStyle={{ gap: S.md }} initialNumToRender={15} maxToRenderPerBatch={20}
+  return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" columnWrapperStyle={{ gap: S.md }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
-      <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} of {species.length.toLocaleString()} discovered</Txt><QuizInvite onPlay={onQuiz} /></View></View>
+      <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} discovered</Txt><QuizInvite onPlay={onQuiz} /><ToolbarAction title="Overview" expanded={overviewOpen} onPress={() => setOverviewOpen(open => !open)} /></View></View>
       <SearchBox value={query} onChange={setQuery} placeholder="Find a Pokémon by name or number" />
       <View style={s.toolbar}>
         <ChoiceMenu compact label="Show Pokémon" options={['All Pokémon', 'Discovered', 'Kanto'].map(label => ({ id: label, label }))} value={filter} onChange={setFilter} style={s.menu} />
         {types.length > 0 && <ChoiceMenu<PokemonType | 'all'> compact label="Pokémon type" options={[{ id: 'all', label: 'Every type' }, ...types.map(t => ({ id: t.type, label: `${typeLabel(t.type)} (${t.count})` }))]} value={activeType ?? 'all'} onChange={value => setTypeFilter(value === 'all' ? null : value)} style={s.menu} />}
       </View>
-      <ActionRow title={overviewOpen ? 'Hide overview' : 'Overview'} value="Progress & value" onPress={() => setOverviewOpen(open => !open)} />
       {overviewOpen && <View style={s.overview}>
         <View style={s.section}><Txt accessibilityRole="header" variant="subtitle">Your discoveries</Txt><Progress value={discovered.size} total={species.length} /><Txt muted variant="caption">{discovered.size} Pokémon discovered · {totalCards(trainer)} cards in binder</Txt>{!!trainer.quizBest && <Txt muted variant="caption">Best quiz score: {trainer.quizBest}/{QUIZ_LENGTH}</Txt>}</View>
         {types.length > 0 && <View style={s.section}><Txt accessibilityRole="header" variant="subtitle">Your types</Txt><View style={s.typeBar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{types.map(t => <View key={t.type} style={{ flex: t.count, backgroundColor: TYPE_COLORS[t.type] }} />)}</View>{types.map(t => <Pressable key={t.type} accessibilityRole="button" accessibilityLabel={`${typeLabel(t.type)}, ${t.count} discovered. ${activeType === t.type ? 'Show every type' : 'Show this type'}`} accessibilityState={{ selected: activeType === t.type }} onPress={() => { tick(); setTypeFilter(activeType === t.type ? null : t.type); setOverviewOpen(false); }} style={state => [s.typeRow, pressFx(state)]}><View style={[s.typeDot, { backgroundColor: TYPE_COLORS[t.type] }]} /><Txt style={{ flex: 1 }}>{typeLabel(t.type)}</Txt><Txt muted variant="readout">{t.count}</Txt>{activeType === t.type && <Icon name="check" size={18} />}</Pressable>)}</View>}
@@ -96,21 +95,21 @@ export function BinderScreen({ onScan, onEntry, onSet, onWishlist, onlyNeedsPrin
   const activeFilters = Number(filter !== 'All cards') + Number(typeFilter !== 'all') + Number(onlyNeedsPrinting);
   function clearFilters() { setQuery(''); setFilter('All cards'); setTypeFilter('all'); onNeedsPrintingChange(false); }
   // Pages keep this vertical list, so the app chrome still collapses; the carousel lives in the header.
-  return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}
+  return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
     ListHeaderComponent={<View style={s.header}>
-      <View><Txt accessibilityRole="header" variant="title">Your card binder</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'} · {duplicateCards(trainer)} {duplicateCards(trainer) === 1 ? 'double' : 'doubles'}</Txt><ToolbarAction title="Add card" icon="plus" color={C.redDark} onPress={onScan} /><ToolbarAction title={`Wishlist (${wishCount})`} icon="star" onPress={onWishlist} /></View></View>
+      <View><View style={s.collectionTitle}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Binder</Txt><IconButton icon="plus" label="Add card" color={C.redDark} onPress={onScan} /><IconButton icon="star" label={`Wishlist (${wishCount})`} onPress={onWishlist} /></View><Txt muted variant="caption">{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'}{duplicateCards(trainer) ? ` · ${duplicateCards(trainer)} ${duplicateCards(trainer) === 1 ? 'double' : 'doubles'}` : ''}</Txt></View>
       <SearchBox value={query} onChange={setQuery} placeholder="Search your cards" />
       <View style={s.toolbar}>
-        <ChoiceMenu compact triggerTitle="View" label="Binder view" options={BINDER_VIEWS} value={view} onChange={onViewChange} style={s.menu} />
-        <ChoiceMenu compact triggerTitle="Sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={setSort} style={s.menu} />
-        <ToolbarAction title={filtersOpen ? 'Done' : activeFilters ? `Filter (${activeFilters})` : 'Filter'} onPress={() => { setOverviewOpen(false); setFiltersOpen(open => !open); }} />
+        <ChoiceMenu compact triggerTitle="View" label="Binder view" options={BINDER_VIEWS} value={view} onChange={onViewChange} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
+        <ChoiceMenu compact triggerTitle="Sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={setSort} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
+        <ToolbarAction title={filtersOpen ? 'Done' : activeFilters ? `Filter (${activeFilters})` : 'Filter'} expanded={filtersOpen} onPress={() => { setOverviewOpen(false); setFiltersOpen(open => !open); }} style={[s.tool, { flexBasis: (activeFilters ? 96 : 74) * Math.min(fontScale, 1.4) }]} />
+        <ToolbarAction title="Overview" expanded={overviewOpen} onPress={() => { setFiltersOpen(false); setOverviewOpen(open => !open); }} style={[s.tool, { flexBasis: 80 * Math.min(fontScale, 1.4) }]} />
       </View>
       {filtersOpen && <View style={s.section}>
         <ChoiceMenu label="Show" options={['All cards', 'Favorites', 'Doubles', 'Japanese', 'Korean', 'Chinese'].map(label => ({ id: label, label }))} value={filter} onChange={setFilter} />
         <ChoiceMenu label="Card kind" options={CARD_FILTERS} value={typeFilter} onChange={setTypeFilter} />
         <ChoiceMenu label="Printing" options={[{ id: 'all', label: 'All printings' }, { id: 'needs', label: `Needs printing (${confirmationCount})` }]} value={onlyNeedsPrinting ? 'needs' : 'all'} onChange={value => onNeedsPrintingChange(value === 'needs')} />
       </View>}
-      <ActionRow title={overviewOpen ? 'Hide overview' : 'Overview'} value="Sets & value" onPress={() => { setFiltersOpen(false); setOverviewOpen(open => !open); }} />
       {overviewOpen && <View style={s.overview}>
         <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { clearFilters(); onNeedsPrintingChange(true); setOverviewOpen(false); }} />
         <YourSets sets={sets} onSet={set => { setOverviewOpen(false); onSet(set); }} />
@@ -151,7 +150,9 @@ const s = StyleSheet.create({
   list: { padding: PAD, paddingBottom: 32 }, header: { gap: S.sm, marginBottom: S.lg },
   summaryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: S.xs },
   summaryCopy: { flexGrow: 1, flexShrink: 1, minWidth: 0, paddingVertical: S.sm },
-  toolbar: { flexDirection: 'row', alignItems: 'center', gap: S.xs },
+  collectionTitle: { flexDirection: 'row', alignItems: 'center', gap: S.xs },
+  toolbar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: S.xs },
+  tool: { flexGrow: 1, flexShrink: 0, maxWidth: '100%' },
   menu: { flex: 1, minWidth: 0 },
   sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: S.md, rowGap: S.xs },
   section: { gap: S.sm }, overview: { gap: S.xl, paddingVertical: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
