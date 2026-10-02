@@ -20,6 +20,8 @@ import { priceKey } from '@/lib/pricing';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
+import { TrainerAccessoryPicker } from './trainer-accessories';
+import { TRAINER_ACCESSORIES, awardTrainerAccessories, canEquipTrainerAccessory } from '@/lib/trainer-accessories';
 import { animatedSprite } from '@/lib/pokedex-voice';
 import { usePokedexVoice } from '@/lib/use-pokedex-voice';
 import { Confetti, HoloShine } from '@/components/celebration';
@@ -194,7 +196,7 @@ function TrainerChoiceRow({ title, options, value, labels, busy, onChange }: { t
 }
 
 type Feedback = { at: string; note?: string; error?: string };
-type ProfilePage = 'settings' | 'rename' | 'add' | 'appearance' | 'about';
+type ProfilePage = 'settings' | 'rename' | 'add' | 'appearance' | 'accessories' | 'about';
 
 export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; onBusyChange: (busy: boolean) => void }) {
   const { collection, trainer, transact, updateTrainer } = useCollection();
@@ -234,7 +236,19 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
       setNewName(''); setPage('settings'); note('New trainer added! Tap their name above to play as them.');
     });
   }
+  function saveAppearance() {
+    run('look', async note => {
+      await updateTrainer(t => {
+        if (!canEquipTrainerAccessory(t, draft.accessory ?? 'none')) throw new Error('This accessory has not been earned by this trainer yet.');
+        return { ...awardTrainerAccessories(t), appearance: draft, color: TRAINER_OUTFIT_COLORS[draft.outfit] };
+      });
+      setPage('settings'); note('New look saved!');
+    });
+  }
   if (page === 'about') return <Sheet title="About" onClose={onClose} onBack={returnToSettings}><AboutScreen><View style={m.aboutDetails}><Txt variant="caption" muted>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt variant="caption" muted>Card data and images: TCGdex. Pokémon names, Pokédex data and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt></View></AboutScreen></Sheet>;
+  if (page === 'accessories') return <Sheet title="Accessories" onClose={onClose} onBack={() => setPage('appearance')} busy={busy} dismissible={false}>
+    <TrainerAccessoryPicker trainer={trainer} appearance={draft} busy={busy} onChoose={selection => { choose('accessory', selection); setPage('appearance'); }} />
+  </Sheet>;
   if (page === 'rename' || page === 'add') {
     const adding = page === 'add', key = adding ? 'add' : 'name';
     const value = adding ? newName : name;
@@ -247,8 +261,9 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
     <TrainerChoiceRow title="Hair color" options={TRAINER_HAIR_COLORS} value={draft.hairColor} labels={TRAINER_APPEARANCE_LABELS.hairColor} busy={busy} onChange={value => choose('hairColor', value)} />
     <TrainerChoiceRow title="Jacket" options={TRAINER_OUTFITS} value={draft.outfit} labels={TRAINER_APPEARANCE_LABELS.outfit} busy={busy} onChange={value => choose('outfit', value)} />
     <TrainerChoiceRow title="Hat" options={TRAINER_HEADWEAR} value={draft.headwear} labels={TRAINER_APPEARANCE_LABELS.headwear} busy={busy} onChange={value => choose('headwear', value)} />
+    <ActionRow title="Accessory" value={TRAINER_ACCESSORIES.find(accessory => accessory.id === draft.accessory)?.name ?? 'None'} disabled={busy} onPress={() => setPage('accessories')} />
     {feedbackAt('look')}
-  </ScrollView><View style={m.footer}><Button title="Save my look" busy={busyKey === 'look'} onPress={() => run('look', async note => { await updateTrainer(t => ({ ...t, appearance: draft, color: TRAINER_OUTFIT_COLORS[draft.outfit] })); setPage('settings'); note('New look saved!'); })} /></View></Sheet>;
+  </ScrollView><View style={m.footer}><Button title="Save my look" busy={busyKey === 'look'} onPress={saveAppearance} /></View></Sheet>;
 
   return <Sheet title="Settings" onClose={onClose} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={[m.content, { gap: S.xxl }]} keyboardShouldPersistTaps="handled">
     <View style={m.section}>

@@ -3,6 +3,7 @@ import { isLanguage, type Language } from './languages';
 import type { Badge } from './badges';
 import { QUIZ_LENGTH } from './quiz';
 import { completedSetCount } from './set-progress';
+import { awardTrainerAccessories, TRAINER_ACCESSORIES, type TrainerAccessoryId, type TrainerAccessorySelection } from './trainer-accessories';
 export { BADGES } from './badges';
 export type { Language } from './languages';
 export type Finish = 'normal' | 'holo' | 'reverse' | 'firstEdition' | 'firstEditionHolo' | 'firstEditionReverse' | 'wPromo' | 'unsure';
@@ -24,6 +25,7 @@ export type TrainerAppearance = {
   hairColor: typeof TRAINER_HAIR_COLORS[number];
   outfit: typeof TRAINER_OUTFITS[number];
   headwear: typeof TRAINER_HEADWEAR[number];
+  accessory?: TrainerAccessorySelection;
 };
 export const TRAINER_OUTFIT_COLORS: Record<TrainerAppearance['outfit'], string> = {
   red: '#C93240', blue: '#377DD1', green: '#519269', violet: '#8561A8', gold: '#CB8437',
@@ -42,7 +44,7 @@ export const WISHLIST_LIMIT = 200;
  * `quizBest` is the trainer's best Who's That Pokémon? score, out of QUIZ_LENGTH.
  * `wishlist` is optional so trainers created by older code still type-check; parseCollection always fills it.
  */
-export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number; wishlist?: Wish[] };
+export type Trainer = { id: string; name: string; color: string; appearance: TrainerAppearance; entries: Entry[]; quizBest?: number; wishlist?: Wish[]; unlockedAccessories?: TrainerAccessoryId[] };
 /** grownUpLock guards deleting cards and backups. It belongs to this device: backups never carry it. */
 export type Collection = { version: 1; activeId: string; trainers: Trainer[]; grownUpLock: boolean };
 
@@ -67,9 +69,9 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
   if (existing && existing.quantity + quantity > 999) throw new Error('You can save up to 999 copies of one printing.');
   // Wish granted: any printing of a wished card takes it off the wishlist.
   const wishlist = trainer.wishlist?.filter(w => w.key !== wishKey(card));
-  return { ...trainer, ...(wishlist ? { wishlist } : {}), entries: existing
+  return awardTrainerAccessories({ ...trainer, ...(wishlist ? { wishlist } : {}), entries: existing
     ? trainer.entries.map(e => e.key === key ? { ...e, card: { ...card, localImage: card.localImage ?? e.card.localImage }, quantity: e.quantity + quantity } : e)
-    : [{ key, card, finish, quantity, favorite: false, addedAt: new Date().toISOString() }, ...trainer.entries] };
+    : [{ key, card, finish, quantity, favorite: false, addedAt: new Date().toISOString() }, ...trainer.entries] });
 }
 
 /** With exactly one known printing, pick it; otherwise leave it for the collector to confirm. */
@@ -176,6 +178,7 @@ export function parseCollection(raw: string): Collection {
         hairColor: t.appearance.hairColor as TrainerAppearance['hairColor'],
         outfit: t.appearance.outfit as TrainerAppearance['outfit'],
         headwear: t.appearance.headwear as TrainerAppearance['headwear'],
+        ...(t.appearance.accessory !== undefined ? { accessory: t.appearance.accessory as TrainerAccessorySelection } : {}),
       };
     }
     const entries: Entry[] = t.entries.map((e: unknown) => {
@@ -199,8 +202,13 @@ export function parseCollection(raw: string): Collection {
       return { key: e.key as string, card, finish, quantity: e.quantity, favorite: e.favorite, addedAt: e.addedAt };
     });
     if (new Set(entries.map(e => e.key)).size !== entries.length) return invalid();
-    // A bad game score should never block a backup; drop it instead.
-    return { id: t.id, name: t.name, color: t.color, appearance, entries, ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}), wishlist: parseWishlist(t.wishlist) };
+    // Cosmetic history and game scores never block an otherwise valid binder.
+    const savedAccessories = Array.isArray(t.unlockedAccessories) ? t.unlockedAccessories : [];
+    const unlockedAccessories = TRAINER_ACCESSORIES.filter(accessory => savedAccessories.includes(accessory.id)).map(accessory => accessory.id);
+    return awardTrainerAccessories({ id: t.id, name: t.name, color: t.color, appearance, entries,
+      ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}), wishlist: parseWishlist(t.wishlist),
+      ...(Array.isArray(t.unlockedAccessories) ? { unlockedAccessories } : {}),
+    });
   });
   if (new Set(trainers.map(t => t.id)).size !== trainers.length || !trainers.some(t => t.id === data.activeId)) return invalid();
   // Saves from before the lock existed, and every backup, open locked; only Settings can unlock.

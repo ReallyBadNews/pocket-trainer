@@ -4,6 +4,7 @@ import {
   TRAINER_OUTFIT_COLORS,
   type TrainerAppearance,
 } from '@/lib/model';
+import type { TrainerAccessoryId } from '@/lib/trainer-accessories';
 
 export const TRAINER_SKIN_COLORS: Record<TrainerAppearance['skinTone'], string> = {
   porcelain: '#F6D5C2',
@@ -155,23 +156,33 @@ const HEADWEAR_IMAGES = {
   'headband-gold': require('../../assets/crafted/trainers/trainer-headwear-headband-gold.webp'),
 } as const;
 
+// These use the portrait's original camera and a face occlusion matte, so
+// collars and straps stay aligned with every skin tone, hairstyle and outfit.
+export const TRAINER_ACCESSORY_IMAGES = {
+  fieldPin: require('../../assets/crafted/trainers/trainer-accessory-field-pin.webp'),
+  explorerScarf: require('../../assets/crafted/trainers/trainer-accessory-explorer-scarf.webp'),
+  expeditionSatchel: require('../../assets/crafted/trainers/trainer-accessory-expedition-satchel.webp'),
+} as const satisfies Record<TrainerAccessoryId, number>;
+
 export function TrainerAvatar({ appearance, size = 48 }: { appearance: TrainerAppearance; size?: number }) {
   const faceKey = `${appearance.skinTone}-${appearance.hairStyle}-${appearance.hairColor}` as keyof typeof FACE_IMAGES;
   const headwearKey = appearance.headwear === 'none'
     ? null
     : `${appearance.headwear}-${appearance.outfit}` as keyof typeof HEADWEAR_IMAGES;
+  const accessory = appearance.accessory ?? 'none';
   const layerStyle = [StyleSheet.absoluteFill, { width: size, height: size }];
 
-  return <View style={[s.avatar, {
+  return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[s.avatar, {
     width: size,
     height: size,
     borderRadius: size / 2,
     borderWidth: Math.max(2, size * .025),
     borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
   }]}>
-    <Image source={OUTFIT_IMAGES[appearance.outfit]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
-    <Image source={FACE_IMAGES[faceKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
-    {headwearKey && <Image source={HEADWEAR_IMAGES[headwearKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />}
+    <Image accessible={false} source={OUTFIT_IMAGES[appearance.outfit]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
+    <Image accessible={false} source={FACE_IMAGES[faceKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
+    {accessory !== 'none' && <Image accessible={false} source={TRAINER_ACCESSORY_IMAGES[accessory]} recyclingKey={accessory} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />}
+    {headwearKey && <Image accessible={false} source={HEADWEAR_IMAGES[headwearKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />}
   </View>;
 }
 
