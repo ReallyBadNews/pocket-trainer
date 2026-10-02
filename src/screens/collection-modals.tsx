@@ -138,7 +138,7 @@ function AnimatedSprite({ id }: { id: number }) {
 
 export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: { id: number; onClose: () => void; onFindCards: (name: string) => void; onEntry: (entry: Entry) => void; onSpecies: (id: number) => void }) {
   const { trainer } = useCollection();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
   const pokemon = speciesById.get(id)!;
   const entries = trainer.entries.filter(e => pokemonIds(e.card).includes(id));
   const owned = entries.length > 0;
@@ -151,11 +151,10 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
   const voice = usePokedexVoice();
   const reading = voice.speaking === id;
   const familyIds = family.flat().map(member => member.id);
-  // Only Eevee has more than three branches; wrap them into a grid beside it.
-  // Tiles share the row (sheet width minus padding, arrows and gaps) so three stages fit a 375pt phone.
+  // Keep names readable rather than squeezing every stage into the sheet.
+  // Large branching families wrap beside their previous stage.
   const wideColumns = width >= 700 ? 4 : 2;
-  const slots = family.reduce((n, stage) => n + (stage.length > 3 ? wideColumns : 1), 0);
-  const tile = Math.min(96, Math.floor((Math.min(width - 24, 600) - 66 - (family.length - 1) * 30 - (wideColumns - 1) * 6 * Number(family.some(stage => stage.length > 3))) / Math.max(1, slots)));
+  const tile = Math.ceil(112 * Math.min(fontScale, 1.4));
   return <Sheet title={`Pokédex #${String(id).padStart(3, '0')}`} onClose={onClose}><ScrollView contentContainerStyle={m.content}>
     <View style={{ alignItems: 'center', gap: S.sm }}><Image accessibilityLabel={owned ? pokemon.en : `${pokemon.en} silhouette`} source={speciesImage(id)} style={{ width: 180, maxWidth: '100%', height: 160, opacity: owned ? 1 : .3 }} tintColor={owned ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" /><Txt style={[ui.title, { textAlign: 'center' }]}>{pokemon.en}</Txt>
       {types.length > 0 && <View accessible accessibilityLabel={`${types.map(typeLabel).join(' and ')} type`} style={[ui.row, { flexWrap: 'wrap', justifyContent: 'center' }]}>{types.map(type => <TypePill key={type} type={type} />)}</View>}
@@ -171,16 +170,16 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
         : <View accessible accessibilityLabel={`Pokédex entry locked. Discover ${pokemon.en} to unlock it.`} style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="lock" size={24} color="#6B7B64" /><View style={{ flex: 1, gap: S.xs }}><Txt style={[m.entryText, { fontWeight: '600' }]}>Discover {pokemon.en} to unlock its Pokédex entry!</Txt><Txt variant="caption" muted>Scan or add any {pokemon.en} card.</Txt></View></View>}</View>
     </View>
     <View style={{ gap: 10 }}><Txt style={ui.subtitle}>Evolution</Txt>{family.length > 1 ? <>
-      <View style={m.evolution}>{family.map((stage, i) => <Fragment key={i}>
+      <ScrollView horizontal showsHorizontalScrollIndicator contentContainerStyle={m.evolution}>{family.map((stage, i) => <Fragment key={i}>
         {i > 0 && <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"><Icon name="arrow" size={18} color={C.muted} /></View>}
         <View style={[m.stage, stage.length > 3 && { flexDirection: 'row', flexWrap: 'wrap', width: wideColumns * tile + (wideColumns - 1) * 6 }]}>{stage.map(member => {
           const current = member.id === id, found = discovered.has(member.id);
           return <Pressable key={member.id} accessibilityRole="button" accessibilityLabel={`${nameOf(member.id)}, ${found ? 'discovered' : 'not yet discovered'}${current ? ', showing now' : ''}`} accessibilityState={{ selected: current }} onPress={() => !current && onSpecies(member.id)} style={({ pressed }) => [m.stageTile, { width: tile }, current && m.stageCurrent, pressed && !current && { opacity: .7 }]}>
-            <Image source={speciesImage(member.id)} style={[{ width: tile - 18, height: tile - 18 }, !found && { opacity: .3 }]} tintColor={found ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" />
+            <Image source={speciesImage(member.id)} style={[{ width: 86, height: 86 }, !found && { opacity: .3 }]} tintColor={found ? undefined : '#526B50'} contentFit="contain" cachePolicy="memory-disk" />
             <Txt variant="caption" style={m.stageName}>{nameOf(member.id)}</Txt>
           </Pressable>;
         })}</View>
-      </Fragment>)}</View>
+      </Fragment>)}</ScrollView>
       <Txt variant="label" style={{ textAlign: 'center' }}>{familyNote(familyIds, discovered)}</Txt>
     </> : <Txt muted>{pokemon.en} doesn’t evolve. It’s one of a kind!</Txt>}</View>
     <Button title={`Find ${pokemon.en} cards`} icon="search" onPress={() => onFindCards(pokemon.en)} />
@@ -372,7 +371,7 @@ const m = StyleSheet.create({
   voiceButton: { minHeight: 44, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: S.sm, paddingVertical: S.sm, borderRadius: 8 },
   voiceActive: { backgroundColor: C.ink }, voiceText: { flexShrink: 1 },
   sprite: { width: 48, height: 48 }, entryText: { fontSize: 15, lineHeight: 22 },
-  evolution: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  evolution: { flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   stage: { gap: 6, justifyContent: 'center' }, stageTile: { minHeight: 88, alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
   stageCurrent: { backgroundColor: '#F8FAF3', borderColor: '#ADC79F' }, stageName: { width: '100%', fontWeight: '600', textAlign: 'center' },
   cardGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 16 }, cardTile: { width: '48%' },
