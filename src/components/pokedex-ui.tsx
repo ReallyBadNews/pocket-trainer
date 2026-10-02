@@ -51,10 +51,10 @@ export function Txt({ children, style, variant = 'body', muted = false, maxFontS
   return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...props} style={[ui.text, typeStyles[variant], muted && { color: C.muted }, style, leading]}>{children}</Text>;
 }
 /** Main actions are 56pt; panel actions are 48pt. Labels wrap at their readable size. */
-export function Button({ title, onPress, icon, secondary = false, disabled = false, busy = false, size = 'large', style }: { title: string; onPress: () => void; icon?: IconName; secondary?: boolean; disabled?: boolean; busy?: boolean; size?: 'large' | 'medium'; style?: StyleProp<ViewStyle> }) {
+export function Button({ title, onPress, icon, secondary = false, disabled = false, busy = false, selected, accessibilityHint, size = 'large', style }: { title: string; onPress: () => void; icon?: IconName; secondary?: boolean; disabled?: boolean; busy?: boolean; selected?: boolean; accessibilityHint?: string; size?: 'large' | 'medium'; style?: StyleProp<ViewStyle> }) {
   const color = secondary ? C.ink : 'white', large = size === 'large';
   const grouped = useContext(ButtonRowContext);
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.button, grouped && { flexGrow: 1 }, !large && ui.buttonMedium, secondary && ui.secondary, style, (disabled || busy) && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityHint={accessibilityHint} accessibilityState={{ disabled: disabled || busy, selected }} disabled={disabled || busy} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.button, grouped && { flexGrow: 1 }, !large && ui.buttonMedium, secondary && ui.secondary, style, (disabled || busy) && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
     {busy ? <ActivityIndicator color={color} /> : icon && <Icon name={icon} color={color} size={large ? 22 : 19} />}
     <Txt variant="control" style={{ flexShrink: 1, color, fontWeight: '700', fontSize: large ? 16 : 15, textAlign: 'center' }}>{title}</Txt>
   </Pressable>;
