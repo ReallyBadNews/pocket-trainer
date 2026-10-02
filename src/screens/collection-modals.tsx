@@ -83,7 +83,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     catch (e) { setWishError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'); }
     finally { setWishing(false); }
   }
-  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView ref={cardScroll} style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
