@@ -34,6 +34,8 @@ export function LiveCamera({ mode: initialMode, layout: initialLayout, language,
   const { width, height } = useWindowDimensions();
   const camera = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const [toolbarHeight, setToolbarHeight] = useState(0);
+  const [controlsHeight, setControlsHeight] = useState(0);
   const [mode, setMode] = useState(initialMode);
   const [layout, setLayout] = useState(initialLayout ?? PAGE_LAYOUTS[0]);
   const [ready, setReady] = useState(false);
@@ -106,13 +108,15 @@ export function LiveCamera({ mode: initialMode, layout: initialLayout, language,
   const denied = permission && !permission.granted && !permission.canAskAgain;
   const status = found ? 'Got it!' : shooting ? 'Taking the photo…' : mode === 'page' ? 'Fill the frame with one binder page' : LIVE_HINTS[hint];
   // The preview is shown at the photo's own 3:4 shape, like the Camera app, so the guide covers what is saved.
-  const boxWidth = Math.min(width, (height - insets.top - insets.bottom - 310) * 3 / 4);
+  const topSpace = toolbarHeight ? toolbarHeight + S.md : insets.top + 76;
+  const bottomSpace = Math.max(234, controlsHeight + S.lg * 2);
+  const boxWidth = Math.max(1, Math.min(width, (height - topSpace - insets.bottom - bottomSpace) * 3 / 4));
   // How much of the preview's width the card or page guide covers, inside the 12pt padding.
   const fill = (boxWidth - 24) / boxWidth * (mode === 'page' ? 1 : CARD_GUIDE_WIDTH);
   const zoom = optics ? closeFocusZoom(optics, mode === 'page' ? layout.columns * POCKET_WIDTH_MM : CARD_WIDTH_MM, fill) : 0;
   const usable = !!permission?.granted && !failed;
   const switchMode = (next: 'card' | 'page') => { if (next !== mode && !shooting && !found) { setMode(next); setHint('looking'); } };
-  return <View style={[s.root, { paddingTop: insets.top + 76, paddingBottom: insets.bottom + 16 }]}>
+  return <View style={[s.root, { paddingTop: topSpace, paddingBottom: insets.bottom + S.lg }]}>
     {!(failed || denied) && <View onLayout={e => { viewSize.current = e.nativeEvent.layout; }} style={[s.box, { width: boxWidth, height: boxWidth * 4 / 3 }]}>
       {/* expo-camera's default focus is continuous; autofocus="on" would focus once and then lock. */}
       {usable && <CameraView ref={camera} style={StyleSheet.absoluteFill} facing="back" zoom={zoom} animateShutter={false} enableTorch={torch} onCameraReady={() => { setOptics(backCameraOptics()); setReady(true); }} onMountError={e => { console.warn('Live camera failed to start', e.message); setFailed("Oops! The camera didn't start."); }} />}
@@ -122,23 +126,23 @@ export function LiveCamera({ mode: initialMode, layout: initialLayout, language,
           : <View style={[s.card, found && { borderColor: '#8BE37B' }]}>{[s.tl, s.tr, s.bl, s.br].map((corner, i) => <View key={i} style={[s.corner, corner, found && { borderColor: '#8BE37B' }]} />)}</View>}
       </View>
     </View>}
-    <View style={[s.top, { paddingTop: insets.top + 8 }]}>
+    <View onLayout={event => setToolbarHeight(event.nativeEvent.layout.height)} style={[s.top, { paddingTop: insets.top + S.sm }]}>
       <IconButton round dark icon="close" label="Close camera" onPress={onClose} />
       {usable ? <Segmented dark label="Camera mode" options={MODES} value={mode} onChange={switchMode} style={{ flex: 1 }} /> : <View style={{ flex: 1 }} />}
       {usable ? <Pressable accessibilityRole="button" accessibilityLabel={torch ? 'Turn off the light' : 'Turn on the light'} accessibilityState={{ selected: torch }} hitSlop={4} onPress={() => { tick(); setTorch(on => !on); }} style={state => [s.round, torch && { backgroundColor: C.gold }, pressFx(state)]}><Icon name="bolt" size={22} color={torch ? C.ink : 'white'} /></Pressable> : <View style={{ width: 44 }} />}
     </View>
     {(failed || denied) ? <View style={s.message}>
-      <Txt style={{ color: 'white', fontWeight: '800', fontSize: 18, textAlign: 'center' }}>{denied ? 'Camera access is off.' : failed}</Txt>
-      <Txt style={{ color: '#D6E3CB', fontSize: 15, textAlign: 'center' }}>{denied ? `Turn it on in Settings${onLibrary ? ', or pick a photo instead.' : '.'}` : `Try the regular camera${onLibrary ? ', or pick a photo instead.' : '.'}`}</Txt>
+      <Txt variant="subtitle" style={{ color: 'white', textAlign: 'center' }}>{denied ? 'Camera access is off.' : failed}</Txt>
+      <Txt style={{ color: '#D6E3CB', textAlign: 'center' }}>{denied ? `Turn it on in Settings${onLibrary ? ', or pick a photo instead.' : '.'}` : `Try the regular camera${onLibrary ? ', or pick a photo instead.' : '.'}`}</Txt>
       <Button title="Use the regular camera" icon="camera" onPress={onFallback} />
       {onLibrary && <Button title="Pick from Photos" icon="photo" secondary onPress={onLibrary} />}
-    </View> : <View style={s.bottom}>
-      <View accessibilityLiveRegion="polite" style={[s.status, found && { backgroundColor: '#3E8E4E' }]}>{!found && mode === 'card' && ready && <ActivityIndicator size="small" color="white" />}<Txt style={{ color: 'white', fontWeight: '700', fontSize: 14 }}>{status}</Txt></View>
+    </View> : <View style={s.bottom}><View onLayout={event => setControlsHeight(event.nativeEvent.layout.height)} style={s.controls}>
+      <View accessibilityLiveRegion="polite" style={[s.status, found && { backgroundColor: '#3E8E4E' }]}>{!found && mode === 'card' && ready && <ActivityIndicator size="small" color="white" />}<Txt variant="label" style={{ color: 'white', flexShrink: 1, minWidth: 0, textAlign: 'center' }}>{status}</Txt></View>
       <Pressable accessibilityRole="button" accessibilityLabel={mode === 'page' ? 'Take a photo of the page' : 'Take the photo now'} disabled={!ready || shooting || found} onPress={shoot} style={({ pressed }) => [s.shutter, pressed && { transform: [{ scale: .94 }] }, (!ready || shooting) && { opacity: .5 }]}><View style={s.shutterInner} /></Pressable>
       {mode === 'card'
-        ? <Txt style={{ color: '#D6E3CB', fontSize: 15, fontWeight: '600', textAlign: 'center' }}>Hold still, it snaps by itself!</Txt>
+        ? <Txt variant="label" style={{ color: '#D6E3CB', textAlign: 'center' }}>Hold still, it snaps by itself!</Txt>
         : <Segmented dark label="How many cards on a page?" options={PAGE_LAYOUTS} value={layout.id} onChange={id => { if (!shooting) setLayout(PAGE_LAYOUTS.find(option => option.id === id)!); }} style={{ alignSelf: 'stretch' }} />}
-    </View>}
+    </View></View>}
   </View>;
 }
 
@@ -158,8 +162,9 @@ const s = StyleSheet.create({
   pocket: { borderWidth: StyleSheet.hairlineWidth * 2, borderColor: '#FFFFFFAA' },
   top: { position: 'absolute', top: 0, left: 0, right: 0, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingHorizontal: S.lg },
   round: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF2E', alignItems: 'center', justifyContent: 'center' },
-  bottom: { flex: 1, alignSelf: 'stretch', alignItems: 'center', justifyContent: 'center', gap: S.md, paddingHorizontal: S.xl },
-  status: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20, backgroundColor: '#FFFFFF1F' },
+  bottom: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', paddingHorizontal: S.xl },
+  controls: { alignItems: 'center', gap: S.md },
+  status: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingHorizontal: S.lg, paddingVertical: S.sm, borderRadius: 20, backgroundColor: '#FFFFFF1F' },
   shutter: { width: 78, height: 78, borderRadius: 39, borderWidth: 5, borderColor: 'white', alignItems: 'center', justifyContent: 'center' },
   shutterInner: { width: 60, height: 60, borderRadius: 30, backgroundColor: C.red },
   message: { flex: 1, alignSelf: 'stretch', justifyContent: 'center', gap: S.md, paddingHorizontal: S.xxl },

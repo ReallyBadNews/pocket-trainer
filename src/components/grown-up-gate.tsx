@@ -4,7 +4,7 @@ import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '@/lib/collection-context';
 import { answerChallenge, createChallenge, pressPadKey, type PadKey } from '@/lib/grown-up';
-import { Button, C, Icon, IconButton, Txt, mono, pressFx, tick, ui } from './pokedex-ui';
+import { Button, C, Icon, SheetHeader, Txt, mono, pressFx, tick } from './pokedex-ui';
 
 const DIGITS: PadKey[] = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
@@ -40,7 +40,7 @@ export function GrownUpGate({ reason, onPass, onCancel }: { reason: string; onPa
   return <View accessibilityViewIsModal style={[g.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}>
     <Pressable accessibilityRole="button" accessibilityLabel="Cancel grown-up check" onPress={onCancel} style={StyleSheet.absoluteFill} />
     <View style={g.panel}>
-      <View style={g.header}><Icon name="lock" size={22} /><Txt accessibilityRole="header" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} style={[ui.subtitle, { flex: 1 }]}>Grown-ups only</Txt><IconButton round icon="close" label="Not now" onPress={onCancel} /></View>
+      <SheetHeader title="Grown-ups only" icon="lock" closeLabel="Not now" onClose={onCancel} />
       <ScrollView contentContainerStyle={g.content} bounces={false}>
         <Txt style={{ textAlign: 'center' }}>To {reason}, ask a grown-up to answer:</Txt>
         <View accessible accessibilityLabel={challenge.spoken} style={g.question}><Txt style={g.questionText}>{challenge.prompt} = ?</Txt></View>
@@ -48,7 +48,7 @@ export function GrownUpGate({ reason, onPass, onCancel }: { reason: string; onPa
         {missed && <Txt accessibilityRole="alert" style={g.missed}>Not quite. Here is a new question.</Txt>}
         <View style={g.pad}>
           {DIGITS.map(key => <PadButton key={key} label={key} onPress={() => press(key)}><Txt style={g.keyText}>{key}</Txt></PadButton>)}
-          <PadButton label="Delete last number" disabled={!value} onPress={() => press('back')}><Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} maxFontSizeMultiplier={1.2} style={g.deleteText}>Delete</Txt></PadButton>
+          <PadButton label="Delete last number" disabled={!value} onPress={() => press('back')}><Txt variant="control" style={{ textAlign: 'center' }}>Delete</Txt></PadButton>
           <PadButton label="0" onPress={() => press('0')}><Txt style={g.keyText}>0</Txt></PadButton>
           <PadButton label="Check answer" disabled={!value} primary onPress={check}><Icon name="check" size={28} color="white" /></PadButton>
         </View>
@@ -65,7 +65,6 @@ function PadButton({ label, onPress, children, disabled = false, primary = false
 const g = StyleSheet.create({
   overlay: { ...StyleSheet.absoluteFill, backgroundColor: '#14201CB3', alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
   panel: { width: '100%', maxWidth: 380, maxHeight: '100%', backgroundColor: C.screen, borderRadius: 24, overflow: 'hidden', borderWidth: 3, borderColor: C.ink },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingLeft: 20, paddingRight: 12, minHeight: 64, borderBottomWidth: 1, borderColor: C.line, backgroundColor: '#F2E9D8' },
   content: { padding: 16, gap: 12 },
   question: { alignItems: 'center', paddingVertical: 12, borderRadius: 14, backgroundColor: '#DDE6D1' },
   questionText: { fontFamily: mono, fontSize: 36, lineHeight: 46, fontWeight: '800' },
@@ -75,6 +74,5 @@ const g = StyleSheet.create({
   pad: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   key: { flexGrow: 1, flexBasis: '30%', minHeight: 56, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#F8FAF3', borderWidth: 1, borderColor: '#B8C6AC', borderBottomWidth: 3 },
   primaryKey: { backgroundColor: C.red, borderColor: C.redDark },
-  deleteText: { fontSize: 17, fontWeight: '800' },
   keyText: { fontFamily: mono, fontSize: 26, lineHeight: 32, fontWeight: '800' },
 });

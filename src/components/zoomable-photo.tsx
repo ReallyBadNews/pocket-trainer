@@ -14,7 +14,7 @@ export function ZoomablePhoto({ label, children, aspectRatio, renderPhoto, dark 
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={`Enlarge ${label}`} accessibilityHint="Opens a photo viewer with pinch to zoom" onPress={() => setOpen(true)} style={state => [{ alignItems: 'center' }, pressFx(state)]}>
       {children}
-      <Txt style={{ fontSize: 13, fontWeight: '600', color: dark ? '#A0B296' : '#526B50', marginTop: 6 }}>Tap to zoom</Txt>
+      <Txt variant="caption" style={{ fontWeight: '600', color: dark ? '#A0B296' : '#526B50', marginTop: 6 }}>Tap to zoom</Txt>
     </Pressable>
     <Modal visible={open} animationType="fade" onRequestClose={() => setOpen(false)}>
       {open && <PhotoViewer key={aspectRatio} aspectRatio={aspectRatio} label={label} onClose={() => setOpen(false)} renderPhoto={renderPhoto} />}
@@ -55,14 +55,14 @@ function PhotoViewer({ label, onClose, aspectRatio, renderPhoto }: {
   const animated = useAnimatedStyle(() => ({ transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }] }));
   function reset() { scale.value = 1; x.value = 0; y.value = 0; }
   return <GestureHandlerRootView style={[styles.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 12) }]}>
-    <View style={styles.header}><Txt numberOfLines={2} style={styles.title}>{label}</Txt><IconButton round dark icon="close" label="Close photo viewer" onPress={onClose} /></View>
+    <View style={styles.header}><Txt accessibilityRole="header" variant="subtitle" style={styles.title}>{label}</Txt><IconButton round dark icon="close" label="Close photo viewer" onPress={onClose} /></View>
     <View style={styles.screen}>
     <GestureDetector gesture={Gesture.Simultaneous(pinch, pan)}>
       <View collapsable={false} style={styles.viewport} onLayout={e => { setSize(e.nativeEvent.layout); reset(); }}>
         {width > 0 && height > 0 && <Animated.View style={[{ width, height, alignItems: 'center', justifyContent: 'center' }, animated]}>{renderPhoto(fitted.width || width, fitted.height || height)}</Animated.View>}
       </View>
     </GestureDetector>
-    <Txt style={styles.hint}>Pinch to zoom</Txt>
+    <Txt variant="caption" style={styles.hint}>Pinch to zoom</Txt>
     </View>
   </GestureHandlerRootView>;
 }
@@ -70,8 +70,8 @@ function PhotoViewer({ label, onClose, aspectRatio, renderPhoto }: {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: C.red },
   header: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, gap: 16, minHeight: 68 },
-  title: { color: C.paper, flex: 1, fontSize: 18, lineHeight: 24, fontWeight: '800', letterSpacing: -.3 },
+  title: { color: C.paper, flex: 1, minWidth: 0 },
   screen: { flex: 1, marginHorizontal: 12, borderRadius: 20, borderWidth: 4, borderColor: C.redDark, backgroundColor: C.screen, overflow: 'hidden', paddingTop: 12 },
   viewport: { flex: 1, overflow: 'hidden', marginHorizontal: 10 },
-  hint: { color: C.muted, textAlign: 'center', fontSize: 14, paddingVertical: 12 },
+  hint: { color: C.muted, textAlign: 'center', paddingVertical: 12 },
 });

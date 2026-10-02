@@ -5,10 +5,10 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, ButtonRow, C, CardArt, Chip, ErrorNotice, Icon, pressFx, S, SearchBox, Segmented, Txt, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, CardArt, CardCaption, Chip, ErrorNotice, Icon, pressFx, R, S, SearchBox, Segmented, Txt, ui } from '@/components/pokedex-ui';
 import { fetchCard, needsScanRefinement, scanCandidates, searchCards, setForCard, ENERGY_SEARCHES, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/lib/scanner';
-import { LANGUAGES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
+import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
 import { defaultFinish, type Card, type CardBrief, type Language } from '@/lib/model';
@@ -178,17 +178,17 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   const toolsLabel = !autoLanguage ? LANGUAGE_LABELS[language] : detected && detected !== 'en' ? LANGUAGE_LABELS[detected] : null;
   const intro = <>
     {/* In page mode the big title only pushed the page grid down; the switch below says where you are. */}
-    {mode === 'card' && !sure && <View><Txt accessibilityRole="header" style={ui.title}>A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>}
+    {mode === 'card' && !sure && <View><Txt accessibilityRole="header" variant="title">A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>}
     <Segmented label="What are you scanning?" options={MODES} value={mode} onChange={id => { if (busy) return; ++generation.current; setImproving('done'); setPagePhoto(null); setMode(id); }} />
     <View style={{ gap: S.sm }}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Scan settings${toolsLabel ? `, reading ${toolsLabel}` : ''}`} accessibilityHint="Language, crop and read again" aria-expanded={toolsOpen} onPress={() => { setToolsOpen(open => !open); setLanguageOpen(false); }} style={state => [s.languageButton, toolsOpen && { borderColor: C.ink }, pressFx(state)]}>
-        <Icon name="tools" size={18} /><Txt style={{ fontSize: 14, fontWeight: '700' }}>Scan settings{toolsLabel ? ` · ${toolsLabel}` : ''}</Txt><View style={{ transform: [{ rotate: toolsOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
+        <Icon name="tools" size={18} /><View style={s.disclosureCopy}><Txt variant="control">Scan settings</Txt>{toolsLabel && <Txt muted variant="caption">{toolsLabel}</Txt>}</View><View style={{ transform: [{ rotate: toolsOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
       </Pressable>
       {toolsOpen && <View style={s.tools}>
       <Pressable accessibilityRole="button" accessibilityLabel={`Card language: ${languageSummary}`} accessibilityHint="Opens language choices. Automatic detection is recommended." aria-expanded={languageOpen} onPress={() => setLanguageOpen(open => !open)} style={state => [s.languageButton, languageOpen && { borderColor: C.ink }, pressFx(state)]}>
-        <Txt style={{ fontSize: 14, fontWeight: '700' }}>Language: {languageSummary}</Txt><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
+        <View style={s.disclosureCopy}><Txt variant="label">Card language</Txt><Txt muted variant="caption">{languageSummary}</Txt></View><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
       </Pressable>
-      {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={state => [s.languageOption, pressFx(state)]}><View style={{ flex: 1 }}><Txt style={{ fontSize: 14, fontWeight: scanLanguage === option ? '700' : '400' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted style={{ fontSize: 13 }}>Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={18} />}</Pressable>)}</View>}
+      {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={state => [s.languageOption, pressFx(state)]}><View style={s.disclosureCopy}><Txt variant="label" style={{ fontWeight: scanLanguage === option ? '700' : '500' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted variant="caption">Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={18} />}</Pressable>)}</View>}
       {mode === 'card' && original && canRecognize && <ButtonRow><Button size="medium" title="Adjust crop" icon="scan" secondary disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setToolsOpen(false); setEditing(true); }} /><Button size="medium" title="Read again" secondary disabled={busy} onPress={() => runScan(original.uri, scanLanguage, manualCrop)} /></ButtonRow>}
       </View>}
     </View>
@@ -205,18 +205,18 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   return <><Animated.FlatList {...scroll} data={sure ? [] : results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       {intro}
-      {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted style={{ fontSize: 13 }}>{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
+      {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted variant="caption">{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button size="medium" title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
       {sure && <View accessibilityLiveRegion="polite" style={s.quick}>
         <Txt style={[ui.subtitle, { textAlign: 'center' }]}>Is this your card?</Txt>
         <View><CardArt card={sure} high style={s.quickArt} />{photo && <View style={s.yours}><Image source={photo} style={{ width: 58, height: 80 }} contentFit="cover" accessibilityLabel="Your photo" /><Txt style={s.yoursLabel}>Yours</Txt></View>}</View>
-        <View style={{ alignItems: 'center' }}><Txt style={{ fontWeight: '900', fontSize: 18 }}>{sure.name}</Txt><Txt muted style={{ fontSize: 13, textAlign: 'center' }}>{setForCard(sure)?.name ?? sure.id} · #{sure.localId} · {LANGUAGE_LABELS[sure.language]}</Txt></View>
+        <View style={{ alignItems: 'center', gap: S.xs }}><Txt variant="subtitle" style={{ textAlign: 'center' }}>{sure.name}</Txt><Txt muted variant="caption" style={{ textAlign: 'center' }}>{setForCard(sure)?.name ?? sure.id}</Txt><Txt muted variant="readout">#{sure.localId} · {LANGUAGE_CODES[sure.language]}</Txt></View>
         <Button title="Yes! Add it" icon="check" busy={quickBusy} onPress={() => quickAdd(sure)} />
         <ButtonRow><Button size="medium" title="No, it's not" secondary disabled={quickBusy} onPress={() => setQuickDismissed(true)} /><Button size="medium" title="See card" secondary disabled={quickBusy} onPress={() => { ++generation.current; onCard(withPhoto(sure)); }} /></ButtonRow>
       </View>}
       {!sure && <>
       <View style={s.capture}>
         <View style={[s.corner, { top: 16, left: 16, borderTopWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { top: 16, right: 16, borderTopWidth: 3, borderRightWidth: 3 }]} /><View style={[s.corner, { bottom: 16, left: 16, borderBottomWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { bottom: 16, right: 16, borderBottomWidth: 3, borderRightWidth: 3 }]} />
-        {photo ? <ZoomablePhoto dark key={photo} aspectRatio={photoSize?.uri === photo ? photoSize.aspectRatio : 0} label="Your card photo" renderPhoto={(width, height) => <Image source={photo} style={{ width, height }} contentFit="contain" />}><Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" onLoad={({ source }) => setPhotoSize({ uri: photo, aspectRatio: source.width / source.height })} /></ZoomablePhoto> : <><Image source={require('../../assets/crafted/pokeball.png')} style={{ height: 130, width: 140 }} contentFit="contain" /><Txt style={{ color: '#D6E3CB', fontWeight: '700', fontSize: 15 }}>Center one whole card</Txt><Txt style={{ color: '#A0B296', fontSize: 13, textAlign: 'center' }}>Keep the little number at the bottom sharp.</Txt></>}
+        {photo ? <ZoomablePhoto dark key={photo} aspectRatio={photoSize?.uri === photo ? photoSize.aspectRatio : 0} label="Your card photo" renderPhoto={(width, height) => <Image source={photo} style={{ width, height }} contentFit="contain" />}><Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" onLoad={({ source }) => setPhotoSize({ uri: photo, aspectRatio: source.width / source.height })} /></ZoomablePhoto> : <><Image source={require('../../assets/crafted/pokeball.png')} style={{ height: 130, width: 140 }} contentFit="contain" /><Txt variant="label" style={{ color: '#D6E3CB', textAlign: 'center' }}>Center one whole card</Txt><Txt variant="caption" style={{ color: '#A0B296', textAlign: 'center' }}>Keep the little number at the bottom sharp.</Txt></>}
         {busy && <View style={s.reading}><ActivityIndicator color="white" /><Txt style={{ color: 'white' }}>Reading the name and number…</Txt></View>}
       </View>
       <ButtonRow><Button title={photo ? 'Retake photo' : 'Take a photo'} icon="camera" onPress={() => takePhoto()} busy={busy} /><Button title="Pick from Photos" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy} /></ButtonRow>
@@ -225,17 +225,17 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
       <ErrorNotice text={error} />
       {note && !sure && <View style={s.note}><Txt style={{ fontSize: 14 }}>{note}</Txt></View>}
       <View style={{ gap: S.sm }}><Txt accessibilityRole="header" style={ui.subtitle}>{sure ? 'Or search for it' : 'Or find your card'}</Txt><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm }}>{CARD_FILTERS.map(f => <Chip key={f.id} label={f.label} selected={typeFilter === f.id} onPress={() => changeType(f.id)} />)}</ScrollView><SearchBox value={query} onChange={setQuery} placeholder="Pokémon name or card number" /></View>
-      {(typeFilter === 'energy' || energyHint) && <View style={s.note}><Txt style={{ fontWeight: '700', fontSize: 14 }}>An Energy card with just a symbol?</Txt><Txt muted style={{ fontSize: 13 }}>Pick its energy type, then check the bottom number.</Txt><View style={[ui.row, { flexWrap: 'wrap', marginTop: 6 }]}>{ENERGY_SEARCHES.map(e => <Chip key={e.label} label={e.label} onPress={() => { changeType('energy'); setQuery(e[language]); }} />)}</View></View>}
+      {(typeFilter === 'energy' || energyHint) && <View style={s.note}><Txt variant="label">An Energy card with just a symbol?</Txt><Txt muted variant="caption">Pick its energy type, then check the bottom number.</Txt><View style={[ui.row, { flexWrap: 'wrap', marginTop: S.xs }]}>{ENERGY_SEARCHES.map(e => <Chip key={e.label} label={e.label} onPress={() => { changeType('energy'); setQuery(e[language]); }} />)}</View></View>}
       {!query && typeFilter === 'all' && !suggested.length && <View style={[ui.row, { flexWrap: 'wrap' }]}>{['Pikachu', 'Eevee', 'Charizard'].map(name => <Chip key={name} label={name} onPress={() => setQuery(name)} />)}</View>}
-      {results.length > 0 && !sure && <Txt style={{ fontSize: 15, fontWeight: '800' }}>{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} found. ` : ''}Which one is yours? Tap it.</Txt>}
+      {results.length > 0 && !sure && <Txt variant="label">{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} found. ` : ''}Which one is yours? Tap it.</Txt>}
     </View>}
     ListEmptyComponent={query.trim() ? <View style={s.note}><Txt style={{ fontWeight: '700' }}>No matching cards</Txt><Txt muted style={{ fontSize: 14 }}>Try just the Pokémon's name or the card number, or check the language in Scan settings.</Txt></View> : null}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, gap: 2 }}><Txt style={{ fontWeight: '800' }}>{item.name}</Txt><Txt muted style={{ fontSize: 12, lineHeight: 18 }}>{setForCard(item)?.name ?? item.id}</Txt><Txt muted style={{ fontSize: 11 }}>{cardKindLabel(item)}</Txt><Txt muted style={{ fontSize: 12 }}>#{item.localId} · {LANGUAGE_LABELS[item.language]}</Txt>{!query && <Txt muted style={{ fontSize: 11, lineHeight: 16 }}>{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />{liveCamera}</>;
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, minWidth: 0, gap: S.xs }}><CardCaption name={item.name} setName={setForCard(item)?.name ?? item.id} detail={`#${item.localId} · ${LANGUAGE_CODES[item.language]}`} /><Txt muted variant="caption">{cardKindLabel(item)}</Txt>{!query && <Txt muted variant="caption">{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />{liveCamera}</>;
 }
 const s = StyleSheet.create({
-  list: { padding: 20, paddingBottom: 40 },
-  tools: { gap: S.sm, padding: S.md, borderRadius: 14, backgroundColor: '#E4ECD9' },
-  quick: { gap: 10, padding: 14, borderRadius: 18, backgroundColor: '#FAFCF6', borderWidth: 2, borderColor: '#9FC08F' },
+  list: { padding: S.xl, paddingBottom: 40 },
+  tools: { gap: S.sm, padding: S.md, borderRadius: R.lg, backgroundColor: '#E4ECD9' },
+  quick: { gap: S.md, padding: S.lg, borderRadius: R.lg, backgroundColor: '#FAFCF6', borderWidth: 2, borderColor: '#9FC08F' },
   quickArt: { width: 180, maxWidth: '70%', alignSelf: 'center' },
   yours: { position: 'absolute', left: 8, bottom: -6, padding: 3, borderRadius: 9, backgroundColor: 'white', transform: [{ rotate: '-6deg' }], alignItems: 'center', shadowColor: '#000', shadowOpacity: .2, shadowRadius: 5 },
   yoursLabel: { fontSize: 10, lineHeight: 14, fontWeight: '800' },
@@ -243,11 +243,12 @@ const s = StyleSheet.create({
   corner: { position: 'absolute', width: 24, height: 24, borderColor: '#86B99A' },
   reading: { position: 'absolute', inset: 0, backgroundColor: '#20392BE8', justifyContent: 'center', alignItems: 'center', gap: 10 },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  note: { padding: 14, backgroundColor: '#DEE8D1', borderRadius: 12, gap: 3 },
-  languageButton: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 1, borderColor: '#C0CDB3', borderRadius: 12, paddingHorizontal: 14, minHeight: 48, backgroundColor: '#F5F8EE' },
-  languageMenu: { borderRadius: 12, padding: 5, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: '#C0CDB3' },
-  languageOption: { minHeight: 48, paddingHorizontal: 12, paddingVertical: 6, flexDirection: 'row', alignItems: 'center', gap: 10 },
+  note: { padding: S.md, backgroundColor: '#DEE8D1', borderRadius: R.md, gap: S.xs },
+  languageButton: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 1, borderColor: '#C0CDB3', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, minHeight: 48, backgroundColor: '#F5F8EE' },
+  disclosureCopy: { flex: 1, minWidth: 0, gap: 2 },
+  languageMenu: { borderRadius: R.md, padding: S.xs, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: '#C0CDB3' },
+  languageOption: { minHeight: 48, paddingHorizontal: S.md, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', gap: S.sm },
   resultArt: { width: 200, maxWidth: '100%', alignSelf: 'center' },
   resultDetails: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  result: { gap: 15, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: 12, borderRadius: 13, marginBottom: 10 },
+  result: { gap: S.md, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: S.md, borderRadius: R.lg, marginBottom: S.md },
 });

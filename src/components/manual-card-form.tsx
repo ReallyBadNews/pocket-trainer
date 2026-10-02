@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TextInput, View } from 'react-native';
-import { Button, C, Chip, ErrorNotice, S, Txt, ui } from './pokedex-ui';
+import { Button, C, Chip, ErrorNotice, S, Segmented, Txt, ui } from './pokedex-ui';
 import { normalize, species } from '@/lib/catalog';
 import { LANGUAGES } from '@/lib/languages';
 import { makeManualCard } from '@/lib/manual-card';
@@ -11,6 +11,7 @@ const EXAMPLES: Partial<Record<Language, { name: string; set: string; number: st
   ko: { name: '야나프', set: 'SV4K', number: '001/066', script: 'Korean' },
 };
 const CHINESE_EXAMPLE = { name: '四季鹿', set: 'CBB4C', number: '17 07/07', script: 'Chinese' };
+const CARD_KINDS = [{ id: 'Pokemon', label: 'Pokémon' }, { id: 'Trainer', label: 'Trainer' }, { id: 'Energy', label: 'Energy' }] as const;
 
 export function ManualCardForm({ language, photoUri, onReview }: { language: Language; photoUri?: string; onReview: (card: Card) => void }) {
   const [name, setName] = useState('');
@@ -23,18 +24,18 @@ export function ManualCardForm({ language, photoUri, onReview }: { language: Lan
   const example = EXAMPLES[language] ?? CHINESE_EXAMPLE;
   const term = normalize(pokemonQuery || name);
   const choices = species.filter(s => dexIds.includes(s.id) || (term && (String(s.id) === term || LANGUAGES.some(lang => normalize(s[lang] ?? '').includes(term))))).slice(0, 12);
-  const field = (label: string, value: string, change: (text: string) => void, placeholder: string) => <View style={{ gap: S.xs }}><Txt style={{ fontSize: 14, fontWeight: '700' }}>{label}</Txt><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} maxFontSizeMultiplier={1.4} style={{ color: C.ink, backgroundColor: '#FFFFFFA8', borderWidth: 1, borderColor: C.line, borderRadius: 12, minHeight: 48, paddingHorizontal: 15, paddingVertical: 10, fontSize: 15 }} /></View>;
+  const field = (label: string, value: string, change: (text: string) => void, placeholder: string) => <View style={{ gap: S.xs }}><Txt variant="label">{label}</Txt><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} maxFontSizeMultiplier={1.4} style={{ color: C.ink, backgroundColor: '#FFFFFFA8', borderWidth: 1, borderColor: C.line, borderRadius: 12, minHeight: 48, paddingHorizontal: 15, paddingVertical: 10, fontSize: 15 }} /></View>;
   return <View style={{ gap: S.md, marginTop: S.md }}>
     {field('Name on card', name, setName, example.name)}
     {field('Set code', setCode, setSetCode, example.set)}
     {field('Number at the bottom', number, setNumber, example.number)}
-    <View style={[ui.row, { flexWrap: 'wrap' }]}>{['Pokemon', 'Trainer', 'Energy'].map(type => <Chip key={type} label={type === 'Pokemon' ? 'Pokémon' : type} selected={category === type} onPress={() => setCategory(type)} />)}</View>
+    <View style={{ gap: S.xs }}><Txt variant="label">Card kind</Txt><Segmented label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} /></View>
     {category === 'Pokemon' && <>
       {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `English / ${example.script} name or Pokédex number`)}
-      <Txt muted style={{ fontSize: 13 }}>Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
+      <Txt muted variant="caption">Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
       <View style={[ui.row, { flexWrap: 'wrap' }]}>{choices.map(s => <Chip key={s.id} label={`${s.en} · ${s[language]}`} selected={dexIds.includes(s.id)} onPress={() => setDexIds(ids => ids.includes(s.id) ? ids.filter(id => id !== s.id) : [...ids, s.id])} />)}</View>
     </>}
-    <Txt muted style={{ fontSize: 13 }}>Saved using the details you enter. Market prices are unavailable for manual entries.</Txt>
+    <Txt muted variant="caption">Saved using the details you enter. Market prices are unavailable for manual entries.</Txt>
     <ErrorNotice text={error} />
     <Button title="Review card" onPress={() => {
       try { const card = makeManualCard({ language, name, setCode, number, category, dexIds, photoUri }); setError(null); onReview(card); }
