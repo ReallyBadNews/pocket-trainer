@@ -1,14 +1,14 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { Button, ButtonRow, C, Icon, Progress, R, S, Txt, mono, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, Icon, Progress, R, S, ToolbarAction, Txt, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { discoveredIds, recordQuizScore } from '@/lib/model';
-import { QUIZ_LENGTH, buildRound, quizPool, quizStars, type QuizRound } from '@/lib/quiz';
+import { QUIZ_LENGTH, buildRound, quizStars, type QuizRound } from '@/lib/quiz';
 import { Sheet } from './collection-modals';
 
 const UNIVERSE = species.map(s => s.id);
@@ -49,28 +49,7 @@ function Star({ on, size = 44 }: { on: boolean; size?: number }) {
 }
 
 export function QuizInvite({ onPlay }: { onPlay: () => void }) {
-  const { trainer } = useCollection();
-  const { width: windowWidth, fontScale } = useWindowDimensions();
-  const [width, setWidth] = useState(0);
-  const inviteWidth = width || Math.min(windowWidth, 1100) - S.xl * 2;
-  const stack = inviteWidth < 280 || fontScale > 1.2;
-  const teaserSize = stack ? 104 : Math.min(120, Math.max(84, inviteWidth * .29));
-  const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
-  const own = useMemo(() => !quizPool(discovered, UNIVERSE).fallback, [discovered]);
-  // One of their own Pokémon as the teaser shadow; Pikachu until they have some.
-  const [teaser] = useState(() => { const ids = [...discovered].filter(id => speciesById.has(id)); return ids.length ? ids[Math.floor(Math.random() * ids.length)] : 25; });
-  return <View onLayout={event => setWidth(event.nativeEvent.layout.width)} style={[q.invite, stack && q.inviteStack]}>
-    <View style={[q.inviteCopy, stack && { flex: 0, alignSelf: 'stretch' }]}>
-      <Txt accessibilityRole="header" variant="subtitle">Who’s That Pokémon?</Txt>
-      <Txt muted variant="caption" style={{ marginTop: S.sm }}>{own ? 'Guess the shadow! 10 quick questions from your Pokédex.' : 'Guess the shadow! Play with the first 151 Pokémon.'}</Txt>
-      {!!trainer.quizBest && <Txt variant="readout" style={q.inviteBest}>Best score: {trainer.quizBest}/{QUIZ_LENGTH}</Txt>}
-      <Button size="medium" title="Play" onPress={onPlay} style={{ alignSelf: 'flex-start', marginTop: S.md }} />
-    </View>
-    <View accessible accessibilityRole="image" accessibilityLabel="A mystery Pokémon shadow" style={[q.teaser, { width: teaserSize, height: teaserSize }, stack && { alignSelf: 'flex-end' }]}>
-      <View style={[q.teaserCircle, { borderRadius: teaserSize / 2 }]}><Burst tone="mystery" style={{ position: 'absolute', width: teaserSize * 1.5, height: teaserSize * 1.5, left: -teaserSize * .25, top: -teaserSize * .25 }} /><Image source={speciesImage(teaser)} tintColor={SHADOW} style={{ width: teaserSize * .76, height: teaserSize * .76 }} contentFit="contain" cachePolicy="memory-disk" /></View>
-      <View style={q.teaserBadge}><Txt style={{ color: 'white', fontWeight: '900', fontSize: 20, lineHeight: 24 }}>?</Txt></View>
-    </View>
-  </View>;
+  return <ToolbarAction title="Quiz" icon="star" onPress={onPlay} />;
 }
 
 export function QuizModal({ onClose }: { onClose: () => void }) {
@@ -223,11 +202,4 @@ const q = StyleSheet.create({
   endStage: { width: '100%', height: 150, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#B98A22' },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   score: { fontFamily: mono, fontSize: 44, lineHeight: 52, fontWeight: '800' }, scoreOf: { fontFamily: mono, fontSize: 22, color: C.muted },
-  invite: { backgroundColor: '#D8EAF1', borderRadius: R.lg, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: S.md, padding: S.lg, borderWidth: 1, borderColor: '#B7D3E0' },
-  inviteStack: { flexDirection: 'column', alignItems: 'flex-start' },
-  inviteCopy: { flex: 1, minWidth: 0 },
-  inviteBest: { fontWeight: '600', marginTop: S.sm },
-  teaser: { flexShrink: 0 },
-  teaserCircle: { flex: 1, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#23658C' },
-  teaserBadge: { position: 'absolute', right: 0, top: 4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'white' },
 });

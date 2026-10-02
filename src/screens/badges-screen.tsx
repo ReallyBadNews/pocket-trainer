@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { AchievementEmblem } from '@/components/achievement-emblem';
-import { C, Icon, Progress, R, S, Segmented, Txt, pressFx, tick, ui } from '@/components/pokedex-ui';
+import { C, Icon, Progress, S, Segmented, Txt, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { useChromeScroll } from '@/components/scroll-chrome';
 import { BADGES, BADGE_GROUPS, type Badge } from '@/lib/badges';
 import { catalogSet, speciesById } from '@/lib/catalog';
@@ -29,7 +29,7 @@ export function BadgesScreen({ onSpecies }: { onSpecies: (id: number) => void })
 
   return <Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false}>
     <View style={s.header}>
-      <View style={s.heading}><Txt accessibilityRole="header" variant="title">Your badges</Txt><Txt variant="label">{earnedCount} of {BADGES.length} earned!</Txt><Txt muted variant="caption">Any card of that Pokémon counts!</Txt></View>
+      <View style={s.heading}><Txt accessibilityRole="header" variant="title">Badges</Txt><Txt muted variant="caption">{earnedCount} of {BADGES.length} earned</Txt></View>
       <Segmented label="Show badges" options={FILTERS} value={filter} onChange={setFilter} />
     </View>
     {BADGE_GROUPS.map(group => {
@@ -54,7 +54,7 @@ function AchievementRow({ badge, progress, earned, discovered, closestSet, onSpe
   const { fontScale } = useWindowDimensions();
   // One finished set earns Set master, so its bar follows the set he is closest to finishing.
   const closest = badge.kind === 'sets' && !earned ? closestSet : undefined;
-  return <View style={[s.achievement, earned && s.earned]}>
+  return <View style={s.achievement}>
     <View style={s.row}>
       <AchievementEmblem emblem={badge.emblem} earned={earned} />
       <View style={s.copy}>
@@ -77,7 +77,7 @@ function AchievementRow({ badge, progress, earned, discovered, closestSet, onSpe
         <View style={s.speciesList}>{badge.speciesIds.map(id => {
           const owned = discovered.has(id);
           const name = speciesById.get(id)?.en ?? `#${id}`;
-          return <Pressable key={id} accessibilityRole="button" accessibilityLabel={`${name}, ${owned ? 'collected' : 'still to find'}. View cards`} onPress={() => { tick(); onSpecies(id); }} style={state => [s.species, { flexBasis: 132 * Math.min(fontScale, 1.4) }, owned && s.speciesOwned, pressFx(state)]}>
+          return <Pressable key={id} accessibilityRole="button" accessibilityLabel={`${name}, ${owned ? 'collected' : 'still to find'}. View cards`} onPress={() => { tick(); onSpecies(id); }} style={state => [s.species, { flexBasis: 132 * Math.min(fontScale, 1.4) }, pressFx(state)]}>
             <Icon name={owned ? 'check' : 'search'} color={owned ? '#48763A' : C.muted} size={14} />
             <Txt variant="label" style={s.speciesName}>{name}</Txt>
           </Pressable>;
@@ -89,23 +89,21 @@ function AchievementRow({ badge, progress, earned, discovered, closestSet, onSpe
 
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 32 },
-  header: { gap: S.lg, marginBottom: S.xxl },
+  header: { gap: S.lg, marginBottom: S.xl },
   heading: { gap: S.xs },
   group: { marginBottom: S.lg },
-  groupTitle: { marginBottom: S.md },
-  achievement: { borderWidth: 1, borderColor: C.line, marginBottom: S.md, backgroundColor: '#F5F8EE', borderRadius: R.lg, overflow: 'hidden' },
-  earned: { backgroundColor: '#F7ECCC', borderColor: '#DBC786' },
-  row: { flexDirection: 'row', alignItems: 'flex-start', gap: S.md, padding: S.lg },
+  groupTitle: { marginBottom: S.xs },
+  achievement: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line, paddingBottom: S.sm, marginBottom: S.sm },
+  row: { flexDirection: 'row', alignItems: 'flex-start', gap: S.md, paddingVertical: S.md },
   copy: { flex: 1, minWidth: 0, gap: S.xs },
   progress: { marginVertical: S.xs },
   status: { flexDirection: 'row', alignItems: 'center', gap: S.xs },
   progressText: { color: C.muted, fontWeight: '600', flexShrink: 1 },
-  toggle: { minHeight: 48, paddingVertical: S.sm, paddingHorizontal: S.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm, borderTopWidth: 1, borderTopColor: C.line },
+  toggle: { minHeight: 44, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: S.sm },
   toggleText: { color: C.muted, flexShrink: 1 },
-  checklist: { padding: S.lg, paddingTop: 0, gap: S.md },
+  checklist: { paddingBottom: S.md, gap: S.md },
   speciesList: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
-  species: { flexDirection: 'row', alignItems: 'center', gap: S.sm, flexGrow: 1, maxWidth: '100%', minWidth: 0, minHeight: 44, padding: S.sm, borderWidth: 1, borderColor: C.line, borderRadius: R.sm, backgroundColor: '#FAFCF7' },
-  speciesOwned: { backgroundColor: '#E4EDD9', borderColor: '#BBCDAA' },
+  species: { flexDirection: 'row', alignItems: 'center', gap: S.sm, flexGrow: 1, maxWidth: '100%', minWidth: 0, minHeight: 44, paddingVertical: S.sm },
   speciesName: { flexShrink: 1 },
   empty: { alignItems: 'center', paddingVertical: 28, gap: 12 },
   emptyText: { textAlign: 'center', maxWidth: 330 },
