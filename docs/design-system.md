@@ -42,9 +42,10 @@ Est. value         Est. value
 - Give each task one clear filled primary action. Secondary actions are plain text or disclosure rows; equal hit targets do not require equal visual prominence. Wishlist and achievement gold stays semantic.
 - Populated Pokédex and Binder screens lead with search and collection content. Quiz, collection value, and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
 - `ButtonRow` gives actions equal columns and equal heights. It stacks when there is less than 144pt per button, with more space reserved as system text size increases.
-- Segmented controls switch closely related views. Use `ChoiceMenu` for sort, filter, language, and form values. On iOS it opens native choices; other platforms show a checked list. A selected value remains visible while its choices are hidden.
+- Segmented controls switch closely related views. Use `ChoiceMenu` for sort, filter, language, and form values. On iOS it opens native choices; other platforms show a checked list. Form rows show the selected value. Compact toolbar triggers can use short titles such as Sort or View; accessibility announces the current selection and the menu checks it.
 - `ToolbarAction` and `ActionRow` keep secondary destinations easy to tap without another filled card. Use alignment, separators, and section gaps to group related items.
 - Filter chips remain compact, independently selected controls. Long bilingual labels may wrap inside the available width.
+- Main tabs remain available while scrolling. Only the decorative header collapses.
 - Sheet navigation stays in place while saving. A busy sheet disables its navigation instead of removing it. Titles wrap beside fixed 44pt navigation controls.
 - Card captions show the name followed by one metadata block with the set and printed number. Full names and metadata wrap; details provide the complete identity. Avoid reserved blank lines and repeated estimate/printing labels.
 - Quantity controls use a short “Copies” label and a trailing stepper. Stack only when actual width or text size requires it. Deletion is a quiet destructive action.

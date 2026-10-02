@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { Children, createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActionSheetIOS, ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
+import { ActionSheetIOS, ActivityIndicator, findNodeHandle, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View, useWindowDimensions, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
 import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
@@ -69,28 +69,30 @@ export function LinkButton({ title, onPress, color = C.ink, style }: { title: st
   return <Pressable accessibilityRole="button" accessibilityLabel={title} hitSlop={4} onPress={() => { tick(); onPress(); }} style={state => [ui.link, style, pressFx(state)]}><Txt variant="label" style={{ color }}>{title}</Txt></Pressable>;
 }
 /** Secondary destinations stay readable and tappable without looking like another content card. */
-export function ToolbarAction({ title, icon, onPress, color = C.ink, style }: { title: string; icon?: IconName; onPress: () => void; color?: string; style?: StyleProp<ViewStyle> }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={() => { tick(); onPress(); }} style={state => [ui.toolbarAction, style, pressFx(state)]}>{icon && <Icon name={icon} size={18} color={color} />}<Txt variant="caption" style={{ color, fontWeight: '600', flexShrink: 1 }}>{title}</Txt></Pressable>;
+export function ToolbarAction({ title, icon, onPress, color = C.ink, expanded, style }: { title: string; icon?: IconName; onPress: () => void; color?: string; expanded?: boolean; style?: StyleProp<ViewStyle> }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} aria-expanded={expanded} onPress={() => { tick(); onPress(); }} style={state => [ui.toolbarAction, style, pressFx(state)]}>{icon && <Icon name={icon} size={18} color={color} />}<Txt variant="caption" style={{ color, fontWeight: '600', flexShrink: 1 }}>{title}</Txt></Pressable>;
 }
 /** A standard settings/disclosure row, using alignment and a separator rather than nested cards. */
-export function ActionRow({ title, value, detail, icon, onPress, disabled = false, destructive = false }: { title: string; value?: string; detail?: string; icon?: IconName; onPress: () => void; disabled?: boolean; destructive?: boolean }) {
+export function ActionRow({ title, value, detail, icon, onPress, disabled = false, destructive = false, expanded }: { title: string; value?: string; detail?: string; icon?: IconName; onPress: () => void; disabled?: boolean; destructive?: boolean; expanded?: boolean }) {
   const color = destructive ? C.redDark : C.ink;
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${value ? `, ${value}` : ''}`} accessibilityHint={detail} accessibilityState={{ disabled }} disabled={disabled} onPress={() => { tick(); onPress(); }} style={state => [ui.actionRow, disabled && { opacity: .45 }, pressFx(state)]}>
-    {icon && <Icon name={icon} size={20} color={color} />}<View style={{ flex: 1, minWidth: 0, gap: 2 }}><Txt style={{ color, fontWeight: '500' }}>{title}</Txt>{detail && <Txt variant="caption" muted>{detail}</Txt>}</View>{value && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '55%', textAlign: 'right' }}>{value}</Txt>}<View style={{ transform: [{ rotate: '180deg' }] }}><Icon name="back" size={16} color={C.muted} /></View>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${value ? `, ${value}` : ''}`} accessibilityHint={detail} aria-expanded={expanded} accessibilityState={{ disabled }} disabled={disabled} onPress={() => { tick(); onPress(); }} style={state => [ui.actionRow, disabled && { opacity: .45 }, pressFx(state)]}>
+    {icon && <Icon name={icon} size={20} color={color} />}<View style={{ flex: 1, minWidth: 0, gap: 2 }}><Txt style={{ color, fontWeight: '500' }}>{title}</Txt>{detail && <Txt variant="caption" muted>{detail}</Txt>}</View>{value && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '55%', textAlign: 'right' }}>{value}</Txt>}<View style={{ transform: [{ rotate: expanded ? '-90deg' : '180deg' }] }}><Icon name="back" size={16} color={C.muted} /></View>
   </Pressable>;
 }
 /** Compact choices use the native iOS picker sheet; other platforms get the same checked options. */
-export function ChoiceMenu<T extends string>({ label, options, value, onChange, compact = false, triggerTitle, icon, style }: { label: string; options: readonly { id: T; label: string }[]; value: T; onChange: (value: T) => void; compact?: boolean; triggerTitle?: string; icon?: IconName; style?: StyleProp<ViewStyle> }) {
+export function ChoiceMenu<T extends string>({ label, options, value, onChange, compact = false, triggerTitle, disabled = false, icon, style }: { label: string; options: readonly { id: T; label: string }[]; value: T; onChange: (value: T) => void; compact?: boolean; triggerTitle?: string; disabled?: boolean; icon?: IconName; style?: StyleProp<ViewStyle> }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<View>(null);
   const selected = options.find(option => option.id === value);
   const choose = (index: number) => { const option = options[index]; if (option && option.id !== value) { tick(); onChange(option.id); } };
   const show = () => {
+    if (disabled) return;
     tick();
-    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ title: label, options: [...options.map(option => `${option.label}${option.id === value ? ' ✓' : ''}`), 'Cancel'], cancelButtonIndex: options.length, tintColor: C.ink }, choose);
+    if (Platform.OS === 'ios') ActionSheetIOS.showActionSheetWithOptions({ title: label, options: [...options.map(option => `${option.label}${option.id === value ? ' ✓' : ''}`), 'Cancel'], cancelButtonIndex: options.length, tintColor: C.ink, anchor: findNodeHandle(trigger.current) ?? undefined }, choose);
     else setOpen(true);
   };
   return <>
-    <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${selected?.label ?? value}`} accessibilityHint="Opens choices" onPress={show} style={state => [compact ? ui.toolbarAction : ui.actionRow, style, pressFx(state)]}>
+    <Pressable ref={trigger} accessibilityRole="button" accessibilityLabel={`${label}, ${selected?.label ?? value}`} accessibilityHint="Opens choices" accessibilityState={{ disabled }} disabled={disabled} onPress={show} style={state => [compact ? ui.toolbarAction : ui.actionRow, style, disabled && { opacity: .45 }, pressFx(state)]}>
       {icon && <Icon name={icon} size={18} />}<Txt variant={compact ? 'caption' : 'body'} style={{ flex: 1, minWidth: 0, fontWeight: compact ? '600' : '500' }}>{compact ? triggerTitle ?? selected?.label : label}</Txt>{!compact && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '67%', textAlign: 'right' }}>{selected?.label}</Txt>}<View style={{ transform: [{ rotate: compact ? '-90deg' : '180deg' }] }}><Icon name="back" size={14} color={C.muted} /></View>
     </Pressable>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}><View style={ui.menuOverlay}><Pressable accessibilityRole="button" accessibilityLabel="Close choices" onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal style={ui.menuSheet}><SheetHeader title={label} onClose={() => setOpen(false)} /><ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: S.lg }}><View accessibilityRole="radiogroup" accessibilityLabel={label}>{options.map((option, index) => <Pressable key={option.id} accessibilityRole="radio" accessibilityState={{ checked: option.id === value }} aria-checked={option.id === value} onPress={() => { setOpen(false); choose(index); }} style={state => [ui.actionRow, pressFx(state)]}><Txt style={{ flex: 1, fontWeight: option.id === value ? '600' : '400' }}>{option.label}</Txt>{option.id === value && <Icon name="check" size={18} />}</Pressable>)}</View></ScrollView></View></View></Modal>
