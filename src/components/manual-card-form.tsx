@@ -35,7 +35,7 @@ export function ManualCardForm({ language, photoUri, onReview }: { language: Lan
     {category === 'Pokemon' && <>
       {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `${language === 'en' ? 'Name' : `English / ${example.script} name`} or Pokédex number`)}
       <Txt muted variant="caption">Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
-      <View style={[ui.row, { flexWrap: 'wrap' }]}>{choices.map(s => <Chip key={s.id} label={`${s.en} · ${s[language]}`} selected={dexIds.includes(s.id)} onPress={() => setDexIds(ids => ids.includes(s.id) ? ids.filter(id => id !== s.id) : [...ids, s.id])} />)}</View>
+      <View style={[ui.row, { flexWrap: 'wrap' }]}>{choices.map(s => <Chip key={s.id} label={[...new Set([s.en, s[language]])].join(' · ')} selected={dexIds.includes(s.id)} onPress={() => setDexIds(ids => ids.includes(s.id) ? ids.filter(id => id !== s.id) : [...ids, s.id])} />)}</View>
     </>}
     <Txt muted variant="caption">Saved using the details you enter. Market prices are unavailable for manual entries.</Txt>
     <ErrorNotice text={error} />

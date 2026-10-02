@@ -40,6 +40,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [loading, setLoading] = useState(!entry);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
+  const cardScroll = useRef<ScrollView>(null);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState<Finish>(entry?.finish ?? 'unsure');
   const [removing, setRemoving] = useState(false);
@@ -99,7 +100,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
         <CardValuePanel card={card} finish={finish} quantity={liveEntry.quantity} />
         {card.description && <Txt>{card.description}</Txt>}
         {!removing && <ActionRow title="Delete card" destructive disabled={busy} onPress={() => setRemoving(true)} />}
-        {removing && <View style={m.removeBox}><Txt variant="cardTitle">Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt variant="caption">This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>{locked && <Txt variant="caption" style={{ fontWeight: '600' }}>A grown-up answers a quick question first.</Txt>}<ActionRow title="Keep it" disabled={busy} onPress={() => setRemoving(false)} /><ActionRow title="Delete card" destructive icon={locked ? 'lock' : undefined} disabled={busy} detail={busy ? 'Deleting…' : undefined} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></View>}
+        {removing && <View onLayout={event => cardScroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - S.sm), animated: true })} style={m.removeBox}><Txt variant="cardTitle">Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt variant="caption">This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>{locked && <Txt variant="caption" style={{ fontWeight: '600' }}>A grown-up answers a quick question first.</Txt>}<ActionRow title="Keep it" disabled={busy} onPress={() => setRemoving(false)} /><ActionRow title="Delete card" destructive icon={locked ? 'lock' : undefined} disabled={busy} detail={busy ? 'Deleting…' : undefined} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></View>}
       </> : <><CopiesField finish={finish} quantity={quantity} busy={busy} minusDisabled={quantity <= 1} minusLabel="Fewer copies" plusLabel="More copies" onMinus={() => setQuantity(n => Math.max(1, n - 1))} onPlus={() => setQuantity(n => Math.min(999, n + 1))} /><CardValuePanel card={card} finish={finish} quantity={quantity} />
         {canWish && <><WishButton wished={wished} disabled={busy || wishing} onPress={toggleWished} /><ErrorNotice text={wishError} /><Txt variant="caption" muted>{wished ? 'When you get it, add it to your binder. Wish granted!' : 'Don’t have it yet? Wish for it and share your list with family.'}</Txt></>}</>}
     </>}
@@ -233,7 +234,7 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
       setNewName(''); setPage('settings'); note('New trainer added! Tap their name above to play as them.');
     });
   }
-  if (page === 'about') return <Sheet title="About" onClose={onClose} onBack={returnToSettings}><AboutScreen /><View style={m.aboutDetails}><Txt variant="caption" muted>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt variant="caption" muted>Card data and images: TCGdex. Pokémon names, Pokédex data and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt></View></Sheet>;
+  if (page === 'about') return <Sheet title="About" onClose={onClose} onBack={returnToSettings}><AboutScreen><View style={m.aboutDetails}><Txt variant="caption" muted>Saved on this device. Live family syncing is planned for a later version. Card text is read on your iPhone/iPad; photos are not sent to a server.</Txt><Txt variant="caption" muted>Card data and images: TCGdex. Pokémon names, Pokédex data and artwork: PokéAPI. An unofficial family fan project. Pokémon belongs to its respective owners.</Txt></View></AboutScreen></Sheet>;
   if (page === 'rename' || page === 'add') {
     const adding = page === 'add', key = adding ? 'add' : 'name';
     const value = adding ? newName : name;
@@ -365,7 +366,7 @@ const m = StyleSheet.create({
   lockRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: S.md },
   profile: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   builderPreview: { flexDirection: 'row', alignItems: 'center', gap: S.lg, padding: S.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
-  builderContent: { paddingHorizontal: S.xl, paddingBottom: S.lg, gap: S.sm }, aboutDetails: { padding: S.xl, gap: S.md }, section: { gap: S.sm },
+  builderContent: { paddingHorizontal: S.xl, paddingBottom: S.lg, gap: S.sm }, aboutDetails: { gap: S.md }, section: { gap: S.sm },
   input: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: '#B8C6AC', borderRadius: 12, backgroundColor: '#FCFDF9', color: C.ink, fontSize: 15 },
   entry: { gap: S.md }, entryScreen: { gap: S.sm },
   voiceButton: { minHeight: 44, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: S.sm, paddingVertical: S.sm, borderRadius: 8 },
