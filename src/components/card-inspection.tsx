@@ -57,7 +57,6 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
   }, []);
   useEffect(() => {
     if (mode === 'photo') { pose.current = runtime.current?.getPose() ?? pose.current; runtime.current?.dispose(); runtime.current = null; }
-    else setReady(false);
   }, [mode, active]);
 
   function setPose(next: CardPose, animated = false) {
@@ -69,6 +68,7 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
   function reset() { setPose({ ...DEFAULT_CARD_POSE }, true); setBackVisible(false); setFlatReset(n => n + 1); }
   function createContext(gl: ExpoWebGLRenderingContext) {
     runtime.current?.dispose();
+    setReady(false);
     setBackVisible(isCardBackVisible(pose.current));
     runtime.current = createCardRenderer(gl, {
       frontSources: inspectionImageSources(card, cardImage(card, true)), backSource, surface, pose: pose.current,

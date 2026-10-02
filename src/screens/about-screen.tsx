@@ -11,7 +11,7 @@ export function AboutScreen({ children }: { children?: ReactNode }) {
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
 
   return <ScrollView contentContainerStyle={s.content}>
-    <Image source={require('../../assets/crafted/device.png')} contentFit="contain" style={s.device} accessibilityLabel="Our handcrafted 3D Pokédex" />
+    <Image source={require('../../assets/crafted/device.png')} contentFit="contain" style={s.device} accessible accessibilityLabel="Our handcrafted 3D Pokédex" />
     <Txt accessibilityRole="header" variant="title">Pocket Pokédex</Txt>
     <Txt muted>Your Pokémon cards, collected in one place.</Txt>
     <View style={s.details}>
