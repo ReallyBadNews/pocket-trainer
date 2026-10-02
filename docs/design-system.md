@@ -1,6 +1,6 @@
 # Pocket Pokédex design patterns
 
-The red housing and blue lens carry the app's personality. Inside the green display, card art is the focus and the controls use a quieter, consistent hierarchy.
+The red housing and blue lens carry the app's personality. Inside the green display, the collection is the focus. Use one reading surface, clear section spacing, and quiet controls; reserve framed invitations for an empty collection.
 
 ## Palette and type
 
@@ -10,9 +10,9 @@ Use the platform system sans for readable interface copy. Keep monospace for Pok
 
 | Role | Size / leading | Weight | Use |
 | --- | --- | --- | --- |
-| Title | 27 / 33 | 800 | Screen title or discovery |
-| Subtitle | 19 / 25 | 700 | Section and sheet titles |
-| Card title | 15 / 20 | 700 | Card identity |
+| Title | 26 / 32 | 700 | Screen title or discovery |
+| Subtitle | 18 / 24 | 600 | Section and sheet titles |
+| Card title | 15 / 20 | 600 | Card identity |
 | Body | 15 / 22 | Regular | Descriptions |
 | Label | 14 / 20 | 600 | Field labels and filters |
 | Caption | 13 / 18 | Regular | Sets, status, helper text |
@@ -29,26 +29,30 @@ Screen copy is left aligned. Center alignment is reserved for Pokémon artwork, 
 Screen title                 Readout
 Supporting copy
 
-[ Primary action ] [ Secondary action ]
-[ View A          | View B            ]
 Search
-Filters / sort / status
+[ View A          | View B            ]
+Filter / sort menus         Overview
 
 Card artwork       Card artwork
 Card name          Card name
-Set                Set
-Printed number     Printed number
-Estimate           Estimate
+Set + number       Set + number
+Est. value         Est. value
 ```
 
-- Primary actions use red. Secondary actions use the pale green surface. Wishlist and achievement gold stays semantic.
+- Give each task one clear filled primary action. Secondary actions are plain text or disclosure rows; equal hit targets do not require equal visual prominence. Wishlist and achievement gold stays semantic.
+- Populated Pokédex and Binder screens lead with search and collection content. Quiz, collection value, and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
 - `ButtonRow` gives actions equal columns and equal heights. It stacks when there is less than 144pt per button, with more space reserved as system text size increases.
-- Segmented controls describe one exclusive choice. They keep equal columns, readable wrapping labels, and at least 44pt targets.
+- Segmented controls switch closely related views. Use `ChoiceMenu` for sort, filter, language, and form values. On iOS it opens native choices; other platforms show a checked list. A selected value remains visible while its choices are hidden.
+- `ToolbarAction` and `ActionRow` keep secondary destinations easy to tap without another filled card. Use alignment, separators, and section gaps to group related items.
 - Filter chips remain compact, independently selected controls. Long bilingual labels may wrap inside the available width.
 - Sheet navigation stays in place while saving. A busy sheet disables its navigation instead of removing it. Titles wrap beside fixed 44pt navigation controls.
-- Card captions show a clear name, readable set, then printed details. Full card names and sets can wrap; short names reserve two lines so neighboring metadata aligns.
-- Quantity controls are labeled fields. Compact sheets must leave space for both the heading and stepper.
+- Card captions show the name followed by one metadata block with the set and printed number. Full names and metadata wrap; details provide the complete identity. Avoid reserved blank lines and repeated estimate/printing labels.
+- Quantity controls use a short “Copies” label and a trailing stepper. Stack only when actual width or text size requires it. Deletion is a quiet destructive action.
 - Toolbars reflow at narrow widths. Long labels need a flexible text block and fixed icon space.
+- Settings opens destinations instead of presenting several edit forms at once. The appearance editor uses a compact live avatar and keeps Save available while choices scroll.
+- Manual entry is a separate task with its own sheet, rather than a form embedded in the scan instructions.
+
+These patterns follow Apple's guidance on [layout and hierarchy](https://developer.apple.com/design/human-interface-guidelines/layout), [button prominence](https://developer.apple.com/design/human-interface-guidelines/buttons), and [menus](https://developer.apple.com/design/human-interface-guidelines/menus). The Pokédex housing remains the app's distinctive element; content and controls use restraint.
 
 ## Audit coverage
 
