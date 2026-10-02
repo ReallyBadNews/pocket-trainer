@@ -51,9 +51,6 @@ export default function PocketTrainer() {
     if (modalOpen) cancelAnimation(progress);
   }, [modalOpen, chrome.paused, progress]);
   const topStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -headerHeight * progress.value }] }));
-  const bottomStyle = useAnimatedStyle(() => ({
-    transform: [{ translateY: (navHeight + BOTTOM_FRAME_HEIGHT) * progress.value }],
-  }));
   function celebrate(added: AddedCards, source: 'card' | 'page') {
     setSelection(null); setUndo(added);
     // A saved card clears the old photo, matches and search. Page scans reset themselves and stay on the page reader.
@@ -103,13 +100,13 @@ export default function PocketTrainer() {
     {quizOpen && <QuizModal onClose={() => setQuizOpen(false)} />}
     </Modal>
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt variant="label" style={{ flex: 1, minWidth: 0, paddingVertical: 8, color: 'white' }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt variant="label" style={{ color: C.gold }}>Undo</Txt></Pressable></View></View>}
-    <Animated.View style={[s.bottomChrome, bottomStyle]}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan card', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={[s.navItem, item.id === 'scan' && s.scanNav]}><View style={[s.navIcon, tab === item.id && s.navSelected, item.id === 'scan' && s.scanIcon]}><Icon name={item.icon} size={23} color={item.id === 'scan' ? C.redDark : tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: tab === item.id ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></Animated.View>
+    <View style={s.bottomChrome}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={s.navItem}><View style={[s.navIcon, tab === item.id && s.navSelected]}><Icon name={item.icon} size={23} color={tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: tab === item.id ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></View>
     </View>
   </View></View>;
 }
 const s = StyleSheet.create({
   viewport: { flex: 1, minHeight: 0, overflow: 'hidden' },
-  // The list viewport never resizes during scrolling. Only these opaque overlays move.
+  // The list viewport stays fixed. The decorative header collapses; tabs remain available.
   topChrome: { zIndex: 1, position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: C.red },
   bottomChrome: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: C.red },
   feed: { position: 'absolute', top: PINNED_CHROME_HEIGHT, bottom: 0, left: 12, right: 12, borderLeftWidth: 4, borderRightWidth: 4, borderColor: '#A72937', backgroundColor: C.screen, overflow: 'hidden' },
@@ -119,8 +116,8 @@ const s = StyleSheet.create({
   outside: { flex: 1, backgroundColor: '#762530', alignItems: 'center' },
   device: { flex: 1, backgroundColor: C.red, width: '100%', maxWidth: 1100 },
   tablet: { marginVertical: 16, borderRadius: 26, overflow: 'hidden', borderWidth: 1, borderColor: '#F8797F', maxHeight: '96%' },
-  header: { paddingHorizontal: 22, paddingVertical: 15, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  lensRim: { width: 54, height: 54, borderRadius: 30, padding: 5, backgroundColor: '#E8EADB', borderBottomWidth: 3, borderBottomColor: '#9FADA7' },
+  header: { paddingHorizontal: 22, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  lensRim: { width: 44, height: 44, borderRadius: 30, padding: 5, backgroundColor: '#E8EADB', borderBottomWidth: 3, borderBottomColor: '#9FADA7' },
   lens: { flex: 1, borderRadius: 25, backgroundColor: C.blue, borderWidth: 3, borderColor: '#2C91B1', overflow: 'hidden' },
   glint: { position: 'absolute', width: 17, height: 11, borderRadius: 10, top: 4, left: 5, backgroundColor: '#C2F6FE' },
   indicator: { width: 9, height: 9, borderRadius: 8, borderWidth: 1, borderColor: '#80252A' },
@@ -130,7 +127,7 @@ const s = StyleSheet.create({
   brand: { fontWeight: '900', fontSize: 11, lineHeight: 17, color: '#6B7B64', letterSpacing: 2 },
   speaker: { flexDirection: 'row', gap: 3 }, speakerLine: { width: 3, height: 9, borderRadius: 2, backgroundColor: '#A5B299' }, power: { height: 6, width: 6, borderRadius: 5, backgroundColor: '#6DAB63' },
   nav: { flexShrink: 0, flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8 }, navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 63, gap: 1 },
-  navIcon: { width: 48, height: 35, alignItems: 'center', justifyContent: 'center', borderRadius: 13 }, navSelected: { backgroundColor: '#A42535' }, scanNav: { marginTop: -2 }, scanIcon: { height: 40, width: 55, backgroundColor: '#F2E9D8', borderBottomWidth: 3, borderBottomColor: '#C8BDA9', borderRadius: 14 },
+  navIcon: { width: 48, height: 35, alignItems: 'center', justifyContent: 'center', borderRadius: 13 }, navSelected: { backgroundColor: '#A42535' },
   toastSlot: { position: 'absolute', left: 24, right: 24, alignItems: 'center', zIndex: 2 },
   toast: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%', maxWidth: 460, paddingLeft: 14, borderRadius: 14, backgroundColor: C.ink, shadowColor: '#000', shadowOpacity: .25, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
   undo: { minHeight: 48, minWidth: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { TextInput, View, useWindowDimensions } from 'react-native';
-import { Button, C, Chip, ErrorNotice, S, Segmented, Txt, ui } from './pokedex-ui';
+import { TextInput, View } from 'react-native';
+import { Button, C, Chip, ChoiceMenu, ErrorNotice, S, Txt, ui } from './pokedex-ui';
 import { normalize, species } from '@/lib/catalog';
 import { LANGUAGES } from '@/lib/languages';
 import { makeManualCard } from '@/lib/manual-card';
@@ -8,15 +8,14 @@ import type { Card, Language } from '@/lib/model';
 
 // Placeholders show a real printing in the selected language.
 const EXAMPLES: Partial<Record<Language, { name: string; set: string; number: string; script: string }>> = {
+  en: { name: 'Pikachu', set: 'MEW', number: '025/165', script: 'English' },
+  ja: { name: 'ピカチュウ', set: 'SV2a', number: '025/165', script: 'Japanese' },
   ko: { name: '야나프', set: 'SV4K', number: '001/066', script: 'Korean' },
 };
 const CHINESE_EXAMPLE = { name: '四季鹿', set: 'CBB4C', number: '17 07/07', script: 'Chinese' };
 const CARD_KINDS = [{ id: 'Pokemon', label: 'Pokémon' }, { id: 'Trainer', label: 'Trainer' }, { id: 'Energy', label: 'Energy' }] as const;
 
 export function ManualCardForm({ language, photoUri, onReview }: { language: Language; photoUri?: string; onReview: (card: Card) => void }) {
-  const { fontScale } = useWindowDimensions();
-  const [kindWidth, setKindWidth] = useState(0);
-  const stackKinds = kindWidth > 0 && kindWidth < 264 * Math.min(fontScale, 1.4);
   const [name, setName] = useState('');
   const [setCode, setSetCode] = useState('');
   const [number, setNumber] = useState('');
@@ -32,9 +31,9 @@ export function ManualCardForm({ language, photoUri, onReview }: { language: Lan
     {field('Name on card', name, setName, example.name)}
     {field('Set code', setCode, setSetCode, example.set)}
     {field('Number at the bottom', number, setNumber, example.number)}
-    <View onLayout={event => setKindWidth(event.nativeEvent.layout.width)} style={{ gap: S.xs }}><Txt variant="label">Card kind</Txt><Segmented label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} style={stackKinds && { flexDirection: 'column' }} /></View>
+    <ChoiceMenu label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} />
     {category === 'Pokemon' && <>
-      {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `English / ${example.script} name or Pokédex number`)}
+      {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `${language === 'en' ? 'Name' : `English / ${example.script} name`} or Pokédex number`)}
       <Txt muted variant="caption">Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
       <View style={[ui.row, { flexWrap: 'wrap' }]}>{choices.map(s => <Chip key={s.id} label={`${s.en} · ${s[language]}`} selected={dexIds.includes(s.id)} onPress={() => setDexIds(ids => ids.includes(s.id) ? ids.filter(id => id !== s.id) : [...ids, s.id])} />)}</View>
     </>}

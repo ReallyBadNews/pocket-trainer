@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, ButtonRow, C, CardArt, CardCaption, Chip, ErrorNotice, Icon, pressFx, R, S, SearchBox, Segmented, Txt, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, CardArt, CardCaption, Chip, ChoiceMenu, ErrorNotice, Icon, R, S, SearchBox, Segmented, Txt, ui } from '@/components/pokedex-ui';
 import { fetchCard, needsScanRefinement, scanCandidates, searchCards, setForCard, ENERGY_SEARCHES, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/lib/scanner';
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
@@ -21,6 +21,7 @@ import { CARD_FILTERS, cardKindLabel, scanTypeHint, type CardFilter } from '@/li
 import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
 import { PageScan } from './page-scan';
+import { Sheet } from './collection-modals';
 import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 
 const MATCH_NOTE = 'Do the picture and bottom number match? Tap your card.';
@@ -43,14 +44,14 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   const { trainer } = useCollection();
   const addCards = useAddCards();
   const [mode, setMode] = useState<'card' | 'page'>('card');
-  const [toolsOpen, setToolsOpen] = useState(false);
   const [quickDismissed, setQuickDismissed] = useState(false);
   const [quickBusy, setQuickBusy] = useState(false);
   const [liveOpen, setLiveOpen] = useState(false);
   // A page photo taken after switching modes inside the card camera, for the page reader.
   const [pagePhoto, setPagePhoto] = useState<LivePhoto | null>(null);
   const [manual, setManual] = useState(false);
-  const [languageOpen, setLanguageOpen] = useState(false);
+  const [manualLanguage, setManualLanguage] = useState<Language>(language);
+  const afterManual = useRef<Card | null>(null);
   const [detected, setDetected] = useState<Language | null>(null);
   const [typeFilter, setTypeFilter] = useState<CardFilter>('all');
   const [improving, setImproving] = useState<ScanStage>('done');
@@ -74,8 +75,6 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   const [note, setNote] = useState<string | null>(null);
   const browsing = !query.trim() && typeFilter !== 'all' && !suggested.length;
   const scanLanguage: ScanLanguage = autoLanguage ? 'auto' : language;
-  // After a scan, auto mode names what it read so a wrong guess is easy to spot.
-  const languageSummary = !autoLanguage ? LANGUAGE_LABELS[language] : detected ? `${LANGUAGE_LABELS[detected]} (detected)` : 'Auto-detect';
   // A clear, finished match gets one big yes/no question instead of a list to compare.
   const sure = mode === 'card' && !quickDismissed && !query.trim() && !browsing && !busy && improving === 'done' && suggested.length > 0 && !needsScanRefinement(suggested) ? suggested[0].card : null;
   const results = useMemo(() => !(query.trim() || browsing) ? suggested.map(s => s.card) : autoLanguage && query.trim() ? searchAnyLanguage(query, detected, 80, typeFilter) : searchCards(query, language, 80, typeFilter), [query, language, autoLanguage, detected, suggested, typeFilter, browsing]);
@@ -170,28 +169,16 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
       const added = await addCards([{ card, finish: existing?.finish ?? defaultFinish(card), quantity: 1 }]);
       if (!alive.current) return;
       ++generation.current; lastScan.current = null;
-      setSuggested([]); setPhoto(null); setOriginal(null); setManualCrop(undefined); setNote(null); setToolsOpen(false);
+      setSuggested([]); setPhoto(null); setOriginal(null); setManualCrop(undefined); setNote(null);
       onAdded(added, 'card');
     } catch (e) { console.warn('Adding card failed', e); if (alive.current) setError(OOPS); }
     finally { if (alive.current) setQuickBusy(false); }
   }
-  const toolsLabel = !autoLanguage ? LANGUAGE_LABELS[language] : detected && detected !== 'en' ? LANGUAGE_LABELS[detected] : null;
   const intro = <>
-    {/* In page mode the big title only pushed the page grid down; the switch below says where you are. */}
-    {mode === 'card' && !sure && <View><Txt accessibilityRole="header" variant="title">A new discovery awaits</Txt><Txt muted>Pokémon, Trainers, Energy—every card belongs.</Txt></View>}
+    {!sure && <View><Txt accessibilityRole="header" variant="title">Scan cards</Txt><Txt muted variant="caption">Capture a card or find it by name.</Txt></View>}
     <Segmented label="What are you scanning?" options={MODES} value={mode} onChange={id => { if (busy) return; ++generation.current; setImproving('done'); setPagePhoto(null); setMode(id); }} />
-    <View style={{ gap: S.sm }}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Scan settings${toolsLabel ? `, reading ${toolsLabel}` : ''}`} accessibilityHint="Language, crop and read again" aria-expanded={toolsOpen} onPress={() => { setToolsOpen(open => !open); setLanguageOpen(false); }} style={state => [s.languageButton, toolsOpen && { borderColor: C.ink }, pressFx(state)]}>
-        <Icon name="tools" size={18} /><View style={s.disclosureCopy}><Txt variant="control">Scan settings</Txt>{toolsLabel && <Txt muted variant="caption">{toolsLabel}</Txt>}</View><View style={{ transform: [{ rotate: toolsOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
-      </Pressable>
-      {toolsOpen && <View style={s.tools}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Card language: ${languageSummary}`} accessibilityHint="Opens language choices. Automatic detection is recommended." aria-expanded={languageOpen} onPress={() => setLanguageOpen(open => !open)} style={state => [s.languageButton, languageOpen && { borderColor: C.ink }, pressFx(state)]}>
-        <View style={s.disclosureCopy}><Txt variant="label">Card language</Txt><Txt muted variant="caption">{languageSummary}</Txt></View><View style={{ transform: [{ rotate: languageOpen ? '90deg' : '-90deg' }] }}><Icon name="back" size={16} /></View>
-      </Pressable>
-      {languageOpen && <View accessibilityRole="radiogroup" accessibilityLabel="Card language" style={s.languageMenu}>{(['auto', ...LANGUAGES] as const).map(option => <Pressable key={option} accessibilityRole="radio" accessibilityLabel={option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]} aria-checked={scanLanguage === option} onPress={() => { setLanguageOpen(false); changeLanguage(option); }} style={state => [s.languageOption, pressFx(state)]}><View style={s.disclosureCopy}><Txt variant="label" style={{ fontWeight: scanLanguage === option ? '700' : '500' }}>{option === 'auto' ? 'Auto-detect' : LANGUAGE_LABELS[option]}</Txt>{option === 'auto' && <Txt muted variant="caption">Recommended. Reads the language from your photo.</Txt>}</View>{scanLanguage === option && <Icon name="check" size={18} />}</Pressable>)}</View>}
-      {mode === 'card' && original && canRecognize && <ButtonRow><Button size="medium" title="Adjust crop" icon="scan" secondary disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setToolsOpen(false); setEditing(true); }} /><Button size="medium" title="Read again" secondary disabled={busy} onPress={() => runScan(original.uri, scanLanguage, manualCrop)} /></ButtonRow>}
-      </View>}
-    </View>
+    <ChoiceMenu<ScanLanguage> label="Card language" options={[{ id: 'auto', label: 'Auto-detect' }, ...LANGUAGES.map(id => ({ id, label: LANGUAGE_LABELS[id] }))]} value={scanLanguage} onChange={changeLanguage} />
+    {detected && photo && autoLanguage && <Txt muted variant="caption">Detected: {LANGUAGE_LABELS[detected]}</Txt>}
   </>;
   if (mode === 'page') return <PageScan header={intro} language={scanLanguage} captureRequest={captureRequest} livePhoto={pagePhoto} onCardPhoto={(next, match) => { setPagePhoto(null); setMode('card'); acceptLive(next, match); }} onAdded={added => onAdded(added, 'page')} />;
   if (editing && original) return <Animated.ScrollView {...scroll} scrollEnabled={!dragging} contentContainerStyle={[s.list, scroll.contentContainerStyle]}>
@@ -205,7 +192,6 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   return <><Animated.FlatList {...scroll} data={sure ? [] : results} keyExtractor={c => `${c.language}:${c.id}`} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled"
     ListHeaderComponent={<View style={{ gap: 16, marginBottom: 16 }}>
       {intro}
-      {PARTIAL_CATALOGS.includes(language) && <View style={s.note}><Txt muted variant="caption">{language === 'ko' ? 'Korean' : 'Chinese'} catalog coverage is still growing. If your exact set and number are missing, you can enter the card yourself.</Txt><Button size="medium" title={manual ? 'Close manual entry' : 'Enter an unlisted card'} secondary onPress={() => setManual(value => !value)} />{manual && <ManualCardForm key={language} language={language} photoUri={photo ?? undefined} onReview={card => { ++generation.current; onCard(card, card); }} />}</View>}
       {sure && <View accessibilityLiveRegion="polite" style={s.quick}>
         <Txt style={[ui.subtitle, { textAlign: 'center' }]}>Is this your card?</Txt>
         <View><CardArt card={sure} high style={s.quickArt} />{photo && <View style={s.yours}><Image source={photo} style={{ width: 58, height: 80 }} contentFit="cover" accessibilityLabel="Your photo" /><Txt style={s.yoursLabel}>Yours</Txt></View>}</View>
@@ -214,41 +200,49 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
         <ButtonRow><Button size="medium" title="No, it's not" secondary disabled={quickBusy} onPress={() => setQuickDismissed(true)} /><Button size="medium" title="See card" secondary disabled={quickBusy} onPress={() => { ++generation.current; onCard(withPhoto(sure)); }} /></ButtonRow>
       </View>}
       {!sure && <>
-      <View style={s.capture}>
-        <View style={[s.corner, { top: 16, left: 16, borderTopWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { top: 16, right: 16, borderTopWidth: 3, borderRightWidth: 3 }]} /><View style={[s.corner, { bottom: 16, left: 16, borderBottomWidth: 3, borderLeftWidth: 3 }]} /><View style={[s.corner, { bottom: 16, right: 16, borderBottomWidth: 3, borderRightWidth: 3 }]} />
-        {photo ? <ZoomablePhoto dark key={photo} aspectRatio={photoSize?.uri === photo ? photoSize.aspectRatio : 0} label="Your card photo" renderPhoto={(width, height) => <Image source={photo} style={{ width, height }} contentFit="contain" />}><Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" onLoad={({ source }) => setPhotoSize({ uri: photo, aspectRatio: source.width / source.height })} /></ZoomablePhoto> : <><Image source={require('../../assets/crafted/pokeball.png')} style={{ height: 130, width: 140 }} contentFit="contain" /><Txt variant="label" style={{ color: '#D6E3CB', textAlign: 'center' }}>Center one whole card</Txt><Txt variant="caption" style={{ color: '#A0B296', textAlign: 'center' }}>Keep the little number at the bottom sharp.</Txt></>}
+      {photo ? <View style={s.capture}>
+        <ZoomablePhoto dark key={photo} aspectRatio={photoSize?.uri === photo ? photoSize.aspectRatio : 0} label="Your card photo" renderPhoto={(width, height) => <Image source={photo} style={{ width, height }} contentFit="contain" />}><Image source={photo} style={{ height: 195, width: 150 }} contentFit="contain" accessibilityLabel="Your card photo" onLoad={({ source }) => setPhotoSize({ uri: photo, aspectRatio: source.width / source.height })} /></ZoomablePhoto>
         {busy && <View style={s.reading}><ActivityIndicator color="white" /><Txt style={{ color: 'white' }}>Reading the name and number…</Txt></View>}
-      </View>
-      <ButtonRow><Button title={photo ? 'Retake photo' : 'Take a photo'} icon="camera" onPress={() => takePhoto()} busy={busy} /><Button title="Pick from Photos" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy} /></ButtonRow>
+      </View> : <View style={s.captureGuide}><Icon name="scan" size={34} color={C.muted} /><Txt muted variant="caption" style={{ textAlign: 'center' }}>Keep the whole card and bottom number in view.</Txt></View>}
+      {original && canRecognize && <ButtonRow><Button size="medium" title="Adjust crop" icon="scan" secondary disabled={busy} onPress={() => { ++generation.current; setImproving('done'); setEditing(true); }} /><Button size="medium" title="Read again" secondary disabled={busy} onPress={() => runScan(original.uri, scanLanguage, manualCrop)} /></ButtonRow>}
+      <Button title={photo ? 'Retake photo' : 'Open camera'} icon="camera" onPress={() => takePhoto()} busy={busy} />
+      <ButtonRow><Button size="medium" title="Photos" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy} /><Button size="medium" title="Manual entry" icon="plus" secondary disabled={busy} onPress={() => { setManualLanguage(language); setManual(true); }} /></ButtonRow>
       </>}
       {improving !== 'done' && <View accessibilityLiveRegion="polite" style={s.tip}><ActivityIndicator size="small" color={C.muted} /><Txt muted style={{ flex: 1, fontSize: 14 }}>{improving === 'refining' ? 'Reading the small print… You can choose a match now.' : 'Checking pictures… You can choose a match now.'}</Txt></View>}
       <ErrorNotice text={error} />
       {note && !sure && <View style={s.note}><Txt style={{ fontSize: 14 }}>{note}</Txt></View>}
-      <View style={{ gap: S.sm }}><Txt accessibilityRole="header" style={ui.subtitle}>{sure ? 'Or search for it' : 'Or find your card'}</Txt><ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm }}>{CARD_FILTERS.map(f => <Chip key={f.id} label={f.label} selected={typeFilter === f.id} onPress={() => changeType(f.id)} />)}</ScrollView><SearchBox value={query} onChange={setQuery} placeholder="Pokémon name or card number" /></View>
+      <View style={{ gap: S.sm }}><Txt accessibilityRole="header" variant="subtitle">{sure ? 'Or search for it' : 'Find a card'}</Txt><SearchBox value={query} onChange={setQuery} placeholder="Pokémon name or card number" /><ChoiceMenu label="Card kind" options={CARD_FILTERS} value={typeFilter} onChange={changeType} /></View>
       {(typeFilter === 'energy' || energyHint) && <View style={s.note}><Txt variant="label">An Energy card with just a symbol?</Txt><Txt muted variant="caption">Pick its energy type, then check the bottom number.</Txt><View style={[ui.row, { flexWrap: 'wrap', marginTop: S.xs }]}>{ENERGY_SEARCHES.map(e => <Chip key={e.label} label={e.label} onPress={() => { changeType('energy'); setQuery(e[language]); }} />)}</View></View>}
-      {!query && typeFilter === 'all' && !suggested.length && <View style={[ui.row, { flexWrap: 'wrap' }]}>{['Pikachu', 'Eevee', 'Charizard'].map(name => <Chip key={name} label={name} onPress={() => setQuery(name)} />)}</View>}
       {results.length > 0 && !sure && <Txt variant="label">{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} found. ` : ''}Which one is yours? Tap it.</Txt>}
     </View>}
-    ListEmptyComponent={query.trim() ? <View style={s.note}><Txt style={{ fontWeight: '700' }}>No matching cards</Txt><Txt muted style={{ fontSize: 14 }}>Try just the Pokémon's name or the card number, or check the language in Scan settings.</Txt></View> : null}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, minWidth: 0, gap: S.xs }}><CardCaption name={item.name} setName={setForCard(item)?.name ?? item.id} detail={`#${item.localId} · ${LANGUAGE_CODES[item.language]}`} /><Txt muted variant="caption">{cardKindLabel(item)}</Txt>{!query && <Txt muted variant="caption">{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />{liveCamera}</>;
+    ListEmptyComponent={query.trim() ? <View style={s.note}><Txt style={{ fontWeight: '700' }}>No matching cards</Txt><Txt muted style={{ fontSize: 14 }}>Try just the Pokémon's name or the card number, or choose a different card language.</Txt></View> : null}
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`Review ${item.name} ${item.id}`} onPress={() => { ++generation.current; setImproving('done'); onCard(withPhoto(item)); }} style={({ pressed }) => [s.result, pressed && { opacity: .65 }]}><CardArt card={item} high style={s.resultArt} /><View style={s.resultDetails}><View style={{ flex: 1, minWidth: 0, gap: S.xs }}><CardCaption name={item.name} setName={setForCard(item)?.name ?? item.id} detail={`#${item.localId} · ${LANGUAGE_CODES[item.language]}`} /><Txt muted variant="caption">{cardKindLabel(item)}</Txt>{!query && <Txt muted variant="caption">{suggested.find(s => s.card.id === item.id)?.evidence}</Txt>}<CardPriceTag card={item} enabled={!busy && improving === 'done'} /></View><Icon name="arrow" size={19} color={C.muted} /></View></Pressable>} />{liveCamera}<Modal visible={manual} transparent animationType="fade" onRequestClose={() => setManual(false)} onDismiss={() => { const card = afterManual.current; afterManual.current = null; if (card) onCard(card, card); }}>
+    {manual && <Sheet title="Enter a card" onClose={() => setManual(false)} dismissible={false}><ScrollView keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" automaticallyAdjustKeyboardInsets contentContainerStyle={s.manualContent}>
+      <Txt muted variant="caption">Use the name, set code and number printed on your card.</Txt>
+      <ChoiceMenu label="Card language" options={LANGUAGES.map(id => ({ id, label: LANGUAGE_LABELS[id] }))} value={manualLanguage} onChange={setManualLanguage} />
+      {PARTIAL_CATALOGS.includes(manualLanguage) && <Txt muted variant="caption">Catalog coverage is still growing. Manual entry lets you keep unlisted cards in your binder.</Txt>}
+      <ManualCardForm key={manualLanguage} language={manualLanguage} photoUri={photo ?? undefined} onReview={card => {
+        ++generation.current; setManual(false);
+        // iOS must dismiss this sheet before the root card review modal can open.
+        if (Platform.OS === 'ios') afterManual.current = card;
+        else onCard(card, card);
+      }} />
+    </ScrollView></Sheet>}
+  </Modal></>;
 }
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 40 },
-  tools: { gap: S.sm, padding: S.md, borderRadius: R.lg, backgroundColor: '#E4ECD9' },
-  quick: { gap: S.md, padding: S.lg, borderRadius: R.lg, backgroundColor: '#FAFCF6', borderWidth: 2, borderColor: '#9FC08F' },
+  quick: { gap: S.md },
   quickArt: { width: 180, maxWidth: '70%', alignSelf: 'center' },
   yours: { position: 'absolute', left: 8, bottom: -6, padding: 3, borderRadius: 9, backgroundColor: 'white', transform: [{ rotate: '-6deg' }], alignItems: 'center', shadowColor: '#000', shadowOpacity: .2, shadowRadius: 5 },
   yoursLabel: { fontSize: 10, lineHeight: 14, fontWeight: '800' },
-  capture: { minHeight: 245, backgroundColor: '#2C4037', borderRadius: 19, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 2, overflow: 'hidden' },
-  corner: { position: 'absolute', width: 24, height: 24, borderColor: '#86B99A' },
+  capture: { minHeight: 215, backgroundColor: '#2C4037', borderRadius: 19, alignItems: 'center', justifyContent: 'center', padding: 20, gap: 2, overflow: 'hidden' },
+  captureGuide: { alignItems: 'center', justifyContent: 'center', gap: S.sm, paddingVertical: S.md },
+  manualContent: { padding: S.xl, gap: S.md, paddingBottom: S.xxl },
   reading: { position: 'absolute', inset: 0, backgroundColor: '#20392BE8', justifyContent: 'center', alignItems: 'center', gap: 10 },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   note: { padding: S.md, backgroundColor: '#DEE8D1', borderRadius: R.md, gap: S.xs },
-  languageButton: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: S.sm, borderWidth: 1, borderColor: '#C0CDB3', borderRadius: R.md, paddingHorizontal: S.md, paddingVertical: S.sm, minHeight: 48, backgroundColor: '#F5F8EE' },
-  disclosureCopy: { flex: 1, minWidth: 0, gap: 2 },
-  languageMenu: { borderRadius: R.md, padding: S.xs, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: '#C0CDB3' },
-  languageOption: { minHeight: 48, paddingHorizontal: S.md, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', gap: S.sm },
-  resultArt: { width: 200, maxWidth: '100%', alignSelf: 'center' },
-  resultDetails: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  result: { gap: S.md, backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, padding: S.md, borderRadius: R.lg, marginBottom: S.md },
+  resultArt: { width: 90, alignSelf: 'flex-start' },
+  resultDetails: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: S.sm },
+  result: { flexDirection: 'row', alignItems: 'center', gap: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line, paddingVertical: S.md },
 });

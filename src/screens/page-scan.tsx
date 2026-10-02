@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Button, ButtonRow, C, CardArt, CardCaption, ErrorNotice, Icon, IconButton, pressFx, R, S, SearchBox, Segmented, Txt, tick, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ErrorNotice, Icon, IconButton, pressFx, R, S, SearchBox, Txt, tick, ui } from '@/components/pokedex-ui';
 import { fetchCard, setForCard, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, compareCardArtwork, recognizeCard, refineCard } from '@/lib/scanner';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
@@ -194,7 +194,6 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
     }} />;
   };
   const active = selected !== null ? pockets[selected] : null;
-  const guidePocket = layout.rows > 3 ? 36 : layout.columns === 2 ? 52 : 44;
   const helper = summary.toCheck ? `Tap the ? ${summary.toCheck === 1 ? 'card to check it' : 'cards to check them'}.` : summary.ready ? 'All set! Tap a card to change it.' : 'No cards found yet. Tap a card to change it.';
 
   return <><Modal visible={liveOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setLiveOpen(false)} onDismiss={() => { const next = afterLive.current; afterLive.current = null; next?.(); }}>
@@ -202,17 +201,11 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
   </Modal><Animated.ScrollView ref={list} {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <View onLayout={e => { contentTop.current = e.nativeEvent.layout.y; }} style={{ gap: S.lg }}>
       {header}
-      <View style={{ gap: S.sm }}>
-        <Txt accessibilityRole="header" variant="label">How many cards on a page?</Txt>
-        <Segmented label="How many cards on a page?" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
-      </View>
+      <ChoiceMenu label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
       {!photo ? <>
-        <View style={s.capture}>
-          <View style={[s.pageGuide, { width: guidePocket * layout.columns + 5 * (layout.columns + 1) + 4 }]}>{pocketCrops(layout).map((_, index) => <View key={index} style={[s.guidePocket, { width: guidePocket, height: guidePocket / .716 }]}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: guidePocket * .45, height: guidePocket * .45, opacity: .55 }} contentFit="contain" /></View>)}</View>
-          <Txt variant="label" style={{ color: '#D6E3CB', marginTop: S.md, textAlign: 'center' }}>Fill the photo with one binder page</Txt>
-          <Txt variant="caption" style={{ color: '#A0B296', textAlign: 'center' }}>Hold the phone flat above the page. Tilt a little if the sleeves shine.</Txt>
-        </View>
-        <ButtonRow><Button title="Take a photo" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} /><Button title="Pick from Photos" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy || adding} /></ButtonRow>
+        <View style={s.captureGuide}><Icon name="binder" size={34} color={C.muted} /><Txt muted variant="caption" style={{ textAlign: 'center' }}>Hold the phone flat above one binder page. Tilt it slightly if the sleeves shine.</Txt></View>
+        <Button title="Open camera" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} />
+        <Button title="Photos" size="medium" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy || adding} />
       </> : <View onLayout={e => setGridWidth(e.nativeEvent.layout.width)} style={[s.grid, { gap }]}>
         {tileWidth > 0 && pockets.map((pocket, index) => {
           const card = pocket.choice ? details[detailKey(pocket.choice)] : undefined;
@@ -282,9 +275,7 @@ function PocketPanel({ index, pocket, slice, aspect, onChoose, onSkip, onClose }
 
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 40 },
-  capture: { minHeight: 245, backgroundColor: '#2C4037', borderRadius: 19, alignItems: 'center', justifyContent: 'center', padding: 20, gap: S.xs },
-  pageGuide: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, padding: 5, borderRadius: 8, borderWidth: 2, borderColor: '#86B99A' },
-  guidePocket: { aspectRatio: .716, borderRadius: 5, borderWidth: 1, borderColor: '#5E8B6E', backgroundColor: '#35503F', alignItems: 'center', justifyContent: 'center' },
+  captureGuide: { alignItems: 'center', justifyContent: 'center', gap: S.sm, paddingVertical: S.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', padding: S.sm, backgroundColor: '#2C4037', borderRadius: R.lg },
   tile: { overflow: 'hidden', borderRadius: R.sm + 2, backgroundColor: '#1F2F27', borderWidth: 3, borderColor: 'transparent' },
   tileCheck: { borderColor: C.gold },
@@ -300,7 +291,7 @@ const s = StyleSheet.create({
   helper: { textAlign: 'center' },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   note: { padding: S.md, backgroundColor: '#DEE8D1', borderRadius: R.md, gap: S.xs },
-  panel: { padding: S.lg, gap: S.md, backgroundColor: '#FAFCF6', borderRadius: R.lg, borderWidth: 1, borderColor: C.line },
+  panel: { paddingVertical: S.lg, gap: S.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
   pocketSummary: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: S.md },
   pocketCopy: { flexGrow: 1, maxWidth: '100%', minWidth: 0, gap: S.sm },
   panelSlice: { overflow: 'hidden', borderRadius: R.sm, backgroundColor: '#1F2F27' },
