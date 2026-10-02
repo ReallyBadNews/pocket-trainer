@@ -1,7 +1,7 @@
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { C, Txt, ui } from '@/components/pokedex-ui';
+import { C, R, S, Txt } from '@/components/pokedex-ui';
 
 /** Shown inside the Settings sheet; the sheet's back arrow returns to Settings. */
 export function AboutScreen() {
@@ -9,19 +9,19 @@ export function AboutScreen() {
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
 
   return <ScrollView contentContainerStyle={s.content}>
-    <Txt style={ui.title}>Pocket Pokédex</Txt>
+    <Txt accessibilityRole="header" variant="title">Pocket Pokédex</Txt>
     <Txt muted>Your Pokémon cards, collected in one place.</Txt>
     <View style={s.details}>
-      <View style={s.row}><Txt muted>Version</Txt><Txt selectable style={s.value}>{version}</Txt></View>
-      <View style={s.row}><Txt muted>Build number</Txt><Txt selectable style={s.value}>{build}</Txt></View>
+      <View style={s.row}><Txt muted variant="label">Version</Txt><Txt selectable variant="readout" style={s.value}>{version}</Txt></View>
+      <View style={s.row}><Txt muted variant="label">Build number</Txt><Txt selectable variant="readout" style={s.value}>{build}</Txt></View>
     </View>
-    <Txt muted style={{ fontSize: 13 }}>Use these numbers to check which app is installed when testing an update.</Txt>
+    <Txt muted variant="caption">Use these numbers to check which app is installed when testing an update.</Txt>
   </ScrollView>;
 }
 
 const s = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 26, gap: 16 },
-  details: { backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, borderRadius: 14, padding: 16, gap: 16 },
-  row: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', gap: 12 },
-  value: { fontWeight: '800' },
+  content: { padding: S.xl, paddingBottom: 26, gap: S.lg },
+  details: { backgroundColor: '#FAFCF6', borderWidth: 1, borderColor: C.line, borderRadius: R.lg, padding: S.lg, gap: S.lg },
+  row: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', justifyContent: 'space-between', gap: S.md },
+  value: { fontWeight: '600', flexShrink: 1 },
 });

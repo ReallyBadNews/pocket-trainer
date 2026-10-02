@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, FlatList, Pressable, StyleSheet, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import { C, CardArt, Icon, Progress, S, Txt, tick } from '@/components/pokedex-ui';
+import { C, CardArt, IconButton, Progress, S, Txt, tick } from '@/components/pokedex-ui';
 import { LANGUAGE_LABELS } from '@/lib/languages';
 import type { Entry } from '@/lib/model';
 
@@ -36,7 +36,6 @@ export function BinderPages({ entries, onEntry }: { entries: Entry[]; onEntry: (
   useEffect(() => { if (width) list.current?.scrollToOffset({ offset: current * width, animated: false }); }, [width, perSpread]);
   function go(next: number) {
     const target = Math.max(0, Math.min(spreads.length - 1, next));
-    tick();
     settled.current = target;
     list.current?.scrollToOffset({ offset: target * width, animated: !reduceMotion });
     setIndex(target);
@@ -62,19 +61,17 @@ export function BinderPages({ entries, onEntry }: { entries: Entry[]; onEntry: (
     <View style={s.pager}>
       <PageButton label="Previous page" disabled={current <= 0} flip={false} onPress={() => go(current - 1)} />
       <View style={s.pageInfo}>
-        <Txt accessibilityLiveRegion="polite" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} style={s.pageLabel}>{label}</Txt>
+        <Txt accessibilityLiveRegion="polite" variant="readout" style={s.pageLabel}>{label}</Txt>
         {spreads.length > 1 && <Progress value={current + 1} total={spreads.length} />}
       </View>
       <PageButton label="Next page" disabled={current >= spreads.length - 1} flip onPress={() => go(current + 1)} />
     </View>
-    {spreads.length > 1 && current === 0 && <Txt muted style={s.hint}>Swipe to turn the page</Txt>}
+    {spreads.length > 1 && current === 0 && <Txt muted variant="caption" style={s.hint}>Swipe to turn the page</Txt>}
   </View>;
 }
 
 function PageButton({ label, disabled, flip, onPress }: { label: string; disabled: boolean; flip: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [s.pageButton, disabled && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
-    <View style={flip && { transform: [{ rotate: '180deg' }] }}><Icon name="back" size={26} /></View>
-  </Pressable>;
+  return <View style={flip && { transform: [{ rotate: '180deg' }] }}><IconButton round icon="back" label={label} onPress={onPress} disabled={disabled} /></View>;
 }
 
 function BinderPage({ entries, page, pocket, width, spine, onEntry }: { entries: Entry[]; page: number; pocket: number; width: number; spine: 'left' | 'right'; onEntry: (entry: Entry) => void }) {
@@ -110,8 +107,7 @@ const s = StyleSheet.create({
   quantity: { position: 'absolute', bottom: 7, right: 7, backgroundColor: C.ink, paddingHorizontal: 6, borderRadius: 6 },
   quantityText: { color: 'white', fontWeight: '800', fontSize: 13, lineHeight: 19 },
   pager: { flexDirection: 'row', alignItems: 'center', gap: S.md },
-  pageInfo: { flex: 1, gap: S.sm },
-  pageButton: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3EAD9', borderBottomWidth: 3, borderBottomColor: '#C7D2BB' },
-  pageLabel: { fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  hint: { fontSize: 13, textAlign: 'center' },
+  pageInfo: { flex: 1, minWidth: 0, gap: S.sm },
+  pageLabel: { fontWeight: '600', textAlign: 'center' },
+  hint: { textAlign: 'center' },
 });
