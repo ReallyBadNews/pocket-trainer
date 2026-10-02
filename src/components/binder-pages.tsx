@@ -4,7 +4,7 @@ import { AccessibilityInfo, FlatList, Pressable, StyleSheet, View, useWindowDime
 import { useReducedMotion } from 'react-native-reanimated';
 import { C, CardArt, IconButton, Progress, S, Txt, tick } from '@/components/pokedex-ui';
 import { LANGUAGE_LABELS } from '@/lib/languages';
-import type { Entry } from '@/lib/model';
+import { collectorNumber, FINISH_LABELS, type Entry } from '@/lib/model';
 
 export type BinderView = 'grid' | 'pages';
 export const BINDER_VIEWS: { id: BinderView; label: string; icon: 'grid' | 'binder' }[] = [{ id: 'grid', label: 'Grid', icon: 'grid' }, { id: 'pages', label: 'Pages', icon: 'binder' }];
@@ -81,7 +81,7 @@ function BinderPage({ entries, page, pocket, width, spine, onEntry }: { entries:
     <View style={[s.pockets, { width: pocket * 3 + GAP * 2 }]}>{Array.from({ length: POCKETS }, (_, slot) => {
       const entry = entries[slot];
       if (!entry) return <View key={slot} accessible={false} style={[s.sleeve, { width: pocket }]}><View style={[s.empty, { width: art, height: art / .716 }]}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: art * .42, height: art * .42, opacity: .16 }} contentFit="contain" /></View></View>;
-      return <Pressable key={entry.key} accessibilityRole="button" accessibilityLabel={`${entry.card.name}, ${entry.quantity} ${entry.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[entry.card.language]}. Page ${page}, pocket ${slot + 1}`} onPress={() => onEntry(entry)} style={({ pressed }) => [s.sleeve, { width: pocket }, pressed && { opacity: .7 }]}>
+      return <Pressable key={entry.key} accessibilityRole="button" accessibilityLabel={`${entry.card.name}, ${entry.card.set.name}, ${collectorNumber(entry.card)}, ${LANGUAGE_LABELS[entry.card.language]}, ${FINISH_LABELS[entry.finish]}, ${entry.quantity} ${entry.quantity === 1 ? 'copy' : 'copies'}${entry.favorite ? ', favorite' : ''}. Page ${page}, pocket ${slot + 1}`} onPress={() => onEntry(entry)} style={({ pressed }) => [s.sleeve, { width: pocket }, pressed && { opacity: .7 }]}>
         <CardArt card={entry.card} style={{ width: art, borderRadius: 5 }} />
         <View style={s.shine} pointerEvents="none" />
         {entry.quantity > 1 && <View style={s.quantity}><Txt maxFontSizeMultiplier={1} style={s.quantityText}>×{entry.quantity}</Txt></View>}

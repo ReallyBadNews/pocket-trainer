@@ -8,7 +8,7 @@ import { useCollection } from '@/lib/collection-context';
 import { catalogSet, species, speciesById, speciesImage, normalize } from '@/lib/catalog';
 import { CARD_FILTERS, matchesCardFilter, type CardFilter } from '@/lib/card-kind';
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
-import { collectorNumber, discoveredIds, duplicateCards, totalCards, type Entry } from '@/lib/model';
+import { collectorNumber, discoveredIds, duplicateCards, FINISH_LABELS, totalCards, type Entry } from '@/lib/model';
 import { CardPriceTag, CollectionValue } from '@/components/card-values';
 import { HoloShine } from '@/components/celebration';
 import { isShiny } from '@/lib/shine';
@@ -112,14 +112,14 @@ export function BinderScreen({ onScan, onEntry, onSet, onWishlist, onlyNeedsPrin
       </View>}
       {overviewOpen && <View style={s.overview}>
         <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { clearFilters(); onNeedsPrintingChange(true); setOverviewOpen(false); }} />
-        <YourSets sets={sets} onSet={set => { setOverviewOpen(false); onSet(set); }} />
+        <YourSets sets={sets} onSet={onSet} />
       </View>}
       {priceSort && <Txt muted variant="caption">Uses the lower estimate in each range. Unpriced cards appear last.</Txt>}
       {(activeFilters > 0 || query) && <View style={s.sectionHeading}><Txt muted variant="caption" style={{ flexShrink: 1 }}>{entries.length} {entries.length === 1 ? 'card' : 'cards'}{onlyNeedsPrinting ? ' to confirm' : ' shown'}</Txt><ToolbarAction title="Clear filters" onPress={clearFilters} /></View>}
       {pages && entries.length > 0 && <BinderPages entries={entries} onEntry={onEntry} />}
     </View>}
     ListEmptyComponent={pages && entries.length > 0 ? null : <View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{onlyNeedsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{onlyNeedsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese, Korean and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : onScan} style={{ marginTop: 10 }} /></View>}
-    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[item.card.language]}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
+    renderItem={({ item }) => <Pressable accessibilityRole="button" accessibilityLabel={`${item.card.name}, ${item.card.set.name}, ${collectorNumber(item.card)}, ${LANGUAGE_LABELS[item.card.language]}, ${FINISH_LABELS[item.finish]}, ${item.quantity} ${item.quantity === 1 ? 'copy' : 'copies'}${item.favorite ? ', favorite' : ''}`} onPress={() => onEntry(item)} style={({ pressed }) => [{ flex: 1 / columns, marginBottom: 20 }, pressed && { opacity: .7 }]}>
       <View>{isShiny(item.card, item.finish) ? <HoloShine><CardArt card={item.card} /></HoloShine> : <CardArt card={item.card} />}{item.quantity > 1 && <View style={s.quantity}><Txt maxFontSizeMultiplier={1} style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>×{item.quantity}</Txt></View>}{item.favorite && <View style={s.favorite}><Icon name="heart" size={15} color={C.red} filled /></View>}</View>
       <CardCaption name={item.card.name} setName={item.card.set.name} detail={`${item.card.language !== 'en' ? `${LANGUAGE_CODES[item.card.language]} · ` : ''}${collectorNumber(item.card)}`} />
       <CardPriceTag card={item.card} finish={item.finish} />

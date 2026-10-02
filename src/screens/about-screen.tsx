@@ -1,10 +1,11 @@
+import type { ReactNode } from 'react';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { C, S, Txt } from '@/components/pokedex-ui';
 
 /** Shown inside the Settings sheet; the sheet's back arrow returns to Settings. */
-export function AboutScreen() {
+export function AboutScreen({ children }: { children?: ReactNode }) {
   const version = Application.nativeApplicationVersion ?? (Platform.OS === 'web' ? Constants.expoConfig?.version : null) ?? 'Unavailable';
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
 
@@ -15,7 +16,8 @@ export function AboutScreen() {
       <View style={s.row}><Txt muted variant="label">Version</Txt><Txt selectable variant="readout" style={s.value}>{version}</Txt></View>
       <View style={s.row}><Txt muted variant="label">Build number</Txt><Txt selectable variant="readout" style={s.value}>{build}</Txt></View>
     </View>
-    <Txt muted variant="caption">Use these numbers to check which app is installed when testing an update.</Txt>
+    <Txt muted variant="caption">Version information helps when reporting a problem.</Txt>
+    {children}
   </ScrollView>;
 }
 
