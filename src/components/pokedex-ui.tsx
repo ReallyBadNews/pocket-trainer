@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { Children, useEffect, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
+import { Children, createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
+import { ActivityIndicator, Platform, Pressable, StyleSheet, Text, TextInput, View, useWindowDimensions, type PressableStateCallbackType, type StyleProp, type ViewStyle, type TextProps, type TextStyle } from 'react-native';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
 import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
@@ -12,8 +12,20 @@ export const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
 /** One spacing and corner scale for the whole app: screens pad `xl`, sections sit `lg` apart, rows use `sm`/`md`. */
 export const S = { xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24 } as const;
 export const R = { sm: 8, md: 12, lg: 16, xl: 24, pill: 999 } as const;
+/** Text roles keep controls, card identity and supporting copy in a predictable hierarchy. */
+export const typeStyles = StyleSheet.create({
+  title: { fontSize: 27, lineHeight: 33, fontWeight: '800', letterSpacing: -.6 },
+  subtitle: { fontSize: 19, lineHeight: 25, fontWeight: '700', letterSpacing: -.2 },
+  cardTitle: { fontSize: 15, lineHeight: 20, fontWeight: '700' },
+  body: { fontSize: 15, lineHeight: 22 },
+  label: { fontSize: 14, lineHeight: 20, fontWeight: '600' },
+  caption: { fontSize: 13, lineHeight: 18 },
+  control: { fontSize: 15, lineHeight: 20, fontWeight: '600' },
+  readout: { fontSize: 13, lineHeight: 18, fontVariant: ['tabular-nums'] },
+});
 /** Every tappable thing dims a little while held, so it feels like it heard the finger. */
 export const pressFx = ({ pressed }: PressableStateCallbackType): StyleProp<ViewStyle> => pressed ? { opacity: .7 } : null;
+const ButtonRowContext = createContext(false);
 export type IconName = 'dex' | 'binder' | 'scan' | 'badge' | 'user' | 'search' | 'plus' | 'minus' | 'close' | 'back' | 'heart' | 'check' | 'download' | 'upload' | 'camera' | 'photo' | 'arrow' | 'lock' | 'tools' | 'bolt' | 'speaker' | 'note' | 'stop' | 'grid' | 'star';
 // A light tick makes small toggles feel physical, like pressing a real Pokédex button.
 export const tick = () => { Haptics.selectionAsync().catch(() => {}); };
@@ -32,47 +44,57 @@ export function Icon({ name, size = 24, color = C.ink, filled = false }: { name:
   };
   return <Svg width={size} height={size} viewBox="0 0 24 24" fill="none"><Path d={paths[name]} stroke={color} fill={filled && (name === 'heart' || name === 'star') ? color : 'none'} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" /></Svg>;
 }
-export function Txt({ children, style, muted = false, maxFontSizeMultiplier = 1.4, ...props }: TextProps & { muted?: boolean }) {
+export function Txt({ children, style, variant = 'body', muted = false, maxFontSizeMultiplier = 1.4, ...props }: TextProps & { muted?: boolean; variant?: keyof typeof typeStyles }) {
   // Small text would otherwise inherit the 22pt body line height and look double spaced.
   const own = StyleSheet.flatten(style) as TextStyle | undefined;
   const leading = own?.fontSize && own.lineHeight === undefined ? { lineHeight: Math.round(own.fontSize * 1.3) } : null;
-  return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...props} style={[ui.text, muted && { color: C.muted }, style, leading]}>{children}</Text>;
+  return <Text maxFontSizeMultiplier={maxFontSizeMultiplier} {...props} style={[ui.text, typeStyles[variant], muted && { color: C.muted }, style, leading]}>{children}</Text>;
 }
-/** `large` (56pt) is for the main thing to do on a screen; `medium` (48pt) sits in rows and panels. Labels shrink a little rather than spill into the padding. */
+/** Main actions are 56pt; panel actions are 48pt. Labels wrap at their readable size. */
 export function Button({ title, onPress, icon, secondary = false, disabled = false, busy = false, size = 'large', style }: { title: string; onPress: () => void; icon?: IconName; secondary?: boolean; disabled?: boolean; busy?: boolean; size?: 'large' | 'medium'; style?: StyleProp<ViewStyle> }) {
   const color = secondary ? C.ink : 'white', large = size === 'large';
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.button, !large && ui.buttonMedium, secondary && ui.secondary, style, (disabled || busy) && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
+  const grouped = useContext(ButtonRowContext);
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} accessibilityState={{ disabled: disabled || busy }} disabled={disabled || busy} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.button, grouped && { flexGrow: 1 }, !large && ui.buttonMedium, secondary && ui.secondary, style, (disabled || busy) && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
     {busy ? <ActivityIndicator color={color} /> : icon && <Icon name={icon} color={color} size={large ? 22 : 19} />}
-    <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} maxFontSizeMultiplier={1.2} style={{ flexShrink: 1, color, fontWeight: '800', fontSize: large ? 17 : 15, textAlign: 'center' }}>{title}</Txt>
+    <Txt variant="control" style={{ flexShrink: 1, color, fontWeight: '700', fontSize: large ? 16 : 15, textAlign: 'center' }}>{title}</Txt>
   </Pressable>;
 }
 /** Buttons side by side when they fit, stacked full width when they don't. */
 export function ButtonRow({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
-  return <View style={[ui.buttonRow, style]}>{Children.map(children, child => child ? <View style={ui.buttonSlot}>{child}</View> : null)}</View>;
+  const { fontScale } = useWindowDimensions();
+  return <ButtonRowContext.Provider value><View style={[ui.buttonRow, style]}>{Children.map(children, child => child ? <View style={[ui.buttonSlot, { flexBasis: 144 * Math.min(fontScale, 1.4) }]}>{child}</View> : null)}</View></ButtonRowContext.Provider>;
 }
 /** A quiet text action (like "Clear filters") that is still easy to hit. */
 export function LinkButton({ title, onPress, color = C.ink, style }: { title: string; onPress: () => void; color?: string; style?: StyleProp<ViewStyle> }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} hitSlop={4} onPress={() => { tick(); onPress(); }} style={state => [ui.link, style, pressFx(state)]}><Txt style={{ color, fontSize: 14, fontWeight: '700', textDecorationLine: 'underline' }}>{title}</Txt></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} hitSlop={4} onPress={() => { tick(); onPress(); }} style={state => [ui.link, style, pressFx(state)]}><Txt variant="label" style={{ color, textDecorationLine: 'underline' }}>{title}</Txt></Pressable>;
 }
 /** Two to four choices where exactly one is on, like Grid / Pages. `dark` is for the camera. */
 export function Segmented<T extends string>({ options, value, onChange, dark = false, label, style }: { options: readonly { id: T; label: string; icon?: IconName }[]; value: T; onChange: (value: T) => void; dark?: boolean; label?: string; style?: StyleProp<ViewStyle> }) {
   return <View accessibilityRole="tablist" accessibilityLabel={label} style={[ui.segmented, dark && ui.segmentedDark, style]}>{options.map(option => {
     const selected = option.id === value, color = selected ? (dark ? C.ink : C.paper) : dark ? 'white' : C.ink;
     return <Pressable key={option.id} accessibilityRole="tab" accessibilityLabel={option.label} accessibilityState={{ selected }} onPress={() => { if (!selected) { tick(); onChange(option.id); } }} style={state => [ui.segment, selected && (dark ? ui.segmentSelectedDark : ui.segmentSelected), !selected && pressFx(state)]}>
-      {option.icon && <Icon name={option.icon} size={20} color={color} />}
-      <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} maxFontSizeMultiplier={1.2} style={{ flexShrink: 1, color, fontSize: 15, fontWeight: '800' }}>{option.label}</Txt>
+      {option.icon && <Icon name={option.icon} size={18} color={color} />}
+      <Txt variant="control" style={{ flexShrink: 1, color, textAlign: 'center' }}>{option.label}</Txt>
     </Pressable>;
   })}</View>;
 }
 /** `round` gives the icon a soft circle, used for every close and back button so they all look alike. */
-export function IconButton({ icon, label, onPress, color = C.ink, filled = false, round = false, dark = false }: { icon: IconName; label: string; onPress: () => void; color?: string; filled?: boolean; round?: boolean; dark?: boolean }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} hitSlop={round ? 4 : 0} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.iconButton, round && ui.iconRound, round && dark && ui.iconRoundDark, pressed && { opacity: .6 }]}><Icon name={icon} color={dark ? 'white' : color} filled={filled} size={round ? 22 : 24} /></Pressable>;
+export function IconButton({ icon, label, onPress, color = C.ink, filled = false, round = false, dark = false, disabled = false }: { icon: IconName; label: string; onPress: () => void; color?: string; filled?: boolean; round?: boolean; dark?: boolean; disabled?: boolean }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} hitSlop={round ? 4 : 0} onPress={() => { tick(); onPress(); }} style={({ pressed }) => [ui.iconButton, round && ui.iconRound, round && dark && ui.iconRoundDark, disabled && { opacity: .4 }, pressed && { opacity: .6 }]}><Icon name={icon} color={dark ? 'white' : color} filled={filled} size={round ? 22 : 24} /></Pressable>;
+}
+/** Sheet titles wrap, while navigation stays in the same position during saving. */
+export function SheetHeader({ title, onClose, onBack, busy = false, closeLabel = 'Close', icon }: { title: string; onClose: () => void; onBack?: () => void; busy?: boolean; closeLabel?: string; icon?: IconName }) {
+  return <View style={ui.sheetHeader}>{onBack ? <IconButton round icon="back" label="Back" onPress={onBack} disabled={busy} /> : icon ? <Icon name={icon} size={22} /> : null}<Txt accessibilityRole="header" variant="subtitle" style={{ flex: 1, minWidth: 0 }}>{title}</Txt><IconButton round icon="close" label={closeLabel} onPress={onClose} disabled={busy} /></View>;
+}
+/** Card identity gets the first line of emphasis; sets and printed numbers stay readable. */
+export function CardCaption({ name, setName, detail }: { name: string; setName?: string; detail?: string }) {
+  return <View style={ui.cardCaption}><Txt variant="cardTitle" style={{ minHeight: 40 }}>{name}</Txt>{setName && <Txt variant="caption" muted>{setName}</Txt>}{detail && <Txt variant="readout" muted>{detail}</Txt>}</View>;
 }
 export function SearchBox({ value, onChange, placeholder = 'Search Pokémon…' }: { value: string; onChange: (text: string) => void; placeholder?: string }) {
-  return <View style={ui.search}><Icon name="search" size={19} color={C.muted} /><TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} returnKeyType="search" style={ui.input} />{value ? <IconButton icon="close" label="Clear search" onPress={() => onChange('')} /> : null}</View>;
+  return <View style={ui.search}><Icon name="search" size={19} color={C.muted} /><TextInput accessibilityLabel={placeholder} value={value} onChangeText={onChange} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} returnKeyType="search" maxFontSizeMultiplier={1.4} style={ui.input} />{value ? <IconButton icon="close" label="Clear search" onPress={() => onChange('')} /> : null}</View>;
 }
 export function Chip({ label, selected, onPress }: { label: string; selected?: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={state => [ui.chip, selected && ui.chipSelected, !selected && pressFx(state)]}><Txt numberOfLines={1} maxFontSizeMultiplier={1.25} style={{ color: selected ? C.paper : C.ink, fontWeight: '700', fontSize: 14 }}>{label}</Txt></Pressable>;
+  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ selected }} onPress={() => { tick(); onPress(); }} style={state => [ui.chip, selected && ui.chipSelected, !selected && pressFx(state)]}><Txt variant="label" style={{ color: selected ? C.paper : C.ink, flexShrink: 1 }}>{label}</Txt></Pressable>;
 }
 // Read-only pills sit inside a labeled row; pass onPress for a 44pt filter chip with its own label.
 export function TypePill({ type, count, selected = false, onPress }: { type: PokemonType; count?: number; selected?: boolean; onPress?: () => void }) {
@@ -114,19 +136,21 @@ export function ErrorNotice({ text }: { text: string | null }) {
 }
 export const ui = StyleSheet.create({
   text: { color: C.ink, fontSize: 15, lineHeight: 22, fontFamily: Platform.OS === 'ios' ? 'System' : undefined },
-  title: { fontSize: 29, lineHeight: 35, fontWeight: '900', letterSpacing: -.8 },
-  subtitle: { fontSize: 19, lineHeight: 25, fontWeight: '800', letterSpacing: -.3 },
+  title: typeStyles.title,
+  subtitle: typeStyles.subtitle,
   row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   between: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-  button: { minHeight: 56, borderRadius: 16, backgroundColor: C.red, paddingHorizontal: 18, paddingVertical: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderBottomWidth: 3, borderBottomColor: C.redDark },
-  buttonMedium: { minHeight: 48, borderRadius: 14, paddingHorizontal: 14, gap: 7 },
+  button: { minHeight: 56, borderRadius: R.lg, backgroundColor: C.red, paddingHorizontal: 16, paddingVertical: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, borderBottomWidth: 2, borderBottomColor: C.redDark },
+  buttonMedium: { minHeight: 48, borderRadius: R.md, paddingHorizontal: 12, paddingVertical: 10, gap: S.sm },
   secondary: { backgroundColor: '#E3EAD9', borderBottomColor: '#C7D2BB' },
-  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  buttonSlot: { flexGrow: 1 },
+  buttonRow: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm, alignItems: 'stretch' },
+  buttonSlot: { flexGrow: 1, flexShrink: 0, maxWidth: '100%', justifyContent: 'center' },
   link: { minHeight: 44, justifyContent: 'center' },
-  segmented: { flexDirection: 'row', padding: 4, gap: 4, borderRadius: 16, backgroundColor: '#E3EAD9', borderWidth: 1, borderColor: '#C7D2BB' },
+  segmented: { flexDirection: 'row', padding: S.xs, gap: S.xs, borderRadius: R.lg, backgroundColor: '#E3EAD9', borderWidth: 1, borderColor: '#C7D2BB' },
   segmentedDark: { backgroundColor: '#FFFFFF1F', borderColor: '#FFFFFF33' },
-  segment: { flex: 1, minHeight: 48, borderRadius: 12, paddingHorizontal: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  segment: { flex: 1, minWidth: 0, minHeight: 44, borderRadius: R.md, paddingHorizontal: S.sm, paddingVertical: S.sm, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm },
+  sheetHeader: { flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingHorizontal: S.lg, paddingVertical: S.sm, minHeight: 64, borderBottomWidth: 1, borderColor: C.line, backgroundColor: '#DFE8D4' },
+  cardCaption: { gap: 2, marginTop: S.sm },
   segmentSelected: { backgroundColor: C.ink },
   segmentSelectedDark: { backgroundColor: 'white' },
   iconButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
@@ -134,7 +158,7 @@ export const ui = StyleSheet.create({
   iconRoundDark: { backgroundColor: '#FFFFFF2E' },
   search: { flexDirection: 'row', alignItems: 'center', paddingLeft: 15, paddingRight: 4, minHeight: 48, backgroundColor: '#FFFFFFA8', borderWidth: 1, borderColor: C.line, borderRadius: 12, gap: 10 },
   input: { flex: 1, minWidth: 0, minHeight: 48, color: C.ink, fontSize: 15 },
-  chip: { minHeight: 44, justifyContent: 'center', paddingHorizontal: 15, borderRadius: 22, borderWidth: 1, borderColor: C.line },
+  chip: { minHeight: 44, maxWidth: '100%', justifyContent: 'center', paddingHorizontal: 14, paddingVertical: S.sm, borderRadius: R.pill, borderWidth: 1, borderColor: C.line },
   chipSelected: { backgroundColor: C.ink, borderColor: C.ink },
   typePill: { flexDirection: 'row', alignItems: 'center', gap: 6, minHeight: 28, paddingHorizontal: 12, borderRadius: 14 },
   typeChip: { minHeight: 44, borderRadius: 22, borderWidth: 3, borderColor: 'transparent' },
