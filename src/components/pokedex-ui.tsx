@@ -80,7 +80,7 @@ export function ActionRow({ title, value, detail, icon, onPress, disabled = fals
   </Pressable>;
 }
 /** Compact choices use the native iOS picker sheet; other platforms get the same checked options. */
-export function ChoiceMenu<T extends string>({ label, options, value, onChange, compact = false, icon, style }: { label: string; options: readonly { id: T; label: string }[]; value: T; onChange: (value: T) => void; compact?: boolean; icon?: IconName; style?: StyleProp<ViewStyle> }) {
+export function ChoiceMenu<T extends string>({ label, options, value, onChange, compact = false, triggerTitle, icon, style }: { label: string; options: readonly { id: T; label: string }[]; value: T; onChange: (value: T) => void; compact?: boolean; triggerTitle?: string; icon?: IconName; style?: StyleProp<ViewStyle> }) {
   const [open, setOpen] = useState(false);
   const selected = options.find(option => option.id === value);
   const choose = (index: number) => { const option = options[index]; if (option && option.id !== value) { tick(); onChange(option.id); } };
@@ -91,7 +91,7 @@ export function ChoiceMenu<T extends string>({ label, options, value, onChange, 
   };
   return <>
     <Pressable accessibilityRole="button" accessibilityLabel={`${label}, ${selected?.label ?? value}`} accessibilityHint="Opens choices" onPress={show} style={state => [compact ? ui.toolbarAction : ui.actionRow, style, pressFx(state)]}>
-      {icon && <Icon name={icon} size={18} />}<Txt variant={compact ? 'caption' : 'body'} style={{ flex: 1, minWidth: 0, fontWeight: compact ? '600' : '500' }}>{compact ? selected?.label : label}</Txt>{!compact && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '67%', textAlign: 'right' }}>{selected?.label}</Txt>}<View style={{ transform: [{ rotate: compact ? '-90deg' : '180deg' }] }}><Icon name="back" size={14} color={C.muted} /></View>
+      {icon && <Icon name={icon} size={18} />}<Txt variant={compact ? 'caption' : 'body'} style={{ flex: 1, minWidth: 0, fontWeight: compact ? '600' : '500' }}>{compact ? triggerTitle ?? selected?.label : label}</Txt>{!compact && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '67%', textAlign: 'right' }}>{selected?.label}</Txt>}<View style={{ transform: [{ rotate: compact ? '-90deg' : '180deg' }] }}><Icon name="back" size={14} color={C.muted} /></View>
     </Pressable>
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}><View style={ui.menuOverlay}><Pressable accessibilityRole="button" accessibilityLabel="Close choices" onPress={() => setOpen(false)} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal style={ui.menuSheet}><SheetHeader title={label} onClose={() => setOpen(false)} /><ScrollView style={{ flexShrink: 1 }} contentContainerStyle={{ paddingHorizontal: S.lg }}><View accessibilityRole="radiogroup" accessibilityLabel={label}>{options.map((option, index) => <Pressable key={option.id} accessibilityRole="radio" accessibilityState={{ checked: option.id === value }} aria-checked={option.id === value} onPress={() => { setOpen(false); choose(index); }} style={state => [ui.actionRow, pressFx(state)]}><Txt style={{ flex: 1, fontWeight: option.id === value ? '600' : '400' }}>{option.label}</Txt>{option.id === value && <Icon name="check" size={18} />}</Pressable>)}</View></ScrollView></View></View></Modal>
   </>;
