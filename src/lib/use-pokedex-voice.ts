@@ -17,28 +17,34 @@ export function usePokedexVoice() {
   const [speaking, setSpeaking] = useState<number | null>(null);
   const player = useRef<AudioPlayer | null>(null);
   const alive = useRef(true);
+  const generation = useRef(0);
   useEffect(() => {
     alive.current = true;
-    return () => { alive.current = false; Speech.stop(); player.current?.remove(); player.current = null; };
+    return () => { alive.current = false; generation.current++; void Speech.stop(); player.current?.remove(); player.current = null; };
   }, []);
   async function cry(id: number) {
     const url = cryUrl(id);
     if (!url) return;
+    const request = ++generation.current;
+    setSpeaking(null);
+    player.current?.remove(); player.current = null;
+    await Speech.stop();
     await prepareAudio();
-    if (!alive.current) return;
-    player.current?.remove();
+    if (!alive.current || request !== generation.current) return;
     try { player.current = createAudioPlayer(url); player.current.play(); } catch { player.current = null; }
   }
   async function speak(id: number) {
     const text = pokedexLine(id);
     if (!text) return;
+    const request = ++generation.current;
+    player.current?.remove(); player.current = null;
     await Speech.stop();
     const identifier = await pickVoice();
-    if (!alive.current) return;
+    if (!alive.current || request !== generation.current) return;
     setSpeaking(id);
-    const done = () => { if (alive.current) setSpeaking(current => current === id ? null : current); };
+    const done = () => { if (alive.current && request === generation.current) setSpeaking(null); };
     Speech.speak(text, { language: 'en-US', voice: identifier, pitch: 1.05, rate: .92, onDone: done, onStopped: done, onError: done });
   }
-  function stop() { void Speech.stop(); setSpeaking(null); }
+  function stop() { generation.current++; void Speech.stop(); player.current?.remove(); player.current = null; setSpeaking(null); }
   return { speaking, speak, stop, cry };
 }

@@ -1,9 +1,7 @@
 import { DeviceMotion } from 'expo-sensors';
-import * as Haptics from 'expo-haptics';
-import { Image } from 'expo-image';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
-import Animated, { Easing, makeMutable, useAnimatedStyle, useReducedMotion, useSharedValue, withDelay, withRepeat, withSequence, withTiming, ZoomIn, type SharedValue } from 'react-native-reanimated';
+import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
+import Animated, { Easing, makeMutable, useAnimatedStyle, useReducedMotion, useSharedValue, withRepeat, withSequence, withTiming, type SharedValue } from 'react-native-reanimated';
 
 // One motion listener feeds every shimmering card; it runs only while at least one is on screen.
 const tilt = makeMutable(0);
@@ -70,41 +68,8 @@ export function Confetti({ count = 30 }: { count?: number }) {
   return <View pointerEvents="none" style={s.burst}>{Array.from({ length: count }, (_, i) => <Piece key={i} progress={progress} seed={i + 1} />)}</View>;
 }
 
-const WIGGLES = [300, 850, 1400];
-export const CATCH_MS = 1900;
-/**
- * The Poké Ball wiggles three times like a catch in the games, clicks, then opens with confetti and
- * reveals `children`. Tapping skips ahead; reduced motion shows the result straight away.
- */
-export function CatchReveal({ children, onReveal }: { children: ReactNode; onReveal?: () => void }) {
-  const reduced = useReducedMotion();
-  const [revealed, setRevealed] = useState(reduced);
-  const rotate = useSharedValue(0);
-  useEffect(() => {
-    if (reduced) { onReveal?.(); return; }
-    const wiggle = (delay: number) => withDelay(delay, withSequence(withTiming(-20, { duration: 110 }), withTiming(20, { duration: 170 }), withTiming(0, { duration: 110 })));
-    rotate.value = withSequence(wiggle(WIGGLES[0]), wiggle(160), wiggle(160));
-    const timers = WIGGLES.map(at => setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}), at + 120));
-    timers.push(setTimeout(reveal, CATCH_MS));
-    return () => timers.forEach(clearTimeout);
-  }, []);
-  function reveal() {
-    setRevealed(current => {
-      if (!current) { Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {}); onReveal?.(); }
-      return true;
-    });
-  }
-  const ball = useAnimatedStyle(() => ({ transform: [{ rotate: `${rotate.value}deg` }] }));
-  if (revealed) return <View style={s.stage}>{!reduced && <Confetti />}<Animated.View entering={reduced ? undefined : ZoomIn.springify().damping(11)} style={{ alignItems: 'center' }}>{children}</Animated.View></View>;
-  return <Pressable accessibilityRole="button" accessibilityLabel="Open the Poké Ball" onPress={reveal} style={s.stage}>
-    <Animated.View style={[s.ballPivot, ball]}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /></Animated.View>
-  </Pressable>;
-}
-
 const s = StyleSheet.create({
   band: { position: 'absolute', top: '-30%', height: '160%', flexDirection: 'row' },
   burst: { position: 'absolute', left: '50%', top: '45%', width: 0, height: 0, zIndex: 3 },
   piece: { position: 'absolute', borderRadius: 2 },
-  stage: { minHeight: 290, width: '100%', alignItems: 'center', justifyContent: 'center' },
-  ballPivot: { transformOrigin: 'bottom' },
 });

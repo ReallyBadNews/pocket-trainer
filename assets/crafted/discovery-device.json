@@ -1,0 +1,23 @@
+{
+  "width": 600,
+  "height": 680,
+  "logicalSize": {
+    "width": 300,
+    "height": 340
+  },
+  "screen": {
+    "x": 0.24981134,
+    "y": 0.26226443,
+    "width": 0.50037731,
+    "height": 0.3773585,
+    "cornerRadius": 0.014
+  },
+  "screenPixels": {
+    "x": 149.887,
+    "y": 178.34,
+    "width": 300.226,
+    "height": 256.604
+  },
+  "source": "assets/blender/pokedex-device.blend",
+  "camera": "Orthographic, straight on; no image skew required"
+}
