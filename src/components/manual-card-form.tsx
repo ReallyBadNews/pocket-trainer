@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { TextInput, View } from 'react-native';
+import { TextInput, View, useWindowDimensions } from 'react-native';
 import { Button, C, Chip, ErrorNotice, S, Segmented, Txt, ui } from './pokedex-ui';
 import { normalize, species } from '@/lib/catalog';
 import { LANGUAGES } from '@/lib/languages';
@@ -14,6 +14,9 @@ const CHINESE_EXAMPLE = { name: '四季鹿', set: 'CBB4C', number: '17 07/07', s
 const CARD_KINDS = [{ id: 'Pokemon', label: 'Pokémon' }, { id: 'Trainer', label: 'Trainer' }, { id: 'Energy', label: 'Energy' }] as const;
 
 export function ManualCardForm({ language, photoUri, onReview }: { language: Language; photoUri?: string; onReview: (card: Card) => void }) {
+  const { fontScale } = useWindowDimensions();
+  const [kindWidth, setKindWidth] = useState(0);
+  const stackKinds = kindWidth > 0 && kindWidth < 264 * Math.min(fontScale, 1.4);
   const [name, setName] = useState('');
   const [setCode, setSetCode] = useState('');
   const [number, setNumber] = useState('');
@@ -29,7 +32,7 @@ export function ManualCardForm({ language, photoUri, onReview }: { language: Lan
     {field('Name on card', name, setName, example.name)}
     {field('Set code', setCode, setSetCode, example.set)}
     {field('Number at the bottom', number, setNumber, example.number)}
-    <View style={{ gap: S.xs }}><Txt variant="label">Card kind</Txt><Segmented label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} /></View>
+    <View onLayout={event => setKindWidth(event.nativeEvent.layout.width)} style={{ gap: S.xs }}><Txt variant="label">Card kind</Txt><Segmented label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} style={stackKinds && { flexDirection: 'column' }} /></View>
     {category === 'Pokemon' && <>
       {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `English / ${example.script} name or Pokédex number`)}
       <Txt muted variant="caption">Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
