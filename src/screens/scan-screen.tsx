@@ -177,7 +177,7 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
   const intro = <>
     {!sure && <View><Txt accessibilityRole="header" variant="title">Scan cards</Txt><Txt muted variant="caption">Capture a card or find it by name.</Txt></View>}
     <Segmented label="What are you scanning?" options={MODES} value={mode} onChange={id => { if (busy) return; ++generation.current; setImproving('done'); setPagePhoto(null); setMode(id); }} />
-    <ChoiceMenu<ScanLanguage> label="Card language" options={[{ id: 'auto', label: 'Auto-detect' }, ...LANGUAGES.map(id => ({ id, label: LANGUAGE_LABELS[id] }))]} value={scanLanguage} onChange={changeLanguage} />
+    <ChoiceMenu<ScanLanguage> disabled={busy || quickBusy} label="Card language" options={[{ id: 'auto', label: 'Auto-detect' }, ...LANGUAGES.map(id => ({ id, label: LANGUAGE_LABELS[id] }))]} value={scanLanguage} onChange={changeLanguage} />
     {detected && photo && autoLanguage && <Txt muted variant="caption">Detected: {LANGUAGE_LABELS[detected]}</Txt>}
   </>;
   if (mode === 'page') return <PageScan header={intro} language={scanLanguage} captureRequest={captureRequest} livePhoto={pagePhoto} onCardPhoto={(next, match) => { setPagePhoto(null); setMode('card'); acceptLive(next, match); }} onAdded={added => onAdded(added, 'page')} />;
@@ -211,7 +211,7 @@ function ScanSession({ onCard, onAdded, captureRequest, initialQuery = '', autoL
       {improving !== 'done' && <View accessibilityLiveRegion="polite" style={s.tip}><ActivityIndicator size="small" color={C.muted} /><Txt muted style={{ flex: 1, fontSize: 14 }}>{improving === 'refining' ? 'Reading the small print… You can choose a match now.' : 'Checking pictures… You can choose a match now.'}</Txt></View>}
       <ErrorNotice text={error} />
       {note && !sure && <View style={s.note}><Txt style={{ fontSize: 14 }}>{note}</Txt></View>}
-      <View style={{ gap: S.sm }}><Txt accessibilityRole="header" variant="subtitle">{sure ? 'Or search for it' : 'Find a card'}</Txt><SearchBox value={query} onChange={setQuery} placeholder="Pokémon name or card number" /><ChoiceMenu label="Card kind" options={CARD_FILTERS} value={typeFilter} onChange={changeType} /></View>
+      <View style={{ gap: S.sm }}><Txt accessibilityRole="header" variant="subtitle">{sure ? 'Or search for it' : 'Find a card'}</Txt><SearchBox value={query} onChange={setQuery} placeholder="Pokémon name or card number" /><ChoiceMenu disabled={busy || quickBusy} label="Card kind" options={CARD_FILTERS} value={typeFilter} onChange={changeType} /></View>
       {(typeFilter === 'energy' || energyHint) && <View style={s.note}><Txt variant="label">An Energy card with just a symbol?</Txt><Txt muted variant="caption">Pick its energy type, then check the bottom number.</Txt><View style={[ui.row, { flexWrap: 'wrap', marginTop: S.xs }]}>{ENERGY_SEARCHES.map(e => <Chip key={e.label} label={e.label} onPress={() => { changeType('energy'); setQuery(e[language]); }} />)}</View></View>}
       {results.length > 0 && !sure && <Txt variant="label">{query || browsing ? `${results.length === 80 ? 'First 80' : results.length} found. ` : ''}Which one is yours? Tap it.</Txt>}
     </View>}

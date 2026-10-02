@@ -201,7 +201,7 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
   </Modal><Animated.ScrollView ref={list} {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <View onLayout={e => { contentTop.current = e.nativeEvent.layout.y; }} style={{ gap: S.lg }}>
       {header}
-      <ChoiceMenu label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
+      <ChoiceMenu disabled={busy || adding} label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
       {!photo ? <>
         <View style={s.captureGuide}><Icon name="binder" size={34} color={C.muted} /><Txt muted variant="caption" style={{ textAlign: 'center' }}>Hold the phone flat above one binder page. Tilt it slightly if the sleeves shine.</Txt></View>
         <Button title="Open camera" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} />

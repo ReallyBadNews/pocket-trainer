@@ -89,12 +89,12 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     {card && <>
       <View style={m.cardHero}><ZoomablePhoto aspectRatio={.716} label={`${card.name} card`} renderPhoto={(width) => <CardArt card={card} high style={{ width }} />}>{isShiny(card, finish) ? <HoloShine style={{ width: 160, maxWidth: '100%' }}><CardArt key={card.id} card={card} high /></HoloShine> : <CardArt key={card.id} card={card} high style={{ width: 160, maxWidth: '100%' }} />}</ZoomablePhoto></View>
       <View style={{ gap: S.xs }}>
-        <View style={ui.between}><View style={{ flex: 1, minWidth: 0 }}><Txt variant="title">{card.name}</Txt>{card.language !== 'en' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
+        <View style={ui.between}><View style={{ flex: 1, minWidth: 0 }}><Txt variant="title">{card.name}</Txt>{card.language !== 'en' && card.dexIds.length > 0 && <Txt muted>{card.dexIds.map(id => speciesById.get(id)?.en).filter(Boolean).join(' & ')}</Txt>}</View>{liveEntry && <IconButton disabled={busy} icon="heart" color={liveEntry.favorite ? C.red : C.muted} filled={liveEntry.favorite} label={liveEntry.favorite ? 'Remove from favorites' : 'Add to favorites'} onPress={() => run(() => updateTrainer(t => ({ ...t, entries: t.entries.map(e => e.key === liveEntry.key ? { ...e, favorite: !e.favorite } : e) })))} />}</View>
         <Txt variant="caption" muted>{card.set.name} · {LANGUAGE_LABELS[card.language]}</Txt>
         <Txt variant="readout" muted>#{collectorNumber(card)} · {card.rarity} · {cardKindLabel(card)}{card.hp ? ` · HP ${card.hp}` : ''}</Txt>
         <Txt variant="caption" muted>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
       </View>
-      <View style={m.section}><ChoiceMenu label="Printing" options={printingChoices.map(id => ({ id, label: FINISH_LABELS[id] }))} value={finish} onChange={value => !busy && setFinish(value)} />{!entry && <Txt variant="caption" muted>Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around it. “Not sure yet” is okay.</Txt>}</View>
+      <View style={m.section}><ChoiceMenu disabled={busy} label="Printing" options={printingChoices.map(id => ({ id, label: FINISH_LABELS[id] }))} value={finish} onChange={value => !busy && setFinish(value)} />{!entry && <Txt variant="caption" muted>Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around it. “Not sure yet” is okay.</Txt>}</View>
       {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setRemoving(true) : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
         <CardValuePanel card={card} finish={finish} quantity={liveEntry.quantity} />
         {card.description && <Txt>{card.description}</Txt>}
@@ -189,7 +189,7 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
 }
 
 function TrainerChoiceRow({ title, options, value, labels, busy, onChange }: { title: string; options: readonly string[]; value: string; labels: Record<string, string>; busy: boolean; onChange: (value: string) => void }) {
-  return <ChoiceMenu label={title} options={options.map(id => ({ id, label: labels[id] }))} value={value} onChange={next => !busy && onChange(next)} />;
+  return <ChoiceMenu disabled={busy} label={title} options={options.map(id => ({ id, label: labels[id] }))} value={value} onChange={next => !busy && onChange(next)} />;
 }
 
 type Feedback = { at: string; note?: string; error?: string };
