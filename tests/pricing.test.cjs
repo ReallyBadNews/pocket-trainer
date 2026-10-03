@@ -1,7 +1,8 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { DAY, priceKey, parseCardPricing, parseExchangeRate, quotePrice, quoteLabel, collectionValue, parsePriceCache } = require('../.test-build/lib/pricing');
+const { DAY, HOUR, priceKey, parseCardPricing, parseExchangeRate, quotePrice, quoteLabel, collectionValue, mostValuable, needsRefresh, parsePriceCache } = require('../.test-build/lib/pricing');
 const { PriceClient } = require('../.test-build/lib/price-client');
+const { fetchCardData } = require('../.test-build/lib/card-api');
 const { changePrinting, entryKey, freshCollection, addCard } = require('../.test-build/lib/model');
 const fixtures = require('./fixtures/prices.json');
 const now = Date.parse('2026-09-06T19:00:00Z');
@@ -127,4 +128,75 @@ test('FX failure never labels EUR as USD and successful snapshots persist separa
   const jp = brief('SV5K-025', 'ja'); await client.ensure([jp]); await until(() => !client.pending.size); await client.flush();
   assert.equal(quotePrice(client.snapshots[priceKey(jp)], 'holo', client.fx, now), null);
   assert.ok(client.errors.has('fx')); assert.equal(writes, 1);
+});
+
+test('the most valuable printing ranks by its low estimate and skips unpriced cards', () => {
+  const make = (id, finish, quantity = 1) => ({ key: id + finish, card: { ...card, ...brief(id) }, finish, quantity });
+  const data = Object.fromEntries(['base1-58', 'sm12-221', 'sm9-156'].map(id => [priceKey(brief(id)), snapshot(id)]));
+  // Quantity never promotes a cheap card: ten Stadiums are still worth less each than one TAG TEAM.
+  const top = mostValuable([make('sm9-156', 'unsure', 10), make('missing', 'normal'), make('sm12-221', 'holo'), make('base1-58', 'normal', 3)], data, fx, now);
+  assert.equal(top.entry.card.id, 'sm12-221'); assert.equal(top.quote.low, 56804);
+  assert.equal(mostValuable([make('missing', 'normal')], data, fx, now), undefined);
+});
+
+test('prices refresh when the provider’s next daily update is due, without hourly retries for stalled listings', () => {
+  const published = Date.parse('2026-10-01T22:54:00Z');
+  const at = (checkedAt, updatedAt = published) => ({ key: 'en:x', checkedAt, finishes: ['normal'], prices: [{ finish: 'normal', amount: 1, currency: 'USD', source: 'TCGplayer', updatedAt: new Date(updatedAt).toISOString() }] });
+  // Fetched the afternoon after a publish: wait for the next publish (plus slack), not a full day after fetching.
+  const afternoon = at(published + 20 * HOUR);
+  assert.equal(needsRefresh(afternoon, published + 24 * HOUR), false);
+  assert.equal(needsRefresh(afternoon, published + DAY + HOUR), true);
+  // The same check right after fetching never repeats within the hour.
+  assert.equal(needsRefresh(at(published + DAY + 30 * 60_000), published + DAY + HOUR + 1), false);
+  // Prices that were already a day old when fetched (the provider was late, or the card stopped trading) wait a full day.
+  const late = at(published + DAY + 2 * HOUR);
+  assert.equal(needsRefresh(late, published + DAY + 5 * HOUR), false);
+  assert.equal(needsRefresh(late, published + 2 * DAY + 2 * HOUR), true);
+  // Cards with no price at all keep the daily check.
+  const empty = { key: 'en:x', checkedAt: now, finishes: [], prices: [] };
+  assert.equal(needsRefresh(empty, now + DAY - 1), false); assert.equal(needsRefresh(empty, now + DAY), true);
+});
+
+test('an early refresh skips a shared card response older than the snapshot it replaces', async () => {
+  const s = snapshot('base1-58'), published = Date.parse(s.prices[0].updatedAt);
+  let clock = published + 20 * HOUR; const calls = [];
+  const cached = { ...s, checkedAt: clock };
+  const client = new PriceClient({ now: () => clock, read: async () => JSON.stringify({ version: 1, snapshots: [cached], fx }), write: async () => {}, exchange: async () => ({}),
+    card: async (c, force, after) => { calls.push({ force, after }); return sample('base1-58'); } });
+  await client.ensure([brief()]); assert.equal(calls.length, 0);
+  clock = published + DAY + 2 * HOUR; await client.ensure([brief()]); await until(() => !client.pending.size);
+  assert.deepEqual(calls, [{ force: false, after: cached.checkedAt }]);
+  assert.equal(client.snapshots[s.key].checkedAt, clock);
+
+  const originalFetch = global.fetch; let requests = 0;
+  global.fetch = async () => { requests++; return { ok: true, json: async () => ({ id: 'shared-1' }) }; };
+  try {
+    const shared = brief('shared-1');
+    await fetchCardData(shared); await fetchCardData(shared); assert.equal(requests, 1);
+    await fetchCardData(shared, false, Date.now() + 1); assert.equal(requests, 2);
+  } finally { global.fetch = originalFetch; }
+});
+
+test('a burst of settled prices repaints listeners once with a fresh state, and waking notifies screens to re-check', async () => {
+  const pending = [];
+  const client = new PriceClient({ now: () => now, read: async () => null, write: async () => {}, exchange: async () => ({}),
+    card: c => new Promise(resolve => pending.push(() => resolve({ id: c.id }))) });
+  let repaints = 0; client.subscribe(() => repaints++);
+  // Screens are memoized by the React Compiler, so they read an immutable state that is replaced on every change.
+  const initial = client.getState();
+  assert.equal(client.getState(), initial); assert.equal(initial.ready, false);
+  await client.ensure(Array.from({ length: 3 }, (_, i) => brief(`burst-${i}`)));
+  const loading = client.getState();
+  assert.notEqual(loading, initial); assert.equal(loading.ready, true); assert.equal(loading.pending.size, 3);
+  await new Promise(resolve => setTimeout(resolve, 80)); repaints = 0;
+  const before = client.revision;
+  pending.forEach(resolve => resolve()); await until(() => !client.pending.size);
+  assert.ok(client.revision - before >= 3);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(repaints, 1);
+  assert.equal(client.getState().pending.size, 0); assert.equal(loading.pending.size, 3);
+  assert.equal(Object.keys(client.getState().snapshots).length, 3);
+  client.wake(); assert.equal(client.getState().wakes, 1);
+  await new Promise(resolve => setTimeout(resolve, 80));
+  assert.equal(repaints, 2);
 });
