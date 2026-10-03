@@ -22,6 +22,7 @@
       }
     },
     "android": {
+      "package": "com.reallybadnews.pockettrainer",
       "predictiveBackGestureEnabled": false
     },
     "web": {
