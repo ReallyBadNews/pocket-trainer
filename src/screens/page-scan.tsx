@@ -3,8 +3,8 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, ButtonRow, C, CardArt, ErrorNotice, Icon, IconButton, pressFx, R, S, SearchBox, Segmented, Txt, tick, ui } from '@/components/pokedex-ui';
+import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Button, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ErrorNotice, Icon, IconButton, pressFx, R, S, SearchBox, Txt, tick, ui } from '@/components/pokedex-ui';
 import { fetchCard, setForCard, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, compareCardArtwork, recognizeCard, refineCard } from '@/lib/scanner';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
@@ -194,7 +194,6 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
     }} />;
   };
   const active = selected !== null ? pockets[selected] : null;
-  const guidePocket = layout.rows > 3 ? 36 : layout.columns === 2 ? 52 : 44;
   const helper = summary.toCheck ? `Tap the ? ${summary.toCheck === 1 ? 'card to check it' : 'cards to check them'}.` : summary.ready ? 'All set! Tap a card to change it.' : 'No cards found yet. Tap a card to change it.';
 
   return <><Modal visible={liveOpen} animationType="slide" presentationStyle="fullScreen" onRequestClose={() => setLiveOpen(false)} onDismiss={() => { const next = afterLive.current; afterLive.current = null; next?.(); }}>
@@ -202,17 +201,11 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
   </Modal><Animated.ScrollView ref={list} {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <View onLayout={e => { contentTop.current = e.nativeEvent.layout.y; }} style={{ gap: S.lg }}>
       {header}
-      <View style={{ gap: S.sm }}>
-        <Txt accessibilityRole="header" style={{ fontWeight: '800', fontSize: 15 }}>How many cards on a page?</Txt>
-        <Segmented label="How many cards on a page?" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
-      </View>
+      <ChoiceMenu disabled={busy || adding} label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
       {!photo ? <>
-        <View style={s.capture}>
-          <View style={[s.pageGuide, { width: guidePocket * layout.columns + 5 * (layout.columns + 1) + 4 }]}>{pocketCrops(layout).map((_, index) => <View key={index} style={[s.guidePocket, { width: guidePocket, height: guidePocket / .716 }]}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: guidePocket * .45, height: guidePocket * .45, opacity: .55 }} contentFit="contain" /></View>)}</View>
-          <Txt style={{ color: '#D6E3CB', fontWeight: '700', fontSize: 15, marginTop: S.md, textAlign: 'center' }}>Fill the photo with one binder page</Txt>
-          <Txt style={{ color: '#A0B296', fontSize: 13, textAlign: 'center' }}>Hold the phone flat above the page. Tilt a little if the sleeves shine.</Txt>
-        </View>
-        <ButtonRow><Button title="Take a photo" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} /><Button title="Pick from Photos" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy || adding} /></ButtonRow>
+        <View style={s.captureGuide}><Icon name="binder" size={34} color={C.muted} /><Txt muted variant="caption" style={{ textAlign: 'center' }}>Hold the phone flat above one binder page. Tilt it slightly if the sleeves shine.</Txt></View>
+        <Button title="Open camera" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} />
+        <Button title="Photos" size="medium" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy || adding} />
       </> : <View onLayout={e => setGridWidth(e.nativeEvent.layout.width)} style={[s.grid, { gap }]}>
         {tileWidth > 0 && pockets.map((pocket, index) => {
           const card = pocket.choice ? details[detailKey(pocket.choice)] : undefined;
@@ -241,9 +234,9 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
       }}><PocketPanel index={selected} pocket={active} slice={slice(selected, 120, 120 / pocketAspect)} aspect={pocketAspect}
         onChoose={card => choose(selected, card)} onSkip={() => { updatePocket(selected, { skipped: !active.skipped }); }} onClose={() => setSelected(null)} /></View>}
       <ErrorNotice text={error} />
-      {note && <View style={s.note}><Txt style={{ fontSize: 14 }}>{note}</Txt></View>}
+      {note && <View style={s.note}><Txt variant="caption">{note}</Txt></View>}
       {photo && !busy && pockets.length > 0 && <>
-        <Txt accessibilityLiveRegion="polite" style={s.helper}>{helper}</Txt>
+        <Txt accessibilityLiveRegion="polite" variant="label" style={s.helper}>{helper}</Txt>
         <Button title={summary.ready ? `Add ${summary.ready} ${summary.ready === 1 ? 'card' : 'cards'}` : 'No cards ready yet'} icon="plus" disabled={!summary.ready} busy={adding} onPress={addPage} />
       </>}
       {photo && <Button title="Scan another page" icon="camera" secondary onPress={() => takePhoto()} disabled={busy || adding} />}
@@ -253,37 +246,36 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
 
 function PocketPanel({ index, pocket, slice, aspect, onChoose, onSkip, onClose }: { index: number; pocket: Pocket; slice: ReactNode; aspect: number; onChoose: (card: CardBrief) => void; onSkip: () => void; onClose: () => void }) {
   const [query, setQuery] = useState('');
+  const { fontScale } = useWindowDimensions();
   const results = useMemo(() => query.trim() ? searchAnyLanguage(query, pocket.choice?.language ?? null, 12) : pocket.matches.slice(0, 6).map(m => m.card), [query, pocket]);
   const included = pocketIncluded(pocket);
   const options = !!query || results.length > 1;
   return <View style={s.panel}>
-    <View style={ui.between}><Txt accessibilityRole="header" style={ui.subtitle}>Pocket {index + 1}</Txt><IconButton round icon="close" label="Close" onPress={onClose} /></View>
-    <View style={[ui.row, { alignItems: 'flex-start', gap: S.md }]}>
-      <View style={{ alignItems: 'center', gap: S.xs }}><View style={[s.panelSlice, { width: 120, height: 120 / aspect }]}>{slice}</View><Txt muted style={{ fontSize: 12 }}>Your card</Txt></View>
-      <View style={{ flex: 1, gap: S.xs }}>
-        {pocket.choice && !pocket.skipped ? <><Txt style={{ fontWeight: '800', fontSize: 17 }}>{pocket.choice.name}</Txt><Txt muted style={{ fontSize: 13 }}>{setForCard(pocket.choice)?.name ?? pocket.choice.id} · #{pocket.choice.localId}</Txt>
-          {included ? <View style={[ui.row, { gap: S.xs }]}><Icon name="check" size={18} color="#3E7A48" /><Txt style={{ fontSize: 14, color: '#3E7A48', fontWeight: '800' }}>Ready to add</Txt></View> : <Txt style={{ fontSize: 14, fontWeight: '700' }}>Is this your card?</Txt>}</>
-          : <Txt style={{ fontSize: 14 }}>{pocket.skipped ? 'This one will be skipped.' : pocket.status === 'empty' ? 'This pocket looks empty.' : "Hmm, we can't read this one. Type its name below."}</Txt>}
+    <View style={ui.between}><Txt accessibilityRole="header" variant="subtitle" style={{ flex: 1, minWidth: 0 }}>Pocket {index + 1}</Txt><IconButton round icon="close" label="Close" onPress={onClose} /></View>
+    <View style={s.pocketSummary}>
+      <View style={{ alignItems: 'center', gap: S.xs }}><View style={[s.panelSlice, { width: 120, height: 120 / aspect }]}>{slice}</View><Txt muted variant="caption">Your card</Txt></View>
+      <View style={[s.pocketCopy, { flexBasis: 152 * Math.min(fontScale, 1.4) }]}>
+        {pocket.choice && !pocket.skipped ? <><CardCaption name={pocket.choice.name} setName={setForCard(pocket.choice)?.name ?? pocket.choice.id} detail={`#${pocket.choice.localId}`} />
+          {included ? <View style={[ui.row, { gap: S.xs }]}><Icon name="check" size={18} color="#3E7A48" /><Txt variant="label" style={{ flex: 1, minWidth: 0, color: '#3E7A48' }}>Ready to add</Txt></View> : <Txt variant="label">Is this your card?</Txt>}</>
+          : <Txt variant="caption">{pocket.skipped ? 'This one will be skipped.' : pocket.status === 'empty' ? 'This pocket looks empty.' : "Hmm, we can't read this one. Type its name below."}</Txt>}
       </View>
     </View>
     <ButtonRow>
       {pocket.choice && !pocket.skipped && !included && <Button size="medium" title="Yes, that's it!" icon="check" onPress={() => onChoose(pocket.choice!)} />}
       <Button size="medium" title={pocket.skipped ? 'Put it back' : 'Skip it'} secondary onPress={onSkip} />
     </ButtonRow>
-    {options && <Txt style={{ fontWeight: '800', fontSize: 15 }}>{query ? (results.length ? 'Search results' : 'No matching cards') : 'Is it one of these?'}</Txt>}
+    {options && <Txt variant="label">{query ? (results.length ? 'Search results' : 'No matching cards') : 'Is it one of these?'}</Txt>}
     {options && <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: S.sm }}>{results.map(card => {
       const current = pocket.choice?.id === card.id && pocket.choice.language === card.language && !pocket.skipped;
-      return <Pressable key={`${card.language}:${card.id}`} accessibilityRole="button" accessibilityLabel={`Choose ${card.name} ${card.localId}`} accessibilityState={{ selected: current }} onPress={() => { tick(); onChoose(card); }} style={state => [s.option, current && { borderColor: C.ink }, pressFx(state)]}><CardArt card={card} style={{ width: 104 }} /><Txt numberOfLines={1} style={{ fontSize: 13, fontWeight: '700', width: 104 }}>{card.name}</Txt><Txt muted numberOfLines={1} style={{ fontSize: 12, width: 104 }}>#{card.localId} · {setForCard(card)?.name ?? card.id}</Txt></Pressable>;
+      return <Pressable key={`${card.language}:${card.id}`} accessibilityRole="button" accessibilityLabel={`Choose ${card.name} ${card.localId}`} accessibilityState={{ selected: current }} onPress={() => { tick(); onChoose(card); }} style={state => [s.option, current && { borderColor: C.ink }, pressFx(state)]}><CardArt card={card} /><CardCaption name={card.name} setName={setForCard(card)?.name ?? card.id} detail={`#${card.localId}`} /></Pressable>;
     })}</ScrollView>}
     <SearchBox value={query} onChange={setQuery} placeholder="Type the Pokémon's name" />
   </View>;
 }
 
 const s = StyleSheet.create({
-  list: { padding: 20, paddingBottom: 40 },
-  capture: { minHeight: 245, backgroundColor: '#2C4037', borderRadius: 19, alignItems: 'center', justifyContent: 'center', padding: 20, gap: S.xs },
-  pageGuide: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, padding: 5, borderRadius: 8, borderWidth: 2, borderColor: '#86B99A' },
-  guidePocket: { aspectRatio: .716, borderRadius: 5, borderWidth: 1, borderColor: '#5E8B6E', backgroundColor: '#35503F', alignItems: 'center', justifyContent: 'center' },
+  list: { padding: S.xl, paddingBottom: 40 },
+  captureGuide: { alignItems: 'center', justifyContent: 'center', gap: S.sm, paddingVertical: S.md },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', padding: S.sm, backgroundColor: '#2C4037', borderRadius: R.lg },
   tile: { overflow: 'hidden', borderRadius: R.sm + 2, backgroundColor: '#1F2F27', borderWidth: 3, borderColor: 'transparent' },
   tileCheck: { borderColor: C.gold },
@@ -296,10 +288,12 @@ const s = StyleSheet.create({
   newSlot: { position: 'absolute', left: 4, bottom: 4 },
   newTag: { backgroundColor: C.red, paddingHorizontal: 5, paddingVertical: 1, borderRadius: 6, borderWidth: 1.5, borderColor: 'white', transform: [{ rotate: '-4deg' }] },
   newText: { fontWeight: '900', fontSize: 10, lineHeight: 13, color: 'white', letterSpacing: .4 },
-  helper: { fontSize: 14, fontWeight: '600', textAlign: 'center' },
+  helper: { textAlign: 'center' },
   tip: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  note: { padding: 14, backgroundColor: '#DEE8D1', borderRadius: R.md, gap: 3 },
-  panel: { padding: S.lg, gap: S.md, backgroundColor: '#FAFCF6', borderRadius: R.lg, borderWidth: 1, borderColor: C.line },
+  note: { padding: S.md, backgroundColor: '#DEE8D1', borderRadius: R.md, gap: S.xs },
+  panel: { paddingVertical: S.lg, gap: S.md, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: C.line },
+  pocketSummary: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'flex-start', gap: S.md },
+  pocketCopy: { flexGrow: 1, maxWidth: '100%', minWidth: 0, gap: S.sm },
   panelSlice: { overflow: 'hidden', borderRadius: R.sm, backgroundColor: '#1F2F27' },
-  option: { gap: 3, padding: 4, borderRadius: 10, borderWidth: 2, borderColor: 'transparent' },
+  option: { width: 128, padding: S.xs, borderRadius: R.md, borderWidth: 2, borderColor: 'transparent' },
 });

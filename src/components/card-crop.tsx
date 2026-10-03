@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useMemo, useRef, useState } from 'react';
 import { PanResponder, StyleSheet, View } from 'react-native';
-import { Button, ButtonRow, C, S, Txt, ui } from './pokedex-ui';
+import { Button, ButtonRow, C, S, Txt } from './pokedex-ui';
 import { fullCrop, resizeCrop, type Crop } from '@/lib/scan-types';
 
 export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
@@ -25,8 +25,8 @@ export function CardCrop({ photo, initial, onConfirm, onCancel, onDrag }: {
   })), []);
   const [x, y, w, h] = crop;
   return <View style={{ gap: S.lg }}>
-    <Txt style={ui.subtitle}>Which card are we reading?</Txt>
-    <Txt muted style={{ fontSize: 14 }}>Drag the four dots around one whole card. Keep its name and bottom number inside.</Txt>
+    <Txt accessibilityRole="header" variant="subtitle">Which card are we reading?</Txt>
+    <Txt muted variant="caption">Drag the four dots around one whole card. Keep its name and bottom number inside.</Txt>
     <View style={s.stage} onLayout={event => setAvailable(Math.max(80, event.nativeEvent.layout.width - 44))}>
       <View style={{ width, height }}>
         <Image source={photo.uri} style={{ width, height }} contentFit="fill" accessibilityLabel="Original photo with adjustable card selection" />
