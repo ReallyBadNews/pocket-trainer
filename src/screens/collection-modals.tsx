@@ -1,6 +1,7 @@
 import { CardInspection } from '@/components/card-inspection';
+import { DiscoveryDevice } from '@/components/discovery-device';
 import { Image } from 'expo-image';
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ActionRow, Button, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ErrorNotice, Icon, IconButton, S, SheetHeader, ToolbarAction, TypePill, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
@@ -21,9 +22,9 @@ import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
 import { animatedSprite } from '@/lib/pokedex-voice';
 import { usePokedexVoice } from '@/lib/use-pokedex-voice';
-import { CatchReveal, Confetti, HoloShine } from '@/components/celebration';
+import { Confetti, HoloShine } from '@/components/celebration';
 import { isShiny } from '@/lib/shine';
-import Reanimated, { ZoomIn } from 'react-native-reanimated';
+import Reanimated, { useReducedMotion, ZoomIn } from 'react-native-reanimated';
 
 /** `overlay` (the grown-up check) covers the sheet and hides it from screen readers while open. `onBack` adds a back arrow for sub-pages; `dismissible={false}` stops a stray tap outside from throwing away a game or unsaved work. */
 export function Sheet({ title, onClose, onBack, children, busy = false, dismissible = true, overlay }: { title: string; onClose: () => void; onBack?: () => void; children: ReactNode; busy?: boolean; dismissible?: boolean; overlay?: ReactNode }) {
@@ -329,26 +330,51 @@ export function WishlistModal({ onClose, onCard, onFind }: { onClose: () => void
 }
 
 export function DiscoveryModal({ card, newIds, quantity, granted = 0, nextLabel, onNext, onClose }: { card: Card; newIds: number[]; quantity: number; granted?: number; nextLabel: string; onNext: () => void; onClose: () => void }) {
-  const [revealed, setRevealed] = useState(false);
+  const reduced = useReducedMotion();
+  const [revealed, setRevealed] = useState(reduced);
+  const [index, setIndex] = useState(0);
+  const reveal = useCallback(() => setRevealed(true), []);
   const discovered = newIds.length > 0;
-  const pokemon = speciesById.get(newIds[0]);
+  const id = newIds[index];
+  const pokemon = speciesById.get(id);
   const voice = usePokedexVoice();
-  // Like the anime Pokédex: the new Pokémon calls out, then its entry is read. VoiceOver users keep control.
-  useEffect(() => {
-    if (!pokemon || !revealed) return;
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    AccessibilityInfo.isScreenReaderEnabled().then(reader => {
-      if (cancelled || reader) return;
-      void voice.cry(pokemon.id);
-      timer = setTimeout(() => { if (!cancelled) void voice.speak(pokemon.id); }, 1400);
-    });
-    return () => { cancelled = true; clearTimeout(timer); };
-  }, [pokemon?.id, revealed]);
-  const list = newIds.map(id => speciesById.get(id)?.en ?? `#${id}`), names = list.length > 2 ? `${list.slice(0, -1).join(', ')} & ${list.at(-1)}` : list.join(' & ');
-  // The next steps wait until the Poké Ball opens, so the first tap goes to the ball.
   const ready = !discovered || revealed;
-  return <Sheet title={discovered ? 'New Pokémon discovered!' : 'Added to your binder!'} onClose={onClose} dismissible={false}><ScrollView contentContainerStyle={[m.content, { alignItems: 'center' }]}><View style={m.discoveryStage}><View style={m.discoveryRing} />{discovered ? <CatchReveal onReveal={() => setRevealed(true)}><View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', zIndex: 2 }}>{newIds.map(id => <Image key={id} accessibilityLabel={speciesById.get(id)?.en} source={speciesImage(id)} style={{ width: newIds.length > 1 ? 95 : 220, height: newIds.length > 1 ? 130 : 210 }} contentFit="contain" />)}</View><Image source={require('../../assets/crafted/pokeball-open.png')} style={{ width: 155, height: 145, marginTop: -25 }} contentFit="contain" /></CatchReveal> : <><Confetti count={18} /><Reanimated.View entering={ZoomIn.springify().damping(12)}>{isShiny(card) ? <HoloShine style={{ width: 185, marginVertical: 20 }}><CardArt card={card} /></HoloShine> : <CardArt card={card} style={{ width: 185, marginVertical: 20 }} />}</Reanimated.View></>}</View>{discovered && !revealed ? <View style={{ alignItems: 'center', gap: S.xs }}><Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>Who’s inside?</Txt><Txt variant="label" muted style={{ textAlign: 'center' }}>Tap the Poké Ball!</Txt></View> : <><Txt accessibilityLiveRegion="polite" style={[ui.title, { textAlign: 'center' }]}>{discovered ? newIds.length > 2 ? `${newIds.length} new Pokémon!` : names : quantity > 1 ? `${quantity} cards added!` : card.name}</Txt>{discovered && newIds.length > 2 && <Txt variant="label" style={{ textAlign: 'center' }}>{names}</Txt>}<Txt muted style={{ textAlign: 'center' }}>{discovered ? newIds.length === 1 ? 'It’s in your Pokédex now!' : 'They’re in your Pokédex now!' : quantity > 1 ? 'Your binder keeps growing!' : 'It’s in your binder now!'}</Txt>{pokemon && newIds.length === 1 && <View style={m.languageTag}><Txt variant="caption" style={{ textAlign: 'center' }}><Txt variant="readout" style={{ fontFamily: mono }}>#{String(pokemon.id).padStart(3, '0')}</Txt> · {pokemon.genus}</Txt></View>}{pokemon && <Pressable accessibilityRole="button" accessibilityLabel={voice.speaking === pokemon.id ? 'Stop reading' : `Hear ${pokemon.en}'s Pokédex entry`} onPress={() => voice.speaking === pokemon.id ? voice.stop() : (void voice.cry(pokemon.id), void voice.speak(pokemon.id))} style={({ pressed }) => [m.voiceButton, voice.speaking === pokemon.id && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={voice.speaking === pokemon.id ? 'stop' : 'speaker'} size={18} color={voice.speaking === pokemon.id ? 'white' : C.ink} /><Txt variant="control" style={[m.voiceText, voice.speaking === pokemon.id && { color: 'white' }]}>{voice.speaking === pokemon.id ? 'Stop' : 'Hear it again'}</Txt></Pressable>}{granted > 0 && <View style={m.wishBadge}><Icon name="star" size={18} color={WISH.star} filled /><Txt variant="caption" style={m.wishBadgeText}>{granted === 1 ? 'Wish granted! It’s off your wishlist.' : `${granted} wishes granted! They’re off your wishlist.`}</Txt></View>}</>}{ready && <ButtonRow style={{ alignSelf: 'stretch', marginTop: S.sm }}><Button title={nextLabel} icon="camera" onPress={onNext} /><Button title="Done" secondary onPress={onClose} /></ButtonRow>}</ScrollView></Sheet>;
+  function select(next: number) { voice.stop(); setIndex(next); }
+  useEffect(() => {
+    if (!discovered || !revealed || Platform.OS !== 'ios') return;
+    let cancelled = false;
+    void AccessibilityInfo.isScreenReaderEnabled().then(enabled => {
+      if (enabled && !cancelled) AccessibilityInfo.announceForAccessibility(`${pokemon?.en ?? `Pokémon number ${id}`} discovered.${newIds.length > 1 ? ` ${index + 1} of ${newIds.length} new Pokémon.` : ''}`);
+    });
+    return () => { cancelled = true; };
+  }, [discovered, revealed, id, index, newIds.length, pokemon?.en]);
+
+  return <Sheet title={discovered ? 'Pokédex updated' : 'Added to your binder'} onClose={onClose} dismissible={false}>
+    <ScrollView contentContainerStyle={[m.content, { alignItems: 'center' }]}>
+      {discovered ? <DiscoveryDevice id={id} onReveal={reveal} /> : <View style={m.savedCard}>
+        {!reduced && <Confetti count={18} />}
+        <Reanimated.View entering={reduced ? undefined : ZoomIn.duration(220)}>
+          {isShiny(card) ? <HoloShine style={{ width: 185 }}><CardArt card={card} /></HoloShine> : <CardArt card={card} style={{ width: 185 }} />}
+        </Reanimated.View>
+      </View>}
+      <View style={m.discoveryCopy}>
+        <Txt accessibilityRole="header" accessibilityLiveRegion="polite" variant="title" style={m.center}>{!ready ? 'A new discovery…' : discovered ? pokemon?.en ?? `Pokémon #${id}` : quantity > 1 ? `${quantity} cards added` : card.name}</Txt>
+        <Txt muted style={m.center}>{!ready ? 'Tap the Pokédex to reveal it.' : discovered ? 'Discovered in your collection' : 'Saved in your binder'}</Txt>
+        {ready && pokemon && <Txt variant="caption" muted style={m.center}>#{String(pokemon.id).padStart(3, '0')} · {pokemon.genus}</Txt>}
+      </View>
+      {ready && discovered && newIds.length > 1 && <View style={m.discoveryPager}>
+        <IconButton icon="back" label="Previous discovery" disabled={index === 0} onPress={() => select(index - 1)} />
+        <Txt variant="caption" accessibilityLiveRegion="polite">{index + 1} of {newIds.length} new Pokémon</Txt>
+        <View style={{ transform: [{ rotate: '180deg' }] }}><IconButton icon="back" label="Next discovery" disabled={index === newIds.length - 1} onPress={() => select(index + 1)} /></View>
+      </View>}
+      {ready && pokemon && <View style={m.discoveryAudio}>
+        <ToolbarAction title={voice.speaking === id ? 'Stop reading' : 'Hear entry'} icon={voice.speaking === id ? 'stop' : 'speaker'} onPress={() => voice.speaking === id ? voice.stop() : void voice.speak(id)} />
+        <ToolbarAction title="Play cry" icon="note" onPress={() => void voice.cry(id)} />
+      </View>}
+      {ready && granted > 0 && <View style={m.wishBadge}><Icon name="star" size={18} color={WISH.star} filled /><Txt variant="caption" style={m.wishBadgeText}>{granted === 1 ? 'Wish granted. It’s off your wishlist.' : `${granted} wishes granted. They’re off your wishlist.`}</Txt></View>}
+    </ScrollView>
+    {ready && <View style={m.footer}><ButtonRow><Button title="Done" onPress={onClose} /><Button title={nextLabel} icon="camera" secondary onPress={onNext} /></ButtonRow></View>}
+  </Sheet>;
 }
 
 const m = StyleSheet.create({
@@ -382,5 +408,8 @@ const m = StyleSheet.create({
   wishRemove: { position: 'absolute', top: 0, right: 0, width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   wishRemoveDot: { width: 30, height: 30, borderRadius: 15, backgroundColor: '#FFFFFFE8', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.line },
   wishEmpty: { alignItems: 'center', gap: S.lg, paddingVertical: S.xl }, wishEmptyStar: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center' },
-  discoveryStage: { width: '100%', alignItems: 'center', justifyContent: 'center', minHeight: 290 }, discoveryRing: { position: 'absolute', width: '100%', maxWidth: 265, aspectRatio: 1, borderRadius: 140, backgroundColor: '#D6E7BD', borderWidth: 16, borderColor: '#E3EDCD' },
+  savedCard: { alignItems: 'center', paddingVertical: S.lg },
+  discoveryCopy: { alignSelf: 'stretch', gap: S.xs }, center: { textAlign: 'center' },
+  discoveryPager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, flexWrap: 'wrap' },
+  discoveryAudio: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.md, flexWrap: 'wrap' },
 });
