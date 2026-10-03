@@ -21,7 +21,7 @@ import { setProgress, type SetProgress } from '@/lib/set-progress';
 import { BINDER_VIEWS, BinderPages, type BinderView } from '@/components/binder-pages';
 import { wishesOf } from '@/lib/wishlist';
 
-export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onScan: () => void; onSpecies: (id: number) => void; onNeedsPrinting: () => void; onQuiz: () => void }) {
+export function DexScreen({ onScan, onSpecies, onEntry, onNeedsPrinting, onQuiz }: { onScan: () => void; onSpecies: (id: number) => void; onEntry: (entry: Entry) => void; onNeedsPrinting: () => void; onQuiz: () => void }) {
   const scroll = useChromeScroll();
   const { trainer } = useCollection();
   const [query, setQuery] = useState('');
@@ -41,6 +41,7 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onSc
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" columnWrapperStyle={{ gap: S.md }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
       <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} discovered</Txt><QuizInvite onPlay={onQuiz} /><ToolbarAction title="Overview" expanded={overviewOpen} onPress={() => setOverviewOpen(open => !open)} /></View></View>
+      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onNeedsPrinting={onNeedsPrinting} onEntry={onEntry} />}
       <SearchBox value={query} onChange={setQuery} placeholder="Find a Pokémon by name or number" />
       <View style={s.toolbar}>
         <ChoiceMenu compact label="Show Pokémon" options={['All Pokémon', 'Discovered', 'Kanto'].map(label => ({ id: label, label }))} value={filter} onChange={setFilter} style={s.menu} />
@@ -49,7 +50,6 @@ export function DexScreen({ onScan, onSpecies, onNeedsPrinting, onQuiz }: { onSc
       {overviewOpen && <View style={s.overview}>
         <View style={s.section}><Txt accessibilityRole="header" variant="subtitle">Your discoveries</Txt><Progress value={discovered.size} total={species.length} /><Txt muted variant="caption">{discovered.size} Pokémon discovered · {totalCards(trainer)} cards in binder</Txt>{!!trainer.quizBest && <Txt muted variant="caption">Best quiz score: {trainer.quizBest}/{QUIZ_LENGTH}</Txt>}</View>
         {types.length > 0 && <View style={s.section}><Txt accessibilityRole="header" variant="subtitle">Your types</Txt><View style={s.typeBar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{types.map(t => <View key={t.type} style={{ flex: t.count, backgroundColor: TYPE_COLORS[t.type] }} />)}</View>{types.map(t => <Pressable key={t.type} accessibilityRole="button" accessibilityLabel={`${typeLabel(t.type)}, ${t.count} discovered. ${activeType === t.type ? 'Show every type' : 'Show this type'}`} accessibilityState={{ selected: activeType === t.type }} onPress={() => { tick(); setTypeFilter(activeType === t.type ? null : t.type); setOverviewOpen(false); }} style={state => [s.typeRow, pressFx(state)]}><View style={[s.typeDot, { backgroundColor: TYPE_COLORS[t.type] }]} /><Txt style={{ flex: 1 }}>{typeLabel(t.type)}</Txt><Txt muted variant="readout">{t.count}</Txt>{activeType === t.type && <Icon name="check" size={18} />}</Pressable>)}</View>}
-        <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { setOverviewOpen(false); onNeedsPrinting(); }} />
       </View>}
       {!discovered.size && filter !== 'Discovered' && !query && !activeType && <View style={s.section}>
         <Txt accessibilityRole="header" variant="subtitle">Your first discovery is waiting</Txt><Txt muted variant="caption">Add a Pokémon card to bring its entry to life.</Txt><Button size="medium" title="Scan a card" icon="scan" onPress={onScan} style={{ alignSelf: 'flex-start' }} />
@@ -98,20 +98,20 @@ export function BinderScreen({ onScan, onEntry, onSet, onWishlist, onlyNeedsPrin
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
     ListHeaderComponent={<View style={s.header}>
       <View><View style={s.collectionTitle}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Binder</Txt><IconButton icon="plus" label="Add card" color={C.redDark} onPress={onScan} /><IconButton icon="star" label={`Wishlist (${wishCount})`} onPress={onWishlist} /></View><Txt muted variant="caption">{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'}{duplicateCards(trainer) ? ` · ${duplicateCards(trainer)} ${duplicateCards(trainer) === 1 ? 'double' : 'doubles'}` : ''}</Txt></View>
+      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onEntry={onEntry} onNeedsPrinting={() => { clearFilters(); onNeedsPrintingChange(true); setOverviewOpen(false); }} />}
       <SearchBox value={query} onChange={setQuery} placeholder="Search your cards" />
       <View style={s.toolbar}>
         <ChoiceMenu compact triggerTitle="View" label="Binder view" options={BINDER_VIEWS} value={view} onChange={onViewChange} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
         <ChoiceMenu compact triggerTitle="Sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={setSort} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
         <ToolbarAction title={filtersOpen ? 'Done' : activeFilters ? `Filter (${activeFilters})` : 'Filter'} expanded={filtersOpen} onPress={() => { setOverviewOpen(false); setFiltersOpen(open => !open); }} style={[s.tool, { flexBasis: (activeFilters ? 96 : 74) * Math.min(fontScale, 1.4) }]} />
-        <ToolbarAction title="Overview" expanded={overviewOpen} onPress={() => { setFiltersOpen(false); setOverviewOpen(open => !open); }} style={[s.tool, { flexBasis: 80 * Math.min(fontScale, 1.4) }]} />
+        {sets.length > 0 && <ToolbarAction title="Sets" expanded={overviewOpen} onPress={() => { setFiltersOpen(false); setOverviewOpen(open => !open); }} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />}
       </View>
       {filtersOpen && <View style={s.section}>
         <ChoiceMenu label="Show" options={['All cards', 'Favorites', 'Doubles', 'Japanese', 'Korean', 'Chinese'].map(label => ({ id: label, label }))} value={filter} onChange={setFilter} />
         <ChoiceMenu label="Card kind" options={CARD_FILTERS} value={typeFilter} onChange={setTypeFilter} />
         <ChoiceMenu label="Printing" options={[{ id: 'all', label: 'All printings' }, { id: 'needs', label: `Needs printing (${confirmationCount})` }]} value={onlyNeedsPrinting ? 'needs' : 'all'} onChange={value => onNeedsPrintingChange(value === 'needs')} />
       </View>}
-      {overviewOpen && <View style={s.overview}>
-        <CollectionValue entries={trainer.entries} onNeedsPrinting={() => { clearFilters(); onNeedsPrintingChange(true); setOverviewOpen(false); }} />
+      {overviewOpen && sets.length > 0 && <View style={s.overview}>
         <YourSets sets={sets} onSet={onSet} />
       </View>}
       {priceSort && <Txt muted variant="caption">Uses the lower estimate in each range. Unpriced cards appear last.</Txt>}
