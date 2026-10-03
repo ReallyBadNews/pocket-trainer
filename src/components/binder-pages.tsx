@@ -2,9 +2,9 @@ import { Image } from 'expo-image';
 import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, FlatList, Pressable, StyleSheet, View, useWindowDimensions, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import { useReducedMotion } from 'react-native-reanimated';
-import { C, CardArt, Icon, Progress, S, Txt, tick } from '@/components/pokedex-ui';
+import { C, CardArt, IconButton, Progress, S, Txt, tick } from '@/components/pokedex-ui';
 import { LANGUAGE_LABELS } from '@/lib/languages';
-import type { Entry } from '@/lib/model';
+import { collectorNumber, FINISH_LABELS, type Entry } from '@/lib/model';
 
 export type BinderView = 'grid' | 'pages';
 export const BINDER_VIEWS: { id: BinderView; label: string; icon: 'grid' | 'binder' }[] = [{ id: 'grid', label: 'Grid', icon: 'grid' }, { id: 'pages', label: 'Pages', icon: 'binder' }];
@@ -36,7 +36,6 @@ export function BinderPages({ entries, onEntry }: { entries: Entry[]; onEntry: (
   useEffect(() => { if (width) list.current?.scrollToOffset({ offset: current * width, animated: false }); }, [width, perSpread]);
   function go(next: number) {
     const target = Math.max(0, Math.min(spreads.length - 1, next));
-    tick();
     settled.current = target;
     list.current?.scrollToOffset({ offset: target * width, animated: !reduceMotion });
     setIndex(target);
@@ -62,19 +61,17 @@ export function BinderPages({ entries, onEntry }: { entries: Entry[]; onEntry: (
     <View style={s.pager}>
       <PageButton label="Previous page" disabled={current <= 0} flip={false} onPress={() => go(current - 1)} />
       <View style={s.pageInfo}>
-        <Txt accessibilityLiveRegion="polite" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.8} style={s.pageLabel}>{label}</Txt>
+        <Txt accessibilityLiveRegion="polite" variant="readout" style={s.pageLabel}>{label}</Txt>
         {spreads.length > 1 && <Progress value={current + 1} total={spreads.length} />}
       </View>
       <PageButton label="Next page" disabled={current >= spreads.length - 1} flip onPress={() => go(current + 1)} />
     </View>
-    {spreads.length > 1 && current === 0 && <Txt muted style={s.hint}>Swipe to turn the page</Txt>}
+    {spreads.length > 1 && current === 0 && <Txt muted variant="caption" style={s.hint}>Swipe to turn the page</Txt>}
   </View>;
 }
 
 function PageButton({ label, disabled, flip, onPress }: { label: string; disabled: boolean; flip: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} disabled={disabled} onPress={onPress} style={({ pressed }) => [s.pageButton, disabled && { opacity: .45 }, pressed && { opacity: .85, transform: [{ translateY: 2 }] }]}>
-    <View style={flip && { transform: [{ rotate: '180deg' }] }}><Icon name="back" size={26} /></View>
-  </Pressable>;
+  return <View style={flip && { transform: [{ rotate: '180deg' }] }}><IconButton round icon="back" label={label} onPress={onPress} disabled={disabled} /></View>;
 }
 
 function BinderPage({ entries, page, pocket, width, spine, onEntry }: { entries: Entry[]; page: number; pocket: number; width: number; spine: 'left' | 'right'; onEntry: (entry: Entry) => void }) {
@@ -84,7 +81,7 @@ function BinderPage({ entries, page, pocket, width, spine, onEntry }: { entries:
     <View style={[s.pockets, { width: pocket * 3 + GAP * 2 }]}>{Array.from({ length: POCKETS }, (_, slot) => {
       const entry = entries[slot];
       if (!entry) return <View key={slot} accessible={false} style={[s.sleeve, { width: pocket }]}><View style={[s.empty, { width: art, height: art / .716 }]}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: art * .42, height: art * .42, opacity: .16 }} contentFit="contain" /></View></View>;
-      return <Pressable key={entry.key} accessibilityRole="button" accessibilityLabel={`${entry.card.name}, ${entry.quantity} ${entry.quantity === 1 ? 'copy' : 'copies'}, ${LANGUAGE_LABELS[entry.card.language]}. Page ${page}, pocket ${slot + 1}`} onPress={() => onEntry(entry)} style={({ pressed }) => [s.sleeve, { width: pocket }, pressed && { opacity: .7 }]}>
+      return <Pressable key={entry.key} accessibilityRole="button" accessibilityLabel={`${entry.card.name}, ${entry.card.set.name}, ${collectorNumber(entry.card)}, ${LANGUAGE_LABELS[entry.card.language]}, ${FINISH_LABELS[entry.finish]}, ${entry.quantity} ${entry.quantity === 1 ? 'copy' : 'copies'}${entry.favorite ? ', favorite' : ''}. Page ${page}, pocket ${slot + 1}`} onPress={() => onEntry(entry)} style={({ pressed }) => [s.sleeve, { width: pocket }, pressed && { opacity: .7 }]}>
         <CardArt card={entry.card} style={{ width: art, borderRadius: 5 }} />
         <View style={s.shine} pointerEvents="none" />
         {entry.quantity > 1 && <View style={s.quantity}><Txt maxFontSizeMultiplier={1} style={s.quantityText}>×{entry.quantity}</Txt></View>}
@@ -110,8 +107,7 @@ const s = StyleSheet.create({
   quantity: { position: 'absolute', bottom: 7, right: 7, backgroundColor: C.ink, paddingHorizontal: 6, borderRadius: 6 },
   quantityText: { color: 'white', fontWeight: '800', fontSize: 13, lineHeight: 19 },
   pager: { flexDirection: 'row', alignItems: 'center', gap: S.md },
-  pageInfo: { flex: 1, gap: S.sm },
-  pageButton: { width: 56, height: 56, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#E3EAD9', borderBottomWidth: 3, borderBottomColor: '#C7D2BB' },
-  pageLabel: { fontSize: 17, fontWeight: '800', textAlign: 'center' },
-  hint: { fontSize: 13, textAlign: 'center' },
+  pageInfo: { flex: 1, minWidth: 0, gap: S.sm },
+  pageLabel: { fontWeight: '600', textAlign: 'center' },
+  hint: { textAlign: 'center' },
 });

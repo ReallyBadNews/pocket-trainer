@@ -1,14 +1,14 @@
 import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { Button, C, Icon, Progress, Txt, mono, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, Icon, Progress, R, S, ToolbarAction, Txt, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { discoveredIds, recordQuizScore } from '@/lib/model';
-import { QUIZ_LENGTH, buildRound, quizPool, quizStars, type QuizRound } from '@/lib/quiz';
+import { QUIZ_LENGTH, buildRound, quizStars, type QuizRound } from '@/lib/quiz';
 import { Sheet } from './collection-modals';
 
 const UNIVERSE = species.map(s => s.id);
@@ -49,23 +49,7 @@ function Star({ on, size = 44 }: { on: boolean; size?: number }) {
 }
 
 export function QuizInvite({ onPlay }: { onPlay: () => void }) {
-  const { trainer } = useCollection();
-  const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
-  const own = useMemo(() => !quizPool(discovered, UNIVERSE).fallback, [discovered]);
-  // One of their own Pokémon as the teaser shadow; Pikachu until they have some.
-  const [teaser] = useState(() => { const ids = [...discovered].filter(id => speciesById.has(id)); return ids.length ? ids[Math.floor(Math.random() * ids.length)] : 25; });
-  return <View style={q.invite}>
-    <View style={q.inviteCopy}>
-      <Txt accessibilityRole="header" style={q.inviteTitle}>Who’s That{'\n'}Pokémon?</Txt>
-      <Txt muted style={{ fontSize: 13, lineHeight: 19, marginTop: 6 }}>{own ? 'Guess the shadow! 10 quick questions from your Pokédex.' : 'Guess the shadow! Play with the first 151 Pokémon.'}</Txt>
-      {!!trainer.quizBest && <Txt style={q.inviteBest}>Best score: {trainer.quizBest}/{QUIZ_LENGTH}</Txt>}
-      <Button title="Play" onPress={onPlay} style={{ alignSelf: 'flex-start', marginTop: 14 }} />
-    </View>
-    <View accessible accessibilityRole="image" accessibilityLabel="A mystery Pokémon shadow" style={q.teaser}>
-      <View style={q.teaserCircle}><Burst tone="mystery" style={q.teaserBurst} /><Image source={speciesImage(teaser)} tintColor={SHADOW} style={q.teaserArt} contentFit="contain" cachePolicy="memory-disk" /></View>
-      <View style={q.teaserBadge}><Txt style={{ color: 'white', fontWeight: '900', fontSize: 20, lineHeight: 24 }}>?</Txt></View>
-    </View>
-  </View>;
+  return <ToolbarAction title="Quiz" icon="star" onPress={onPlay} />;
 }
 
 export function QuizModal({ onClose }: { onClose: () => void }) {
@@ -76,7 +60,10 @@ export function QuizModal({ onClose }: { onClose: () => void }) {
 function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void }) {
   const { trainer, updateTrainer } = useCollection();
   const reduced = useReduceMotion();
-  const { height } = useWindowDimensions();
+  const { width, height, fontScale } = useWindowDimensions();
+  const [panelWidth, setPanelWidth] = useState(0);
+  const choiceWidth = (panelWidth || Math.min(width - 24, 600)) - S.xl * 2;
+  const singleColumn = choiceWidth < 300 || fontScale > 1.2;
   const [round] = useState<QuizRound>(() => buildRound(discoveredIds(trainer), { universe: UNIVERSE, seen: seenByTrainer.get(trainer.id) }));
   const [bestBefore] = useState(trainer.quizBest ?? 0);
   const [index, setIndex] = useState(0);
@@ -147,7 +134,7 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
         <View accessible accessibilityRole="image" accessibilityLabel={`${stars} of 3 stars`} style={q.stars}>{[1, 2, 3].map(n => <View key={n} style={n === 2 && { marginTop: -18 }}><Star on={n <= stars} size={n === 2 ? 64 : 50} /></View>)}</View>
       </View>
       <Txt style={q.score}>{score}<Txt style={q.scoreOf}> / {round.questions.length}</Txt></Txt>
-      <Txt accessibilityRole="header" style={[ui.title, { textAlign: 'center' }]}>{cheer[0]}</Txt>
+      <Txt accessibilityRole="header" variant="title" style={{ textAlign: 'center' }}>{cheer[0]}</Txt>
       <Txt muted style={{ textAlign: 'center', maxWidth: 320 }}>{cheer[1]}</Txt>
       <View style={[ui.row, { flexWrap: 'wrap', justifyContent: 'center' }]}>
         {score > bestBefore && <View style={[q.pill, q.pillGold]}><Txt style={q.pillText}>New best score!</Txt></View>}
@@ -155,19 +142,18 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
         {longest >= 3 && <View style={q.pill}><Txt style={q.pillText}>Longest streak: {longest} in a row</Txt></View>}
       </View>
       {round.fallback && <Txt muted style={q.note}>{FALLBACK_NOTE}</Txt>}
-      <Button title="Play again" onPress={onAgain} style={{ alignSelf: 'stretch', marginTop: 6 }} />
-      <Button title="Done" secondary onPress={onDone} style={{ alignSelf: 'stretch' }} />
+      <ButtonRow style={{ alignSelf: 'stretch', marginTop: S.xs }}><Button title="Play again" onPress={onAgain} /><Button title="Done" secondary onPress={onDone} /></ButtonRow>
     </ScrollView>;
   }
 
   const name = nameOf(question.answer);
   const uri = speciesImage(question.answer);
-  return <ScrollView ref={scroll} contentContainerStyle={q.content}>
+  return <ScrollView ref={scroll} onLayout={event => setPanelWidth(event.nativeEvent.layout.width)} contentContainerStyle={q.content}>
     {round.fallback && index === 0 && <Txt muted style={q.note}>{FALLBACK_NOTE}</Txt>}
     <View style={ui.row}>
-      <Txt style={q.count}>{index + 1}/{round.questions.length}</Txt>
+      <Txt variant="readout" style={q.count}>{index + 1}/{round.questions.length}</Txt>
       <View style={{ flex: 1 }}><Progress value={index + (answered ? 1 : 0)} total={round.questions.length} /></View>
-      <View accessible accessibilityLabel={`Score: ${score}`} style={q.scoreChip}><Star on size={18} /><Txt style={{ fontFamily: mono, fontWeight: '700', fontSize: 14 }}>{score}</Txt></View>
+      <View accessible accessibilityLabel={`Score: ${score}`} style={q.scoreChip}><Star on size={18} /><Txt variant="readout" style={{ fontWeight: '600' }}>{score}</Txt></View>
     </View>
     <View accessible accessibilityRole="image" accessibilityLabel={answered ? `It’s ${name}!` : 'A mystery Pokémon shadow. Which Pokémon is it?'} style={[q.stage, { height: stageHeight }]}>
       <Animated.View style={[q.burst, burstStyle]}><Burst tone={answered && correct ? 'win' : 'mystery'} style={StyleSheet.absoluteFill} /></Animated.View>
@@ -176,19 +162,19 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
         <Animated.View style={[StyleSheet.absoluteFill, colorStyle]}><Image source={uri} style={q.fill} contentFit="contain" cachePolicy="memory-disk" /></Animated.View>
         <Animated.View style={[StyleSheet.absoluteFill, shadowStyle]}><Image source={uri} tintColor={SHADOW} style={q.fill} contentFit="contain" cachePolicy="memory-disk" onLoad={() => setArt('ready')} onError={() => setArt('error')} /></Animated.View>
       </Animated.View>
-      {answered && <View style={[q.reveal, correct && q.revealWin]}><Txt numberOfLines={1} adjustsFontSizeToFit style={q.revealText}>It’s {name}!</Txt></View>}
+      {answered && <View style={[q.reveal, correct && q.revealWin]}><Txt variant="subtitle" style={{ textAlign: 'center' }}>It’s {name}!</Txt></View>}
     </View>
     {art === 'error' && !answered && <Txt muted style={q.note}>The picture can’t load right now. Take your best guess!</Txt>}
     <View style={[ui.row, { justifyContent: 'center', flexWrap: 'wrap', minHeight: 32 }]}>
-      <Txt style={q.prompt}>{!answered ? 'Who’s that Pokémon?' : correct ? 'You got it!' : 'Good try! Now you know this one.'}</Txt>
+      <Txt variant="subtitle" style={{ textAlign: 'center' }}>{!answered ? 'Who’s that Pokémon?' : correct ? 'You got it!' : 'Good try! Now you know this one.'}</Txt>
       {answered && correct && streak >= 2 && <View style={[q.pill, q.pillGold]}><Txt style={q.pillText}>{streak} in a row!</Txt></View>}
     </View>
     <View style={q.choices}>{question.choices.map(id => {
       const option = nameOf(id);
       const state = !answered ? 'idle' : id === question.answer ? 'right' : id === picked ? 'wrong' : 'dim';
-      return <Pressable key={id} accessibilityRole="button" accessibilityLabel={state === 'right' ? `${option}, the right answer` : state === 'wrong' ? `${option}, your guess` : option} accessibilityState={{ disabled: answered, selected: id === picked }} disabled={answered} onPress={() => choose(id)} style={({ pressed }) => [q.choice, state === 'right' && q.right, state === 'wrong' && q.wrong, state === 'dim' && { opacity: .45 }, pressed && { opacity: .75, transform: [{ translateY: 2 }] }]}>
-        <Txt numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.75} maxFontSizeMultiplier={1.25} style={[q.choiceText, (state === 'right' || state === 'wrong') && { color: 'white' }]}>{option}</Txt>
-        {(state === 'right' || state === 'wrong') && <View style={q.choiceMark}><Icon name={state === 'right' ? 'check' : 'close'} color="white" size={18} /></View>}
+      return <Pressable key={id} accessibilityRole="button" accessibilityLabel={state === 'right' ? `${option}, the right answer` : state === 'wrong' ? `${option}, your guess` : option} accessibilityState={{ disabled: answered, selected: id === picked }} disabled={answered} onPress={() => choose(id)} style={({ pressed }) => [q.choice, { flexBasis: singleColumn ? '100%' : '46%' }, state === 'right' && q.right, state === 'wrong' && q.wrong, state === 'dim' && { opacity: .45 }, pressed && { opacity: .75, transform: [{ translateY: 2 }] }]}>
+        <Txt variant="control" style={[q.choiceText, (state === 'right' || state === 'wrong') && { color: 'white' }]}>{option}</Txt>
+        <View style={q.choiceMark}>{(state === 'right' || state === 'wrong') && <Icon name={state === 'right' ? 'check' : 'close'} color="white" size={16} />}</View>
       </Pressable>;
     })}</View>
     {answered && <Button title={index + 1 < round.questions.length ? 'Next Pokémon' : 'See my score'} onPress={next} />}
@@ -196,32 +182,24 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
 }
 
 const q = StyleSheet.create({
-  content: { padding: 20, paddingBottom: 26, gap: 16 }, fill: { width: '100%', height: '100%' },
-  note: { fontSize: 13, lineHeight: 19, textAlign: 'center' },
-  count: { fontFamily: mono, fontSize: 13, fontWeight: '700', minWidth: 44 },
+  content: { padding: S.xl, paddingBottom: 26, gap: S.lg }, fill: { width: '100%', height: '100%' },
+  note: { fontSize: 13, lineHeight: 18, textAlign: 'center' },
+  count: { fontWeight: '600', minWidth: 44 },
   scoreChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, minHeight: 32, borderRadius: 16, backgroundColor: '#F7ECCC' },
   stage: { borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#23658C' },
   burst: { position: 'absolute', width: 820, height: 820, left: '50%', top: '50%', marginLeft: -410, marginTop: -410 },
   mystery: { position: 'absolute', fontSize: 96, lineHeight: 110, fontWeight: '900', color: '#FFFFFFB0' },
   reveal: { position: 'absolute', bottom: 10, left: 12, right: 12, alignItems: 'center', paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#FFFFFFE6' },
-  revealWin: { backgroundColor: '#FFF8DCF2' }, revealText: { fontSize: 22, lineHeight: 28, fontWeight: '900', letterSpacing: -.4 },
-  prompt: { fontSize: 18, lineHeight: 24, fontWeight: '800', textAlign: 'center' },
+  revealWin: { backgroundColor: '#FFF8DCF2' },
   pill: { paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14, backgroundColor: '#DCE6D0' }, pillGold: { backgroundColor: '#F3DB8E' },
-  pillText: { fontSize: 13, lineHeight: 18, fontWeight: '800' },
-  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  choice: { flexGrow: 1, flexBasis: '46%', minHeight: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 26, paddingVertical: 8, borderRadius: 16, borderWidth: 2, borderBottomWidth: 4, borderColor: '#B8C6AC', backgroundColor: '#FCFDF9' },
+  pillText: { fontSize: 13, lineHeight: 18, fontWeight: '600' },
+  choices: { flexDirection: 'row', flexWrap: 'wrap', gap: S.sm },
+  choice: { flexGrow: 1, maxWidth: '100%', minWidth: 0, minHeight: 64, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: S.md, paddingVertical: S.md, gap: S.xs, borderRadius: R.lg, borderWidth: 2, borderBottomWidth: 4, borderColor: '#B8C6AC', backgroundColor: '#FCFDF9' },
   right: { backgroundColor: '#4E9444', borderColor: '#356E2E' }, wrong: { backgroundColor: C.red, borderColor: C.redDark },
-  choiceText: { alignSelf: 'stretch', fontSize: 17, lineHeight: 22, fontWeight: '800', textAlign: 'center' },
-  // The answer mark floats in the corner so the name never moves or re-wraps when it appears.
-  choiceMark: { position: 'absolute', top: 8, right: 8 },
+  choiceText: { flex: 1, minWidth: 0, fontWeight: '700', textAlign: 'center' },
+  // Every choice reserves the same mark space before and after the reveal.
+  choiceMark: { width: 16 },
   endStage: { width: '100%', height: 150, borderRadius: 20, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#B98A22' },
   stars: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   score: { fontFamily: mono, fontSize: 44, lineHeight: 52, fontWeight: '800' }, scoreOf: { fontFamily: mono, fontSize: 22, color: C.muted },
-  invite: { backgroundColor: '#D8EAF1', borderRadius: 19, minHeight: 180, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 8, padding: 18, borderWidth: 1, borderColor: '#B7D3E0' },
-  inviteCopy: { flex: 1 }, inviteTitle: { fontSize: 22, fontWeight: '900', lineHeight: 28, letterSpacing: -.5 },
-  inviteBest: { fontFamily: mono, fontSize: 12, fontWeight: '700', marginTop: 6 },
-  teaser: { width: 132, height: 132 },
-  teaserCircle: { flex: 1, borderRadius: 66, overflow: 'hidden', alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#23658C' },
-  teaserBurst: { position: 'absolute', width: 190, height: 190, left: -32, top: -32 }, teaserArt: { width: 100, height: 100 },
-  teaserBadge: { position: 'absolute', right: 0, top: 4, width: 30, height: 30, borderRadius: 15, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'white' },
 });
