@@ -6,6 +6,7 @@ export type PriceSnapshot = { key: string; checkedAt: number; prices: MarketPric
 export type ExchangeRate = { rate: number; date: string; checkedAt: number };
 export type PriceQuote = { low: number; high: number; sources: string[]; updatedAt: string; converted: boolean; unconfirmed: boolean; stale: boolean };
 export const priceKey = (card: CardBrief) => `${card.language}:${card.id}`;
+export const HOUR = 3_600_000;
 export const DAY = 86_400_000;
 const record = (value: unknown): value is Record<string, any> => !!value && typeof value === 'object' && !Array.isArray(value);
 const positive = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 100_000_000;
@@ -57,6 +58,19 @@ export function parseCardPricing(card: CardBrief, data: unknown, now = Date.now(
   return { key: priceKey(card), checkedAt: now, prices, finishes: [...available] };
 }
 
+/**
+ * TCGdex publishes market prices about once a day. Check again a day after the last check, or sooner once the
+ * provider's next daily update is due for prices that were current when fetched. Prices that were already a day
+ * old when fetched aren't expected to move sooner, so a stalled listing never causes hourly requests.
+ */
+export function needsRefresh(snapshot: PriceSnapshot, now = Date.now()) {
+  const age = now - snapshot.checkedAt;
+  if (age >= DAY) return true;
+  const newest = Math.max(0, ...snapshot.prices.map(p => Date.parse(p.updatedAt)));
+  // An hour of slack lets the provider finish publishing before we ask.
+  return newest > 0 && snapshot.checkedAt - newest < DAY && now - newest >= DAY + HOUR && age >= HOUR;
+}
+
 export function parseExchangeRate(data: unknown, now = Date.now()): ExchangeRate {
   if (!record(data) || data.base !== 'EUR' || data.quote !== 'USD' || !positive(data.rate) || !validDate(data.date)) throw new Error('Exchange rate unavailable.');
   return { rate: data.rate, date: data.date, checkedAt: now };
@@ -94,6 +108,16 @@ export function collectionValue(entries: Entry[], snapshots: Readonly<Record<str
     if (quote.stale) stale += entry.quantity;
   }
   return { low, high, priced, missing, unconfirmed, stale };
+}
+
+/** The saved printing worth the most per copy, ranked by the low end of its estimate like the binder's price sort. */
+export function mostValuable(entries: Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>, fx?: ExchangeRate, now = Date.now()) {
+  let best: { entry: Entry; quote: PriceQuote } | undefined;
+  for (const entry of entries) {
+    const quote = quotePrice(snapshots[priceKey(entry.card)], entry.finish, fx, now);
+    if (quote && (!best || quote.low > best.quote.low)) best = { entry, quote };
+  }
+  return best;
 }
 
 /** Price cache is disposable and separate from the family's collection backups. */

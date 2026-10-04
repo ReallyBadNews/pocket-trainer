@@ -1,11 +1,13 @@
 import type { CardBrief } from './model';
-import { DAY, parseCardPricing, parseExchangeRate, parsePriceCache, priceKey, type ExchangeRate, type PriceSnapshot } from './pricing';
+import { DAY, needsRefresh, parseCardPricing, parseExchangeRate, parsePriceCache, priceKey, type ExchangeRate, type PriceSnapshot } from './pricing';
 
-type Job = { card: CardBrief; priority: number; force: boolean; consumers: (() => boolean)[] };
+/** `after` is when the snapshot being replaced was checked; an older shared card response can't refresh it. */
+type Job = { card: CardBrief; priority: number; force: boolean; after: number; consumers: (() => boolean)[] };
 type Dependencies = {
-  card: (card: CardBrief, force: boolean) => Promise<unknown>;
+  card: (card: CardBrief, force: boolean, after: number) => Promise<unknown>;
   exchange: () => Promise<unknown>; read: () => Promise<string | null>; write: (raw: string) => Promise<void>; now?: () => number;
 };
+export type PriceState = { snapshots: Readonly<Record<string, PriceSnapshot>>; fx?: ExchangeRate; errors: ReadonlySet<string>; pending: ReadonlySet<string>; ready: boolean; wakes: number };
 export class PriceClient {
   snapshots: Record<string, PriceSnapshot> = {};
   fx?: ExchangeRate;
@@ -13,7 +15,11 @@ export class PriceClient {
   pending = new Set<string>();
   ready = false;
   revision = 0;
+  /** Bumped when the app returns to the foreground so mounted screens re-check their prices. */
+  wakes = 0;
   private listeners = new Set<() => void>();
+  private notifyTimer?: ReturnType<typeof setTimeout>;
+  private state?: PriceState;
   private jobs = new Map<string, Job>();
   private active = 0;
   private attempts = new Map<string, number>();
@@ -26,8 +32,14 @@ export class PriceClient {
   constructor(private deps: Dependencies) {}
   private now = () => this.deps.now?.() ?? Date.now();
   subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
-  version = () => this.revision;
-  private emit() { this.revision++; this.listeners.forEach(fn => fn()); }
+  /** Screens read this instead of the client's mutable fields: a new object per change, so memoized components (the React Compiler is on) see new prices. */
+  getState = (): PriceState => this.state ??= { snapshots: this.snapshots, fx: this.fx, errors: new Set(this.errors), pending: new Set(this.pending), ready: this.ready, wakes: this.wakes };
+  // A collection refresh settles several cards a second; repaint once per batch rather than once per card.
+  private emit() {
+    this.revision++; this.state = undefined;
+    if (!this.notifyTimer) this.notifyTimer = setTimeout(() => { this.notifyTimer = undefined; this.listeners.forEach(fn => fn()); }, 50);
+  }
+  wake() { this.wakes++; this.emit(); }
   hydrate() {
     if (!this.loading) this.loading = (async () => {
       try { const cache = parsePriceCache(await this.deps.read(), this.now()); this.snapshots = cache.snapshots; this.fx = cache.fx; } catch { /* Optional cache never blocks the binder. */ }
@@ -40,12 +52,12 @@ export class PriceClient {
     if (!isCurrent()) return;
     for (const card of cards) {
       const key = priceKey(card), cached = this.snapshots[key];
-      if (cached && !force && this.now() - cached.checkedAt < DAY) { if (cached.prices.some(p => p.currency === 'EUR')) void this.ensureFx(); continue; }
+      if (cached && !force && !needsRefresh(cached, this.now())) { if (cached.prices.some(p => p.currency === 'EUR')) void this.ensureFx(); continue; }
       if (!force && this.now() - (this.attempts.get(key) ?? -Infinity) < 5 * 60_000) continue;
       const job = this.jobs.get(key);
       if (job) { job.consumers.push(isCurrent); job.priority = Math.min(job.priority, priority); continue; }
       if (this.pending.has(key)) continue;
-      this.jobs.set(key, { card, priority, force, consumers: [isCurrent] }); this.pending.add(key);
+      this.jobs.set(key, { card, priority, force, after: cached?.checkedAt ?? 0, consumers: [isCurrent] }); this.pending.add(key);
     }
     this.emit(); this.drain();
   }
@@ -55,7 +67,7 @@ export class PriceClient {
       const [key, job] = [...this.jobs].sort((a, b) => a[1].priority - b[1].priority)[0];
       this.jobs.delete(key); this.active++;
       this.attempts.set(key, this.now());
-      void this.deps.card(job.card, job.force).then(data => {
+      void this.deps.card(job.card, job.force, job.after).then(data => {
         const snapshot = parseCardPricing(job.card, data, this.now());
         this.snapshots = { ...this.snapshots, [key]: snapshot }; this.errors.delete(key);
         if (snapshot.prices.some(p => p.currency === 'EUR')) void this.ensureFx();

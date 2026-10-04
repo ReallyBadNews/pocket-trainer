@@ -1,6 +1,6 @@
 # Card and collection values
 
-Pocket Trainer shows estimated USD values in scan/search results, card review, saved-card details, the binder, and the cards inside each Pokédex entry. Both the Pokédex home and binder show the active trainer's entire collection value, including Trainer and Energy cards. The family profiles remain separate.
+Pocket Trainer shows estimated USD values in scan/search results, card review, saved-card details, the binder, and the cards inside each Pokédex entry. Both the Pokédex home and binder open with a collection-value readout for the active trainer's entire collection, including Trainer and Energy cards. The family profiles remain separate.
 
 ## Public APIs selected
 
@@ -12,12 +12,15 @@ Live checks on September 6, 2026 found TCGplayer USD prices for English Pikachu,
 
 Other evaluated providers required accounts/keys, imposed small free quotas, or charged more than the family's $5/month target. TCGCSV's public category request returned HTTP 401 in the live check. The selected integration adds no subscription or backend.
 
+TCGdex has no bulk price request. Re-checked October 3, 2026: its GraphQL `Card` type has no `pricing` field, and filtered list endpoints (`/v2/en/cards?id=…`) return only id, number, name and image. Prices therefore still need one card request each. A 30-card sample per language on the same day found prices for 29/30 English, 20/30 Japanese, 30/30 Korean and 19/30 Traditional Chinese cards; the three Japanese misses had only Cardmarket `*-holo` trends on cards the catalog lists as Regular, which the rules below deliberately leave out.
+
 ## Valuation rules
 
 - Use positive `marketPrice` values, not high/low asking prices. Map observed TCGplayer keys including `holofoil`, `reverse-holofoil` and `1st-edition-holofoil` to the app's printing choices.
 - Cardmarket's base trend is used only when the catalog identifies one primary Regular/Holo printing and USD data does not contradict that printing. Ambiguous `*-holo` values are excluded because they do not reliably resolve every reverse/special printing.
 - A first-edition, reverse-holo or promo printing never borrows a regular price. Unavailable, zero, malformed or wrong-currency values stay unavailable.
 - A saved “Not sure yet” printing shows the range of available quotes and is counted as unconfirmed, including when no price is available. The range only covers prices the provider actually supplies.
+- The headline collection value counts each “Not sure yet” printing at its lowest available price, so confirming printings can only raise it. The high end of the range appears beside it as “up to”. The most valuable card ranks by the low end of each printing's per-copy estimate.
 - Multiply each printing's displayed USD cents by its saved quantity. Each physical card counts once, including TAG TEAM cards that unlock several Pokémon. Missing quotes are excluded, with priced/total copy counts shown prominently. Filtered binder views retain the entire active trainer's total.
 - Saved printing choices can be corrected. If the destination printing already exists, quantities merge and favorites are preserved. The 999-copy limit still applies.
 - Prices are ungraded estimates, not guaranteed sale proceeds. Condition, buyer demand and selling fees can change the amount received.
@@ -26,17 +29,19 @@ Other evaluated providers required accounts/keys, imposed small free quotas, or 
 
 Pricing is separate from OCR. Scan results remain usable; new scan-price requests start after recognition/refinement finishes. Details and prices share an in-flight card request. A three-request queue prioritizes opened cards, deduplicates cards across copies, and drops queued work for screens that have been left. Refresh buttons are nonblocking.
 
-Successful quotes, empty provider results and EUR/USD rates are cached for a day. Prices live in a separate local cache, so failed/corrupt cache reads cannot block collection loading or damage backups. Failed requests keep older estimates and use a five-minute retry backoff; manual refresh can retry immediately. Stale estimates are labeled. Source dates older than seven days also trigger a stale label even after a successful fetch.
+TCGdex publishes new market prices about once a day (source dates near 22:55 UTC in the October 3 check). A saved quote is checked again a day after it was fetched, or sooner once the provider's next daily update is due: 25 hours after its newest source date, at least an hour after the last check. Quotes that were already a day old when fetched (a late provider or a card that stopped trading) wait the full day, so they never cause hourly requests. An early refresh never reuses a shared card response older than the quote it replaces. Returning the app to the foreground re-checks prices for the screens that are open. Settled prices repaint the screen in batches rather than once per card.
+
+Empty provider results and EUR/USD rates are cached for a day. Prices live in a separate local cache, so failed/corrupt cache reads cannot block collection loading or damage backups. Failed requests keep older estimates and use a five-minute retry backoff; manual refresh can retry immediately. Stale estimates are labeled. Source dates older than seven days also trigger a stale label even after a successful fetch.
 
 The price API receives the requested public card identifier and language. Frankfurter receives only the currency pair. Neither receives card photos, trainer names, quantities or the family's collection file.
 
 ## Typography, sorting and printing review
 
-Price amounts use the app's system typeface with tabular numerals and a quieter currency caption. Card prices omit “/ copy”; quantities still affect collection totals. Ranges wrap between complete amounts on narrow card tiles.
+Card tiles show the estimate in bold 17pt tabular numerals without “Est.” or “USD” captions; screen readers hear “Worth about …”, plus “converted from euros” or “saved price” when relevant. Card details and the collection total use the same tinted readout window: a small uppercase label, a 28–32pt amount, and one status line. Tapping the readout opens sources, dates, the most valuable card, printing confirmation and refresh. Card details place the readout directly under the card's identity, above the printing and copy controls, and show the copies total when there is more than one. Card prices omit “/ copy”; quantities still affect collection totals. Ranges wrap between complete amounts on narrow card tiles.
 
 The binder supports Recently added, Highest price, Lowest price and Needs printing first. Price order uses each printing's unit value, converted to USD where needed, and the lower estimate for ranges. Unpriced entries stay last in both price directions. Equal prices retain their existing order; new quotes update the order without blocking the UI.
 
-The Needs printing toggle combines with search, language and card-type filters. The Confirm printings shortcut on the Pokédex or binder total opens the pending-printings list with other filters cleared. Its count is the number of saved printing entries, including unpriced entries, rather than the number of physical copies. Saving a confirmed printing removes it from the filtered list while preserving quantities.
+The Needs printing toggle combines with search, language and card-type filters. The Confirm printings shortcut in the Pokédex or binder value details opens the pending-printings list with other filters cleared. Its count is the number of saved printing entries, including unpriced entries, rather than the number of physical copies. Saving a confirmed printing removes it from the filtered list while preserving quantities.
 
 ## Validation
 

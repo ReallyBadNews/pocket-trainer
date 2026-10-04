@@ -1,4 +1,5 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useSyncExternalStore } from 'react';
+import { AppState } from 'react-native';
 import { PriceClient } from './price-client';
 import { fetchCardData } from './card-api';
 import { readPrices, writePrices } from './storage';
@@ -13,21 +14,21 @@ export const prices = new PriceClient({
     return response.json();
   },
 });
+const actions = { ensure: prices.ensure.bind(prices), ensureFx: prices.ensureFx.bind(prices) };
+
+// Coming back to the app picks up the provider's newer prices without reopening a screen.
+AppState.addEventListener('change', state => { if (state === 'active') prices.wake(); });
 
 /** Fetch after rendering, share requests, and drop queued work when a screen is left. */
 export function usePricing(cards: CardBrief[], priority = 10, enabled = true) {
-  const [, setRevision] = useState(prices.revision);
+  const state = useSyncExternalStore(prices.subscribe, prices.getState);
   const keys = cards.map(priceKey).join('|');
-  useEffect(() => {
-    const unsubscribe = prices.subscribe(() => setRevision(prices.revision));
-    void prices.hydrate();
-    return unsubscribe;
-  }, []);
+  useEffect(() => { void prices.hydrate(); }, []);
   useEffect(() => {
     if (!enabled) return;
     let active = true;
     const timer = setTimeout(() => void prices.ensure(cards, () => active, priority), priority === 0 ? 0 : 200);
     return () => { active = false; clearTimeout(timer); };
-  }, [keys, enabled, priority]);
-  return prices;
+  }, [keys, enabled, priority, state.wakes]);
+  return { ...state, ...actions };
 }

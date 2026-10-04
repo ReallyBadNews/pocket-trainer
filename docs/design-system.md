@@ -28,7 +28,10 @@ Screen copy is left aligned. Center alignment is reserved for Pokémon artwork, 
 ```
 Screen title                 Readout
 Supporting copy
-
+┌ COLLECTION VALUE ─────────────┐
+│ $886.15                     › │
+│ All 18 cards priced · up to … │
+└───────────────────────────────┘
 Search
 [ View A          | View B            ]
 Filter / sort menus         Overview
@@ -36,11 +39,12 @@ Filter / sort menus         Overview
 Card artwork       Card artwork
 Card name          Card name
 Set + number       Set + number
-Est. value         Est. value
+$8.88              $0.29–$0.44
 ```
 
 - Give each task one clear filled primary action. Secondary actions are plain text or disclosure rows; equal hit targets do not require equal visual prominence. Wishlist and achievement gold stays semantic.
-- Populated Pokédex and Binder screens lead with search and collection content. Quiz, collection value, and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
+- Populated Pokédex and Binder screens lead with the collection-value readout, then search and collection content. The value is the one framed element above the collection: a tinted Pokédex readout window whose details open in place. Quiz, discoveries and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
+- Card values are content, not metadata: tiles show them in bold tabular numerals, and card details show the same readout window under the card's identity.
 - `ButtonRow` gives actions equal columns and equal heights. It stacks when there is less than 144pt per button, with more space reserved as system text size increases.
 - Segmented controls switch closely related views. Use `ChoiceMenu` for sort, filter, language, and form values. On iOS it opens native choices; other platforms show a checked list. Form rows show the selected value. Compact toolbar triggers can use short titles such as Sort or View; accessibility announces the current selection and the menu checks it.
 - `ToolbarAction` and `ActionRow` keep secondary destinations easy to tap without another filled card. Use alignment, separators, and section gaps to group related items.

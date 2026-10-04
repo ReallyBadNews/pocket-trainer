@@ -6,14 +6,14 @@ export const supplementalCards = supplements as Record<string, Record<string, an
 
 const cached = new Map<string, { data: any; at: number }>();
 const pending = new Map<string, Promise<any>>();
-/** Card details and pricing share one request when opened together. */
-export async function fetchCardData(card: CardBrief, force = false): Promise<any> {
+/** Card details and pricing share one request when opened together. A price refresh passes `after` so it never reuses a response older than its snapshot. */
+export async function fetchCardData(card: CardBrief, force = false, after = 0): Promise<any> {
   // Manual entries have no catalog identity or market quote.
   if (card.id.startsWith('manual-')) return { id: card.id, variants: {} };
   const supplemental = supplementalCards[card.language]?.[card.id];
   if (supplemental) return supplemental;
   const key = priceKey(card), hit = cached.get(key);
-  if (!force && hit && Date.now() - hit.at < DAY) return hit.data;
+  if (!force && hit && Date.now() - hit.at < DAY && hit.at > after) return hit.data;
   if (pending.has(key)) return pending.get(key)!;
   const task = (async () => {
     const response = await fetch(`https://api.tcgdex.net/v2/${card.language}/cards/${encodeURIComponent(card.id)}`, { signal: AbortSignal.timeout(10000) });
