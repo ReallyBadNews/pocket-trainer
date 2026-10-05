@@ -3,6 +3,7 @@ import { ScrollChromeContext, useScrollChromeController } from '@/components/scr
 import { useEffect, useLayoutEffect, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Image } from 'expo-image';
 import { C, Icon, Txt, ui, type IconName, Button, tick } from '@/components/pokedex-ui';
 import { TrainerAvatar } from '@/components/trainer-avatar';
 import { useCollection } from '@/lib/collection-context';
@@ -16,6 +17,7 @@ import { QuizModal } from './quiz-screen';
 import { SetChecklistModal } from './set-checklist';
 import type { SetProgress } from '@/lib/set-progress';
 import type { BinderView } from '@/components/binder-pages';
+import { useAppUpdates } from '@/lib/use-app-updates';
 
 const PINNED_CHROME_HEIGHT = 23 + 4 + 26; // Hinge, screen border, and Pokédex strip.
 const BOTTOM_FRAME_HEIGHT = 20;
@@ -59,6 +61,8 @@ export default function PocketTrainer() {
   }
   // The undo offer appears once the celebration closes and fades after a few seconds.
   const showUndo = !!undo && !modalOpen && undo.trainerId === trainer.id;
+  // New app updates wait until nothing is open: no card, game, scan or undo offer.
+  const appUpdate = useAppUpdates(!modalOpen && tab !== 'scan' && !showUndo);
   useEffect(() => {
     if (!showUndo) return;
     const timer = setTimeout(() => setUndo(null), 8000);
@@ -102,6 +106,7 @@ export default function PocketTrainer() {
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt variant="label" style={{ flex: 1, minWidth: 0, paddingVertical: 8, color: 'white' }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt variant="label" style={{ color: C.gold }}>Undo</Txt></Pressable></View></View>}
     <View style={s.bottomChrome}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={s.navItem}><View style={[s.navIcon, tab === item.id && s.navSelected]}><Icon name={item.icon} size={23} color={tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: tab === item.id ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></View>
     </View>
+    {appUpdate !== 'none' && <View accessibilityViewIsModal accessibilityLiveRegion="polite" style={s.updating}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 104, height: 104 }} contentFit="contain" /><Txt variant="subtitle" style={{ color: 'white', textAlign: 'center' }}>Getting the newest Pokédex…</Txt><ActivityIndicator color="white" /></View>}
   </View></View>;
 }
 const s = StyleSheet.create({
@@ -133,4 +138,5 @@ const s = StyleSheet.create({
   undo: { minHeight: 48, minWidth: 64, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 14 },
   loading: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 25, gap: 15 },
   fill: { flex: 1 }, hidden: { display: 'none' },
+  updating: { ...StyleSheet.absoluteFill, zIndex: 3, backgroundColor: C.red, alignItems: 'center', justifyContent: 'center', gap: 18, padding: 32 },
 });
