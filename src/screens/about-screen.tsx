@@ -11,7 +11,7 @@ export function AboutScreen({ children }: { children?: ReactNode }) {
   const version = Application.nativeApplicationVersion ?? (Platform.OS === 'web' ? Constants.expoConfig?.version : null) ?? 'Unavailable';
   const build = Application.nativeBuildVersion ?? (Platform.OS === 'web' ? 'Browser preview' : 'Unavailable');
   // Which published JavaScript is running, so a parent can tell whether the latest change has arrived.
-  const update = !Updates.isEnabled ? (Platform.OS === 'web' ? 'Browser preview' : 'Development') : Updates.isEmbeddedLaunch || !Updates.updateId ? 'Included with build' : `${Updates.createdAt?.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) ?? 'Downloaded'} · ${Updates.updateId.slice(0, 8)}`;
+  const update = Platform.OS === 'web' ? 'Browser preview' : __DEV__ ? 'Development' : !Updates.isEnabled ? 'Unavailable' : Updates.isEmbeddedLaunch || !Updates.updateId ? 'Included with build' : `${Updates.createdAt?.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) ?? 'Downloaded'} · ${Updates.updateId.slice(0, 8)}`;
 
   return <ScrollView contentContainerStyle={s.content}>
     <Image source={require('../../assets/crafted/device.png')} contentFit="contain" style={s.device} accessible accessibilityLabel="Our handcrafted 3D Pokédex" />

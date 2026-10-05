@@ -8,6 +8,8 @@ import { readUpdateRestart, writeUpdateRestart } from './storage';
 const RELOAD_SCREEN = { backgroundColor: '#C93240', fade: true, spinner: { enabled: true, color: '#FFFFFF', size: 'large' as const } };
 // Rollbacks carry no update id; their publish time identifies them instead.
 const idOf = (info?: Updates.UseUpdatesReturnType['availableUpdate']) => info && (info.updateId ?? `rollback-${info.createdAt.getTime()}`);
+// Development clients report expo-updates as enabled, but its check and reload calls only work in release builds.
+const enabled = Updates.isEnabled && !__DEV__;
 
 /**
  * Applies a newly published update when the app opens or comes back after a while, instead of on the second cold
@@ -22,14 +24,14 @@ export function useAppUpdates(idle: boolean): UpdateStep {
   const starting = useRef(isStartupProcedureRunning);
   useEffect(() => { starting.current = isStartupProcedureRunning; }, [isStartupProcedureRunning]);
 
-  useEffect(() => { if (Updates.isEnabled) readUpdateRestart().then(setRestartedFor, () => setRestartedFor(null)); }, []);
+  useEffect(() => { if (enabled) readUpdateRestart().then(setRestartedFor, () => setRestartedFor(null)); }, []);
   useEffect(() => {
     setSessionOpen(true);
     const timer = setTimeout(() => setSessionOpen(false), SESSION_WINDOW);
     return () => clearTimeout(timer);
   }, [session]);
   useEffect(() => {
-    if (!Updates.isEnabled) return;
+    if (!enabled) return;
     let backgroundedAt: number | undefined;
     const subscription = AppState.addEventListener('change', state => {
       if (state === 'background') { backgroundedAt = Date.now(); return; }
