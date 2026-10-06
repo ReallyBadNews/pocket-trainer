@@ -11,7 +11,7 @@ import type { ScanLanguage } from '@/lib/language-detect';
 import { identifyProgressively } from '@/lib/scan-pipeline';
 import { pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
-import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
+import { defaultFinish, discoveredIds, withScanPhoto, type Card, type CardBrief } from '@/lib/model';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 import { PocketReview } from '@/components/pocket-review';
@@ -173,7 +173,7 @@ export function PageScan({
       if (!isCurrent()) return;
       const status = pocketStatus(text, matches);
       const top = matches[0]?.card;
-      const choice = top ? { ...top, ...(!top.image && photoUri ? { localImage: photoUri } : {}) } : null;
+      const choice = top ? withScanPhoto(top, photoUri) : null;
       updatePocket(index, { status, matches, choice, photoUri });
 
       if (choice) loadDetails(choice);
@@ -285,7 +285,7 @@ export function PageScan({
 
   function choose(index: number, card: CardBrief) {
     const pocket = pockets[index];
-    const choice = { ...card, ...(!card.image && pocket.photoUri ? { localImage: pocket.photoUri } : {}) };
+    const choice = withScanPhoto(card, pocket.photoUri);
     updatePocket(index, { choice, confirmed: true, skipped: false });
     loadDetails(choice);
   }
@@ -303,7 +303,7 @@ export function PageScan({
           const full = details[detailKey(card)] ?? (await fetchCard(card));
 
           return {
-            card: { ...full, ...(card.localImage ? { localImage: card.localImage } : {}) },
+            card: card.localImage ? { ...full, localImage: card.localImage } : full,
             finish: defaultFinish(full),
             quantity: 1,
           };

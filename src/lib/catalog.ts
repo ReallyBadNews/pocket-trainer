@@ -13,14 +13,21 @@ import { LANGUAGES } from './languages';
 import speciesData from '../data/species.json';
 import imageOverrides from '../data/image-overrides.json';
 
-const artOverrides = imageOverrides as Partial<Record<Language, Record<string, string>>>;
+// Card art missing from the catalog, keyed by `language:id`.
+const artOverrides = new Map(
+  Object.entries(imageOverrides).flatMap(([language, images]) =>
+    Object.entries(images).map(([id, uri]) => [`${language}:${id}`, uri]),
+  ),
+);
+
+const artOverride = (card: CardBrief) => artOverrides.get(`${card.language}:${card.id}`);
 
 import { collectorTotal, type Card, type CardBrief, type Finish, type Language } from './model';
 import { fetchCardData, supplementalCards } from './card-api';
 import type { SetCatalog } from './set-progress';
 import { DAY, parseCardPricing } from './pricing';
 
-export const species = speciesData as ({ id: number; genus: string } & Record<Language, string>)[];
+export const species = speciesData;
 
 export const speciesById = new Map(species.map((s) => [s.id, s]));
 
@@ -35,7 +42,7 @@ const catalogs: Record<Language, Omit<CardBrief, 'language'>[]> = {
 export const allCards: CardBrief[] = LANGUAGES.flatMap((language) => {
   const cards: CardBrief[] = catalogs[language].map((c) => ({
     ...c,
-    image: c.image ?? artOverrides[language]?.[c.id],
+    image: c.image ?? artOverrides.get(`${language}:${c.id}`),
     language,
   }));
 
@@ -49,12 +56,14 @@ export const allCards: CardBrief[] = LANGUAGES.flatMap((language) => {
 
 type SetBrief = { id: string; name: string; abbreviation?: string; cardCount: { official: number; total: number } };
 
+const setMap = (sets: SetBrief[]) => new Map(sets.map((s) => [s.id, s]));
+
 const setMaps = {
-  en: new Map((englishSets as SetBrief[]).map((s) => [s.id, s])),
-  ja: new Map((japaneseSets as SetBrief[]).map((s) => [s.id, s])),
-  ko: new Map((koreanSets as SetBrief[]).map((s) => [s.id, s])),
-  'zh-cn': new Map((simplifiedSets as SetBrief[]).map((s) => [s.id, s])),
-  'zh-tw': new Map((traditionalSets as SetBrief[]).map((s) => [s.id, s])),
+  en: setMap(englishSets),
+  ja: setMap(japaneseSets),
+  ko: setMap(koreanSets),
+  'zh-cn': setMap(simplifiedSets),
+  'zh-tw': setMap(traditionalSets),
 };
 
 export const setForCard = (card: CardBrief) => setMaps[card.language].get(card.id.slice(0, card.id.lastIndexOf('-')));
@@ -100,7 +109,7 @@ export const catalogSet: SetCatalog = (language, setId) => {
 };
 
 export const cardImage = (card: CardBrief, high = false) => {
-  const base = card.image ?? artOverrides[card.language]?.[card.id];
+  const base = card.image ?? artOverride(card);
 
   return base ? `${base}/${high ? 'high' : 'low'}.webp` : undefined;
 };
@@ -170,14 +179,14 @@ export type ScanText = { text: string; topText: string; bottomText: string };
 
 export type ScanCandidate = { card: CardBrief; score: number; evidence: string; exactPrinting: boolean };
 
-const scanWords = Object.fromEntries(
+const scanWords = new Map(
   LANGUAGES.map((language) => [
     language,
-    [...new Set(allCards.filter((c) => c.language === language).map((c) => c.name))],
+    [...new Set(allCards.flatMap((c) => (c.language === language ? [c.name] : [])))],
   ]),
-) as Record<Language, string[]>;
+);
 
-export const recognitionWords = (language: Language) => scanWords[language];
+export const recognitionWords = (language: Language) => scanWords.get(language) ?? [];
 
 const canonicalNumber = (s: string) =>
   s
@@ -305,7 +314,7 @@ export function scanCandidates(
 
   const nameScores = new Map<string, number>();
 
-  for (const name of scanWords[language]) {
+  for (const name of recognitionWords(language)) {
     const n = normalize(name),
       base = baseName(n, name);
 
@@ -327,8 +336,8 @@ export function scanCandidates(
   }
 
   const ranked = searchable
-    .filter((c) => c.card.language === language && matchesCardFilter(c.card, filter))
-    .map((c) => {
+    .flatMap((c): ScanCandidate[] => {
+      if (c.card.language !== language || !matchesCardFilter(c.card, filter)) return [];
       const nameScore = nameScores.get(c.name) ?? 0;
       const set = setForCard(c.card);
       const matchingNumbers = fractions.filter((f) => f[0] === canonicalNumber(c.card.localId));
@@ -360,9 +369,8 @@ export function scanCandidates(
               ? 'Name match · check the number'
               : 'Card number · check the picture';
 
-      return { card: c.card, score, evidence, exactPrinting };
+      return score >= 60 ? [{ card: c.card, score, evidence, exactPrinting }] : [];
     })
-    .filter((c) => c.score >= 60)
     .sort((a, b) => b.score - a.score || Number(!!b.card.image) - Number(!!a.card.image));
 
   const threshold = ranked[0]?.score >= 240 ? ranked[0].score - 80 : 60;
@@ -472,7 +480,7 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
     id: data.id,
     name,
     localId,
-    image: data.image ?? brief.image ?? artOverrides[brief.language]?.[brief.id],
+    image: data.image ?? brief.image ?? artOverride(brief),
     set: { id: set.id, name: set.name, total: set.cardCount?.official ?? 0 },
     dexIds: data.category === 'Pokemon' ? (data.dexId ?? []) : [],
     types: data.types ?? [],

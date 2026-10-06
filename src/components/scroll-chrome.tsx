@@ -160,6 +160,7 @@ export function useChromeScroll() {
     onTouchEnd: web ? endDrag : undefined,
     onTouchCancel: web ? endDrag : undefined,
     // Prevent browser anchoring from treating responsive reflow as user scrolling.
+    // SAFETY: react-native-web passes `overflowAnchor` through to CSS; React Native's ViewStyle doesn't list it.
     style: web ? ({ overflowAnchor: 'none' } as ViewStyle) : undefined,
     // Reserve space for the overlays without resizing the list or reflowing its rows.
     contentContainerStyle: { paddingTop: 20 + distance, paddingBottom: Math.max(40, insets.bottom + 16) + bottomInset },

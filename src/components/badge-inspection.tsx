@@ -25,6 +25,7 @@ import { createBadgeRenderer, type BadgeRenderer } from '@/lib/badge-renderer';
 import { BadgeArtwork } from './badge-artwork';
 import { C, IconButton, ToolbarAction, Txt } from './pokedex-ui';
 
+// SAFETY: expo-gl exports GLView; it is required only once the native module is known to exist.
 const NativeGLView =
   Platform.OS === 'web' || requireOptionalNativeModule('ExpoGL')
     ? (require('expo-gl').GLView as typeof GLViewType)

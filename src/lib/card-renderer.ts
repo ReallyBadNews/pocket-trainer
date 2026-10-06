@@ -1,7 +1,7 @@
 import type { ExpoWebGLRenderingContext } from 'expo-gl';
 import model from '../../assets/crafted/card-model.json';
 import { clampCardPose, DEFAULT_CARD_POSE, surfaceUniform, type CardPose, type CardSurface } from './card-inspection';
-import { loadCardTexture, type CardTextureImage } from './card-texture';
+import { loadBundledCardTexture, loadCardTexture, type CardTextureImage } from './card-texture';
 
 const VERTEX = `
 precision highp float;
@@ -131,8 +131,15 @@ export function createCardRenderer(
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    // On iOS/Android Expo accepts {localUri}; on web this is a decoded image.
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image as TexImageSource);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      // SAFETY: on iOS/Android Expo GL accepts {localUri}, which its types omit; on web this is a decoded image.
+      image as TexImageSource,
+    );
 
     if (gl.getError() !== gl.NO_ERROR) throw new Error('The card image could not be uploaded.');
 
@@ -196,7 +203,7 @@ export function createCardRenderer(
     try {
       const [front, back] = await Promise.all([
         frontImage(),
-        options.backSource ? loadCardTexture(options.backSource).catch(() => undefined) : undefined,
+        options.backSource ? loadBundledCardTexture(options.backSource).catch(() => undefined) : undefined,
       ]);
 
       if (disposed || !front) return;

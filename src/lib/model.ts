@@ -153,6 +153,10 @@ export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:$
 
 export const wishKey = (card: CardBrief) => `${card.language}:${card.id}`;
 
+/** A scan photo stands in for the card art only when the catalog has none. */
+export const withScanPhoto = <T extends CardBrief>(card: T, photo?: string): T =>
+  !card.image && photo ? { ...card, localImage: photo } : card;
+
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap((e) => pokemonIds(e.card)));
 
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);

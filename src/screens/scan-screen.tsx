@@ -37,7 +37,7 @@ import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/l
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
-import { defaultFinish, type Card, type CardBrief, type Language } from '@/lib/model';
+import { defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
 import { useCollection } from '@/lib/collection-context';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardCrop } from '@/components/card-crop';
@@ -371,10 +371,7 @@ function ScanSession({
     captureRequested();
   }, [captureRequest, mode]);
 
-  const withPhoto = (card: CardBrief) => ({
-    ...card,
-    ...(!card.image && photo?.startsWith('file://') ? { localImage: photo } : {}),
-  });
+  const withPhoto = (card: CardBrief) => withScanPhoto(card, photo?.startsWith('file://') ? photo : undefined);
 
   async function quickAdd(brief: CardBrief) {
     if (quickBusy) return;

@@ -30,6 +30,7 @@ import { boundPhotoOffset, fitPhoto } from '@/lib/photo-geometry';
 import { C, CardArt, IconButton, pressFx, Segmented, ToolbarAction, Txt, tick } from './pokedex-ui';
 
 // Older development clients can still inspect the flat artwork while awaiting a native rebuild.
+// SAFETY: expo-gl exports GLView; it is required only once the native module is known to exist.
 const NativeGLView =
   Platform.OS === 'web' || requireOptionalNativeModule('ExpoGL')
     ? (require('expo-gl').GLView as typeof GLViewType)

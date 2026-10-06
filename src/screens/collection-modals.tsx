@@ -843,7 +843,7 @@ export function SpeciesModal({
   );
 }
 
-function TrainerChoiceRow({
+function TrainerChoiceRow<T extends string>({
   title,
   options,
   value,
@@ -852,11 +852,11 @@ function TrainerChoiceRow({
   onChange,
 }: {
   title: string;
-  options: readonly string[];
-  value: string;
-  labels: Record<string, string>;
+  options: readonly T[];
+  value: T;
+  labels: Record<T, string>;
   busy: boolean;
-  onChange: (value: string) => void;
+  onChange: (value: T) => void;
 }) {
   return (
     <ChoiceMenu
@@ -924,8 +924,8 @@ export function ProfilesModal({
       </>
     ) : null;
 
-  function choose(part: keyof TrainerAppearance, value: string) {
-    setDraft((current) => ({ ...current, [part]: value }) as TrainerAppearance);
+  function choose<Part extends keyof TrainerAppearance>(part: Part, value: TrainerAppearance[Part]) {
+    setDraft((current) => ({ ...current, [part]: value }));
   }
 
   function returnToSettings() {

@@ -42,15 +42,19 @@ function snapshot(id, normal, reverse, currency = 'USD') {
     prices: [
       ['normal', normal],
       ['reverse', reverse],
-    ]
-      .filter(([, p]) => p !== undefined)
-      .map(([finish, amount]) => ({
-        finish,
-        amount,
-        currency,
-        source: currency === 'USD' ? 'TCGplayer' : 'Cardmarket',
-        updatedAt: new Date(now).toISOString(),
-      })),
+    ].flatMap(([finish, amount]) =>
+      amount === undefined
+        ? []
+        : [
+            {
+              finish,
+              amount,
+              currency,
+              source: currency === 'USD' ? 'TCGplayer' : 'Cardmarket',
+              updatedAt: new Date(now).toISOString(),
+            },
+          ],
+    ),
   };
 }
 
