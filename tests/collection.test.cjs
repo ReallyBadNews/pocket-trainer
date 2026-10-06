@@ -17,7 +17,7 @@ const {
   badgeProgress,
 } = require('../.test-build/lib/model');
 
-const { searchCards, rankScanCandidates, allCards } = require('../.test-build/lib/catalog');
+const { searchCards, rankScanCandidates, allCards, fetchCard } = require('../.test-build/lib/catalog');
 
 const card = {
   id: 'base1-58',
@@ -126,6 +126,32 @@ test('malformed or future backups cannot be imported', () => {
     const broken = structuredClone(c);
     mutate(broken);
     assert.throws(() => parseCollection(JSON.stringify(broken)));
+  }
+});
+
+test('a fetched card keeps only dex numbers a saved binder accepts, so it still loads next launch', async () => {
+  const originalFetch = global.fetch;
+  global.fetch = async () => ({
+    ok: true,
+    json: async () => ({
+      id: 'test-dex-1',
+      localId: '1',
+      name: 'Glitch',
+      category: 'Pokemon',
+      dexId: [25, 10000, 0],
+      set: { id: 'test-dex', name: 'Test Set', cardCount: { official: 1 } },
+      variants: { normal: true },
+    }),
+  });
+
+  try {
+    const fetched = await fetchCard({ id: 'test-dex-1', localId: '1', name: 'Glitch', language: 'en' });
+    assert.deepEqual(fetched.dexIds, [25]);
+    const c = freshCollection();
+    c.trainers[0] = addCard(c.trainers[0], fetched, 'normal', 1);
+    assert.deepEqual(parseCollection(JSON.stringify(c)).trainers[0].entries[0].card.dexIds, [25]);
+  } finally {
+    global.fetch = originalFetch;
   }
 });
 

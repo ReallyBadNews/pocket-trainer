@@ -11,6 +11,9 @@ export const DateText = v.pipe(
 /** Card art served by TCGdex; anything else is never loaded. */
 export const TcgdexImage = v.pipe(v.string(), v.startsWith('https://assets.tcgdex.net/'), v.maxLength(499));
 
+/** A National Pokédex number. Saved cards must use these limits, so fetched cards are checked against them too. */
+export const DexId = v.pipe(v.number(), v.integer(), v.gtValue(0), v.ltValue(10000));
+
 /** A real market price: positive, and small enough to rule out placeholder values. */
 export const PositivePrice = v.pipe(v.number(), v.finite(), v.gtValue(0), v.maxValue(100_000_000));
 

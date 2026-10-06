@@ -3,7 +3,7 @@ import { pokemonIds } from './card-kind';
 import { LanguageSchema, type Language } from './languages';
 import type { Badge } from './badges';
 import { QUIZ_LENGTH } from './quiz';
-import { DateText, lenient, TcgdexImage, Text, withoutUndefined } from './schema';
+import { DateText, DexId, lenient, TcgdexImage, Text, withoutUndefined } from './schema';
 import { completedSetCount } from './set-progress';
 import {
   awardTrainerAccessories,
@@ -290,8 +290,6 @@ export function recordQuizScore(trainer: Trainer, score: number): Trainer {
 
 const SavedDate = v.pipe(Text(), DateText);
 
-const DexId = v.pipe(v.number(), v.integer(), v.gtValue(0), v.ltValue(10000));
-
 const FinishSchema = v.picklist(FINISHES);
 
 const briefDetails = {
@@ -317,7 +315,7 @@ const Wish = v.pipe(
   v.object({
     card: WishCard,
     dexIds: v.pipe(
-      v.fallback(v.array(lenient(DexId)), []),
+      v.fallback(v.array(lenient(DexId)), () => []),
       v.transform((ids) => [...new Set(ids.filter((id) => id !== undefined))].slice(0, 10)),
     ),
     addedAt: SavedDate,
@@ -327,7 +325,7 @@ const Wish = v.pipe(
 
 /** Wishes are a nice-to-have: a bad one is dropped instead of rejecting the whole binder. */
 const Wishlist = v.pipe(
-  v.fallback(v.array(lenient(Wish)), []),
+  v.fallback(v.array(lenient(Wish)), () => []),
   v.transform((saved) => {
     const wishes = new Map<string, Wish>();
 

@@ -1,7 +1,7 @@
 import * as v from 'valibot';
 import type { CardBrief } from './model';
 import { DAY, priceKey } from './pricing';
-import { DateText, lenient, PositivePrice, TcgdexImage, Text } from './schema';
+import { DateText, DexId, lenient, PositivePrice, TcgdexImage, Text } from './schema';
 import supplements from '../data/card-supplements.json';
 
 /** TCGplayer prices are keyed by printing, e.g. `holofoil` or `1st-edition-holofoil`; unusable ones are dropped. */
@@ -32,7 +32,7 @@ export const CardResponse = v.object({
   types: lenient(v.array(Text(50))),
   dexId: lenient(
     v.pipe(
-      v.array(lenient(v.pipe(v.number(), v.integer(), v.gtValue(0)))),
+      v.array(lenient(DexId)),
       v.transform((ids) => ids.filter((id) => id !== undefined)),
     ),
   ),
@@ -43,7 +43,10 @@ export const CardResponse = v.object({
       cardCount: lenient(v.object({ official: lenient(v.pipe(v.number(), v.integer(), v.minValue(0))) })),
     }),
   ),
-  variants: v.optional(v.fallback(v.record(v.string(), v.fallback(v.boolean(), false)), {}), {}),
+  variants: v.optional(
+    v.fallback(v.record(v.string(), v.fallback(v.boolean(), false)), () => ({})),
+    () => ({}),
+  ),
   pricing: lenient(v.object({ tcgplayer: lenient(TcgplayerPricing), cardmarket: lenient(CardmarketPricing) })),
 });
 
