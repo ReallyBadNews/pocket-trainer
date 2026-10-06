@@ -1,6 +1,9 @@
 const { test } = require('node:test');
+
 const assert = require('node:assert/strict');
+
 const { showdownName, cryUrl, animatedSprite, pokedexLine } = require('../.test-build/lib/pokedex-voice');
+
 const { species } = require('../.test-build/lib/catalog');
 
 test('Showdown names drop punctuation, accents and gender symbols', () => {
@@ -23,5 +26,6 @@ test('every species has a usable cry name and a spoken line', () => {
     assert.ok(line.startsWith(`${s.en}, the `), line);
     assert.ok(!/\s{2}|\f|\n/.test(line), line);
   }
+
   assert.match(pokedexLine(1), /^Bulbasaur, the Seed Pokémon\. .+/);
 });

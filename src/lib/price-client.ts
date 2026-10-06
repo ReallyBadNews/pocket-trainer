@@ -1,13 +1,35 @@
 import type { CardBrief } from './model';
-import { DAY, needsRefresh, parseCardPricing, parseExchangeRate, parsePriceCache, priceKey, type ExchangeRate, type PriceSnapshot } from './pricing';
+import {
+  DAY,
+  needsRefresh,
+  parseCardPricing,
+  parseExchangeRate,
+  parsePriceCache,
+  priceKey,
+  type ExchangeRate,
+  type PriceSnapshot,
+} from './pricing';
 
 /** `after` is when the snapshot being replaced was checked; an older shared card response can't refresh it. */
 type Job = { card: CardBrief; priority: number; force: boolean; after: number; consumers: (() => boolean)[] };
+
 type Dependencies = {
   card: (card: CardBrief, force: boolean, after: number) => Promise<unknown>;
-  exchange: () => Promise<unknown>; read: () => Promise<string | null>; write: (raw: string) => Promise<void>; now?: () => number;
+  exchange: () => Promise<unknown>;
+  read: () => Promise<string | null>;
+  write: (raw: string) => Promise<void>;
+  now?: () => number;
 };
-export type PriceState = { snapshots: Readonly<Record<string, PriceSnapshot>>; fx?: ExchangeRate; errors: ReadonlySet<string>; pending: ReadonlySet<string>; ready: boolean; wakes: number };
+
+export type PriceState = {
+  snapshots: Readonly<Record<string, PriceSnapshot>>;
+  fx?: ExchangeRate;
+  errors: ReadonlySet<string>;
+  pending: ReadonlySet<string>;
+  ready: boolean;
+  wakes: number;
+};
+
 export class PriceClient {
   snapshots: Record<string, PriceSnapshot> = {};
   fx?: ExchangeRate;
@@ -31,71 +53,167 @@ export class PriceClient {
   private saveTimer?: ReturnType<typeof setTimeout>;
   constructor(private deps: Dependencies) {}
   private now = () => this.deps.now?.() ?? Date.now();
-  subscribe = (listener: () => void) => { this.listeners.add(listener); return () => { this.listeners.delete(listener); }; };
+  subscribe = (listener: () => void) => {
+    this.listeners.add(listener);
+
+    return () => {
+      this.listeners.delete(listener);
+    };
+  };
   /** Screens read this instead of the client's mutable fields: a new object per change, so memoized components (the React Compiler is on) see new prices. */
-  getState = (): PriceState => this.state ??= { snapshots: this.snapshots, fx: this.fx, errors: new Set(this.errors), pending: new Set(this.pending), ready: this.ready, wakes: this.wakes };
+  getState = (): PriceState =>
+    (this.state ??= {
+      snapshots: this.snapshots,
+      fx: this.fx,
+      errors: new Set(this.errors),
+      pending: new Set(this.pending),
+      ready: this.ready,
+      wakes: this.wakes,
+    });
   // A collection refresh settles several cards a second; repaint once per batch rather than once per card.
   private emit() {
-    this.revision++; this.state = undefined;
-    if (!this.notifyTimer) this.notifyTimer = setTimeout(() => { this.notifyTimer = undefined; this.listeners.forEach(fn => fn()); }, 50);
+    this.revision++;
+    this.state = undefined;
+
+    if (!this.notifyTimer)
+      this.notifyTimer = setTimeout(() => {
+        this.notifyTimer = undefined;
+        this.listeners.forEach((fn) => fn());
+      }, 50);
   }
-  wake() { this.wakes++; this.emit(); }
+  wake() {
+    this.wakes++;
+    this.emit();
+  }
   hydrate() {
-    if (!this.loading) this.loading = (async () => {
-      try { const cache = parsePriceCache(await this.deps.read(), this.now()); this.snapshots = cache.snapshots; this.fx = cache.fx; } catch { /* Optional cache never blocks the binder. */ }
-      this.ready = true; this.emit();
-    })();
+    if (!this.loading)
+      this.loading = (async () => {
+        try {
+          const cache = parsePriceCache(await this.deps.read(), this.now());
+          this.snapshots = cache.snapshots;
+          this.fx = cache.fx;
+        } catch {
+          /* Optional cache never blocks the binder. */
+        }
+
+        this.ready = true;
+        this.emit();
+      })();
+
     return this.loading;
   }
   async ensure(cards: CardBrief[], isCurrent = () => true, priority = 10, force = false) {
     await this.hydrate();
+
     if (!isCurrent()) return;
+
     for (const card of cards) {
-      const key = priceKey(card), cached = this.snapshots[key];
-      if (cached && !force && !needsRefresh(cached, this.now())) { if (cached.prices.some(p => p.currency === 'EUR')) void this.ensureFx(); continue; }
+      const key = priceKey(card),
+        cached = this.snapshots[key];
+
+      if (cached && !force && !needsRefresh(cached, this.now())) {
+        if (cached.prices.some((p) => p.currency === 'EUR')) void this.ensureFx();
+        continue;
+      }
+
       if (!force && this.now() - (this.attempts.get(key) ?? -Infinity) < 5 * 60_000) continue;
       const job = this.jobs.get(key);
-      if (job) { job.consumers.push(isCurrent); job.priority = Math.min(job.priority, priority); continue; }
+
+      if (job) {
+        job.consumers.push(isCurrent);
+        job.priority = Math.min(job.priority, priority);
+        continue;
+      }
+
       if (this.pending.has(key)) continue;
-      this.jobs.set(key, { card, priority, force, after: cached?.checkedAt ?? 0, consumers: [isCurrent] }); this.pending.add(key);
+      this.jobs.set(key, { card, priority, force, after: cached?.checkedAt ?? 0, consumers: [isCurrent] });
+      this.pending.add(key);
     }
-    this.emit(); this.drain();
+
+    this.emit();
+    this.drain();
   }
   private drain() {
-    for (const [key, job] of this.jobs) if (!job.consumers.some(fn => fn())) { this.jobs.delete(key); this.pending.delete(key); }
+    for (const [key, job] of this.jobs)
+      if (!job.consumers.some((fn) => fn())) {
+        this.jobs.delete(key);
+        this.pending.delete(key);
+      }
+
     while (this.active < 3 && this.jobs.size) {
       const [key, job] = [...this.jobs].sort((a, b) => a[1].priority - b[1].priority)[0];
-      this.jobs.delete(key); this.active++;
+      this.jobs.delete(key);
+      this.active++;
       this.attempts.set(key, this.now());
-      void this.deps.card(job.card, job.force, job.after).then(data => {
-        const snapshot = parseCardPricing(job.card, data, this.now());
-        this.snapshots = { ...this.snapshots, [key]: snapshot }; this.errors.delete(key);
-        if (snapshot.prices.some(p => p.currency === 'EUR')) void this.ensureFx();
-        this.persist();
-      }).catch(() => this.errors.add(key)).finally(() => {
-        this.pending.delete(key); this.active--; this.emit(); this.drain();
-      });
+      void this.deps
+        .card(job.card, job.force, job.after)
+        .then((data) => {
+          const snapshot = parseCardPricing(job.card, data, this.now());
+          this.snapshots = { ...this.snapshots, [key]: snapshot };
+          this.errors.delete(key);
+
+          if (snapshot.prices.some((p) => p.currency === 'EUR')) void this.ensureFx();
+          this.persist();
+        })
+        .catch(() => this.errors.add(key))
+        .finally(() => {
+          this.pending.delete(key);
+          this.active--;
+          this.emit();
+          this.drain();
+        });
     }
   }
   async ensureFx(force = false) {
     if (this.fxTask) return this.fxTask;
+
     if (!force && this.fx && this.now() - this.fx.checkedAt < DAY) return;
+
     if (!force && this.now() - this.fxAttempt < 5 * 60_000) return;
-    this.fxAttempt = this.now(); this.pending.add('fx'); this.emit();
-    this.fxTask = this.deps.exchange().then(data => {
-      this.fx = parseExchangeRate(data, this.now()); this.errors.delete('fx'); this.persist();
-    }).catch(() => { this.errors.add('fx'); }).finally(() => { this.fxTask = undefined; this.pending.delete('fx'); this.emit(); });
+    this.fxAttempt = this.now();
+    this.pending.add('fx');
+    this.emit();
+    this.fxTask = this.deps
+      .exchange()
+      .then((data) => {
+        this.fx = parseExchangeRate(data, this.now());
+        this.errors.delete('fx');
+        this.persist();
+      })
+      .catch(() => {
+        this.errors.add('fx');
+      })
+      .finally(() => {
+        this.fxTask = undefined;
+        this.pending.delete('fx');
+        this.emit();
+      });
+
     return this.fxTask;
   }
   private persist() {
     this.dirty = true;
-    if (!this.saveTimer) this.saveTimer = setTimeout(() => { this.saveTimer = undefined; void this.flush(); }, 350);
+
+    if (!this.saveTimer)
+      this.saveTimer = setTimeout(() => {
+        this.saveTimer = undefined;
+        void this.flush();
+      }, 350);
   }
   flush() {
     if (!this.dirty) return this.saving;
     this.dirty = false;
-    const raw = JSON.stringify({ version: 1, snapshots: Object.values(this.snapshots).sort((a,b) => b.checkedAt - a.checkedAt).slice(0, 5000), fx: this.fx });
+
+    const raw = JSON.stringify({
+      version: 1,
+      snapshots: Object.values(this.snapshots)
+        .sort((a, b) => b.checkedAt - a.checkedAt)
+        .slice(0, 5000),
+      fx: this.fx,
+    });
+
     this.saving = this.saving.then(() => this.deps.write(raw)).catch(() => {});
+
     return this.saving;
   }
 }

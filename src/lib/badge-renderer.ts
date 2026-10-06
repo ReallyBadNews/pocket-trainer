@@ -8,9 +8,19 @@ import fossil from '../../assets/crafted/badges/fossil.json';
 import dex from '../../assets/crafted/badges/dex.json';
 import binder from '../../assets/crafted/badges/binder.json';
 import type { BadgeEmblem } from './badges';
-import { BADGE_FOCAL_LENGTH, badgeCameraDistance, badgeClipPlanes, badgeYawDelta, clampBadgePose, DEFAULT_BADGE_POSE, packBadgeMeshes, type BadgePose } from './badge-geometry';
+import {
+  BADGE_FOCAL_LENGTH,
+  badgeCameraDistance,
+  badgeClipPlanes,
+  badgeYawDelta,
+  clampBadgePose,
+  DEFAULT_BADGE_POSE,
+  packBadgeMeshes,
+  type BadgePose,
+} from './badge-geometry';
 
 const EMBLEMS = { medal, starters, eevee, birds, fossil, dex, binder };
+
 const VERTEX = `
 precision highp float;
 attribute vec3 aPosition;
@@ -83,53 +93,87 @@ export type BadgeRenderer = {
 };
 
 /** One indexed Blender mesh and one draw call, with no rendering loop at rest. */
-export function createBadgeRenderer(gl: ExpoWebGLRenderingContext, options: {
-  emblem: BadgeEmblem;
-  pose?: BadgePose;
-  onReady: () => void;
-  onError: () => void;
-}): BadgeRenderer {
-  let disposed = false, ready = false, failed = false, presented = false;
+export function createBadgeRenderer(
+  gl: ExpoWebGLRenderingContext,
+  options: {
+    emblem: BadgeEmblem;
+    pose?: BadgePose;
+    onReady: () => void;
+    onError: () => void;
+  },
+): BadgeRenderer {
+  let disposed = false,
+    ready = false,
+    failed = false,
+    presented = false;
+
   let frame: number | undefined;
   let pose = clampBadgePose(options.pose ?? DEFAULT_BADGE_POSE);
   let animation: { start: number; from: BadgePose; to: BadgePose; yawDelta: number } | undefined;
-  let program: WebGLProgram | null = null, vertexBuffer: WebGLBuffer | null = null, indexBuffer: WebGLBuffer | null = null;
+
+  let program: WebGLProgram | null = null,
+    vertexBuffer: WebGLBuffer | null = null,
+    indexBuffer: WebGLBuffer | null = null;
+
   let mesh: ReturnType<typeof packBadgeMeshes>;
   let uniforms: Record<string, WebGLUniformLocation | null> = {};
 
   function fail(error: unknown) {
     if (disposed || failed) return;
-    failed = true; ready = false; animation = undefined;
+    failed = true;
+    ready = false;
+    animation = undefined;
+
     if (frame !== undefined) cancelAnimationFrame(frame);
     frame = undefined;
+
     if (__DEV__) console.warn('Badge preview:', error);
     options.onError();
   }
+
   function compile(type: number, source: string) {
     const shader = gl.createShader(type);
+
     if (!shader) throw new Error('Unable to prepare the badge preview.');
-    gl.shaderSource(shader, source); gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? 'Badge shader failed.');
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+      throw new Error(gl.getShaderInfoLog(shader) ?? 'Badge shader failed.');
+
     return shader;
   }
+
   function sampleAnimation() {
     if (!animation) return;
     const t = Math.min(1, Math.max(0, (performance.now() - animation.start) / 220));
     const eased = 1 - Math.pow(1 - t, 3);
-    pose = t === 1 ? animation.to : {
-      yaw: animation.from.yaw + animation.yawDelta * eased,
-      pitch: animation.from.pitch + (animation.to.pitch - animation.from.pitch) * eased,
-      zoom: animation.from.zoom + (animation.to.zoom - animation.from.zoom) * eased,
-    };
+    pose =
+      t === 1
+        ? animation.to
+        : {
+            yaw: animation.from.yaw + animation.yawDelta * eased,
+            pitch: animation.from.pitch + (animation.to.pitch - animation.from.pitch) * eased,
+            zoom: animation.from.zoom + (animation.to.zoom - animation.from.zoom) * eased,
+          };
+
     if (t === 1) animation = undefined;
   }
+
   function draw() {
     frame = undefined;
+
     if (disposed || !ready) return;
+
     try {
       sampleAnimation();
-      const width = Math.max(1, gl.drawingBufferWidth), height = Math.max(1, gl.drawingBufferHeight);
-      const aspect = width / height, camera = badgeCameraDistance(aspect, pose.zoom, mesh.radius);
+
+      const width = Math.max(1, gl.drawingBufferWidth),
+        height = Math.max(1, gl.drawingBufferHeight);
+
+      const aspect = width / height,
+        camera = badgeCameraDistance(aspect, pose.zoom, mesh.radius);
+
       const { near, far } = badgeClipPlanes(camera, mesh.radius);
       gl.viewport(0, 0, width, height);
       gl.clearColor(37 / 255, 56 / 255, 47 / 255, 1);
@@ -140,46 +184,77 @@ export function createBadgeRenderer(gl: ExpoWebGLRenderingContext, options: {
       gl.uniform2f(uniforms.uRotation, pose.pitch, pose.yaw);
       gl.uniform1f(uniforms.uCamera, camera);
       gl.uniform1f(uniforms.uAspect, aspect);
-      gl.uniform2f(uniforms.uDepth, (far + near) / (far - near), -2 * far * near / (far - near));
+      gl.uniform2f(uniforms.uDepth, (far + near) / (far - near), (-2 * far * near) / (far - near));
       gl.drawElements(gl.TRIANGLES, mesh.indices.length, gl.UNSIGNED_SHORT, 0);
       gl.endFrameEXP();
-      if (!presented && !disposed) { presented = true; options.onReady(); }
+
+      if (!presented && !disposed) {
+        presented = true;
+        options.onReady();
+      }
+
       if (animation && !disposed) invalidate();
-    } catch (error) { fail(error); }
+    } catch (error) {
+      fail(error);
+    }
   }
+
   function invalidate() {
     if (!disposed && !failed && ready && frame === undefined) frame = requestAnimationFrame(draw);
   }
+
   function prepare() {
     if (disposed) return;
+
     try {
       mesh = packBadgeMeshes([base, EMBLEMS[options.emblem]]);
       program = gl.createProgram();
+
       if (!program) throw new Error('Unable to prepare the badge preview.');
       gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX));
       gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT));
       gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'Badge program failed.');
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+        throw new Error(gl.getProgramInfoLog(program) ?? 'Badge program failed.');
       gl.useProgram(program);
-      vertexBuffer = gl.createBuffer(); indexBuffer = gl.createBuffer();
+      vertexBuffer = gl.createBuffer();
+      indexBuffer = gl.createBuffer();
+
       if (!vertexBuffer || !indexBuffer) throw new Error('Unable to upload the badge mesh.');
       gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
       gl.bufferData(gl.ARRAY_BUFFER, mesh.vertices, gl.STATIC_DRAW);
       gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
       gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, mesh.indices, gl.STATIC_DRAW);
-      for (const [name, count, offset] of [['aPosition', 3, 0], ['aNormal', 3, 3], ['aColor', 3, 6], ['aMaterial', 2, 9]] as const) {
+
+      for (const [name, count, offset] of [
+        ['aPosition', 3, 0],
+        ['aNormal', 3, 3],
+        ['aColor', 3, 6],
+        ['aMaterial', 2, 9],
+      ] as const) {
         const location = gl.getAttribLocation(program, name);
+
         if (location < 0) throw new Error('Badge shader attribute unavailable.');
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, count, gl.FLOAT, false, mesh.stride * 4, offset * 4);
       }
-      uniforms = Object.fromEntries(['uRotation', 'uCamera', 'uAspect', 'uDepth'].map(name => [name, gl.getUniformLocation(program!, name)]));
-      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
-      ready = true; invalidate();
-    } catch (error) { fail(error); }
+
+      uniforms = Object.fromEntries(
+        ['uRotation', 'uCamera', 'uAspect', 'uDepth'].map((name) => [name, gl.getUniformLocation(program!, name)]),
+      );
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      ready = true;
+      invalidate();
+    } catch (error) {
+      fail(error);
+    }
   }
+
   // Let the caller retain the disposer before preparing this context.
   void Promise.resolve().then(prepare);
+
   return {
     getPose: () => ({ ...pose }),
     redraw: invalidate,
@@ -187,13 +262,24 @@ export function createBadgeRenderer(gl: ExpoWebGLRenderingContext, options: {
       if (disposed || failed) return;
       sampleAnimation();
       const to = clampBadgePose(next);
-      if (to.yaw === pose.yaw && to.pitch === pose.pitch && to.zoom === pose.zoom) { animation = undefined; return; }
-      animation = animated ? { start: performance.now(), from: { ...pose }, to, yawDelta: badgeYawDelta(pose.yaw, to.yaw) } : undefined;
+
+      if (to.yaw === pose.yaw && to.pitch === pose.pitch && to.zoom === pose.zoom) {
+        animation = undefined;
+
+        return;
+      }
+
+      animation = animated
+        ? { start: performance.now(), from: { ...pose }, to, yawDelta: badgeYawDelta(pose.yaw, to.yaw) }
+        : undefined;
+
       if (!animated) pose = to;
       invalidate();
     },
     dispose: () => {
-      disposed = true; animation = undefined;
+      disposed = true;
+      animation = undefined;
+
       if (frame !== undefined) cancelAnimationFrame(frame);
       frame = undefined;
       // GLView releases its context. Avoid queued native deletes after unmount.

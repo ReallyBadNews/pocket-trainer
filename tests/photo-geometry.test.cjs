@@ -1,9 +1,11 @@
 const { test } = require('node:test');
+
 const assert = require('node:assert/strict');
+
 const { fitPhoto, boundPhotoOffset } = require('../.test-build/lib/photo-geometry');
 
 test('portrait card cannot pan vertically while its zoomed artwork still fits', () => {
-  const fitted = fitPhoto(390, 680, .716);
+  const fitted = fitPhoto(390, 680, 0.716);
   assert.equal(fitted.width, 390);
   assert.equal(boundPhotoOffset(100, fitted.height, 680, 1.2), 0);
   assert.equal(boundPhotoOffset(100, fitted.width, 390, 1.2), 39);
@@ -18,7 +20,7 @@ test('landscape scan only pans across actual overflow, not contain letterboxing'
 });
 
 test('height-constrained cards use fitted width and zooming out clamps existing offsets', () => {
-  const fitted = fitPhoto(844, 300, .716);
+  const fitted = fitPhoto(844, 300, 0.716);
   assert.ok(Math.abs(fitted.width - 214.8) < 1e-9);
   assert.equal(boundPhotoOffset(400, fitted.width, 844, 3), 0);
   assert.equal(boundPhotoOffset(-400, fitted.height, 300, 3), -300);

@@ -86,31 +86,44 @@ export type CardRenderer = {
 };
 
 /** A single Blender mesh, two textures, one draw call. It renders only on change. */
-export function createCardRenderer(gl: ExpoWebGLRenderingContext, options: {
-  frontSources: string[];
-  backSource?: number;
-  surface: CardSurface;
-  pose?: CardPose;
-  onReady: (hasBack: boolean) => void;
-  onError: () => void;
-}): CardRenderer {
+export function createCardRenderer(
+  gl: ExpoWebGLRenderingContext,
+  options: {
+    frontSources: string[];
+    backSource?: number;
+    surface: CardSurface;
+    pose?: CardPose;
+    onReady: (hasBack: boolean) => void;
+    onError: () => void;
+  },
+): CardRenderer {
   let disposed = false;
   let frame: number | undefined;
   let ready = false;
   let pose = clampCardPose(options.pose ?? DEFAULT_CARD_POSE);
   let animation: { start: number; from: CardPose; to: CardPose } | undefined;
-  let buffer: WebGLBuffer | null = null, program: WebGLProgram | null = null;
+
+  let buffer: WebGLBuffer | null = null,
+    program: WebGLProgram | null = null;
+
   let uniforms: Record<string, WebGLUniformLocation | null> = {};
 
   function compile(type: number, source: string) {
     const shader = gl.createShader(type);
+
     if (!shader) throw new Error('Unable to prepare the card preview.');
-    gl.shaderSource(shader, source); gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(shader) ?? 'Card shader failed.');
+    gl.shaderSource(shader, source);
+    gl.compileShader(shader);
+
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
+      throw new Error(gl.getShaderInfoLog(shader) ?? 'Card shader failed.');
+
     return shader;
   }
+
   function upload(image: CardTextureImage) {
     const texture = gl.createTexture();
+
     if (!texture) throw new Error('Unable to load the card texture.');
     gl.bindTexture(gl.TEXTURE_2D, texture);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
@@ -120,23 +133,34 @@ export function createCardRenderer(gl: ExpoWebGLRenderingContext, options: {
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
     // On iOS/Android Expo accepts {localUri}; on web this is a decoded image.
     gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image as TexImageSource);
+
     if (gl.getError() !== gl.NO_ERROR) throw new Error('The card image could not be uploaded.');
+
     return texture;
   }
+
   function draw() {
     frame = undefined;
+
     if (disposed || !ready) return;
+
     if (animation) {
       const t = Math.min(1, Math.max(0, (performance.now() - animation.start) / 220));
       const eased = 1 - Math.pow(1 - t, 3);
-      pose = { yaw: animation.from.yaw + (animation.to.yaw - animation.from.yaw) * eased,
+      pose = {
+        yaw: animation.from.yaw + (animation.to.yaw - animation.from.yaw) * eased,
         pitch: animation.from.pitch + (animation.to.pitch - animation.from.pitch) * eased,
-        zoom: animation.from.zoom + (animation.to.zoom - animation.from.zoom) * eased };
+        zoom: animation.from.zoom + (animation.to.zoom - animation.from.zoom) * eased,
+      };
+
       if (t === 1) animation = undefined;
     }
-    const width = gl.drawingBufferWidth, height = gl.drawingBufferHeight;
+
+    const width = gl.drawingBufferWidth,
+      height = gl.drawingBufferHeight;
+
     const aspect = width / Math.max(1, height);
-    const camera = Math.max(88, 63 / aspect) * 3.4874 * .61 / pose.zoom;
+    const camera = (Math.max(88, 63 / aspect) * 3.4874 * 0.61) / pose.zoom;
     gl.viewport(0, 0, width, height);
     gl.clearColor(37 / 255, 56 / 255, 47 / 255, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -146,57 +170,102 @@ export function createCardRenderer(gl: ExpoWebGLRenderingContext, options: {
     gl.uniform1f(uniforms.uAspect, aspect);
     gl.drawArrays(gl.TRIANGLES, 0, model.vertices.length / model.stride);
     gl.endFrameEXP();
+
     if (animation) frame = requestAnimationFrame(draw);
   }
-  function invalidate() { if (!disposed && frame === undefined) frame = requestAnimationFrame(draw); }
+
+  function invalidate() {
+    if (!disposed && frame === undefined) frame = requestAnimationFrame(draw);
+  }
+
   async function frontImage() {
     for (const source of options.frontSources) {
       if (disposed) return;
-      try { return await loadCardTexture(source); } catch { /* Try catalog/local fallback. */ }
+
+      try {
+        return await loadCardTexture(source);
+      } catch {
+        /* Try catalog/local fallback. */
+      }
     }
+
     throw new Error('Card artwork unavailable.');
   }
+
   async function prepare() {
     try {
-      const [front, back] = await Promise.all([frontImage(), options.backSource ? loadCardTexture(options.backSource).catch(() => undefined) : undefined]);
+      const [front, back] = await Promise.all([
+        frontImage(),
+        options.backSource ? loadCardTexture(options.backSource).catch(() => undefined) : undefined,
+      ]);
+
       if (disposed || !front) return;
       program = gl.createProgram();
+
       if (!program) throw new Error('Unable to prepare the card preview.');
       gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX));
       gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT));
       gl.linkProgram(program);
-      if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(program) ?? 'Card program failed.');
+
+      if (!gl.getProgramParameter(program, gl.LINK_STATUS))
+        throw new Error(gl.getProgramInfoLog(program) ?? 'Card program failed.');
       gl.useProgram(program);
       buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(model.vertices), gl.STATIC_DRAW);
-      for (const [name, count, offset] of [['aPosition', 3, 0], ['aNormal', 3, 3], ['aUv', 2, 6], ['aSurface', 1, 8]] as const) {
+
+      for (const [name, count, offset] of [
+        ['aPosition', 3, 0],
+        ['aNormal', 3, 3],
+        ['aUv', 2, 6],
+        ['aSurface', 1, 8],
+      ] as const) {
         const location = gl.getAttribLocation(program, name);
         gl.enableVertexAttribArray(location);
         gl.vertexAttribPointer(location, count, gl.FLOAT, false, model.stride * 4, offset * 4);
       }
-      uniforms = Object.fromEntries(['uRotation', 'uCamera', 'uAspect', 'uFront', 'uBack', 'uFinish', 'uHasBack'].map(name => [name, gl.getUniformLocation(program!, name)]));
-      gl.activeTexture(gl.TEXTURE0); upload(front); gl.uniform1i(uniforms.uFront, 0);
-      gl.activeTexture(gl.TEXTURE1); upload(back ?? front); gl.uniform1i(uniforms.uBack, 1);
+
+      uniforms = Object.fromEntries(
+        ['uRotation', 'uCamera', 'uAspect', 'uFront', 'uBack', 'uFinish', 'uHasBack'].map((name) => [
+          name,
+          gl.getUniformLocation(program!, name),
+        ]),
+      );
+      gl.activeTexture(gl.TEXTURE0);
+      upload(front);
+      gl.uniform1i(uniforms.uFront, 0);
+      gl.activeTexture(gl.TEXTURE1);
+      upload(back ?? front);
+      gl.uniform1i(uniforms.uBack, 1);
       gl.uniform1f(uniforms.uHasBack, back ? 1 : 0);
       gl.uniform1f(uniforms.uFinish, surfaceUniform(options.surface));
-      gl.enable(gl.DEPTH_TEST); gl.enable(gl.CULL_FACE);
-      ready = true; invalidate(); options.onReady(!!back);
+      gl.enable(gl.DEPTH_TEST);
+      gl.enable(gl.CULL_FACE);
+      ready = true;
+      invalidate();
+      options.onReady(!!back);
     } catch (error) {
-      if (!disposed) { if (__DEV__) console.warn('Card preview:', error); options.onError(); }
+      if (!disposed) {
+        if (__DEV__) console.warn('Card preview:', error);
+        options.onError();
+      }
     }
   }
+
   void prepare();
+
   return {
     getPose: () => ({ ...pose }),
     setPose: (next, animated = false) => {
       const to = clampCardPose(next);
       animation = animated ? { start: performance.now(), from: { ...pose }, to } : undefined;
+
       if (!animated) pose = to;
       invalidate();
     },
     dispose: () => {
       disposed = true;
+
       if (frame !== undefined) cancelAnimationFrame(frame);
       // GLView owns its context and releases GPU resources when it unmounts.
       animation = undefined;

@@ -1,21 +1,50 @@
 const { test } = require('node:test');
+
 const assert = require('node:assert/strict');
+
 const { recentDiscoveries, discoveredOn, regionProgress, regionRange } = require('../.test-build/lib/discoveries');
+
 const { REGIONS } = require('../.test-build/lib/collection-filters');
 
 // Local calendar times, so the day labels hold in any time zone.
 const at = (day, hour = 12, minute = 0) => new Date(2026, 9, day, hour, minute).toISOString();
+
 let serial = 0;
+
 const entry = (dexIds, addedAt, category = 'Pokemon') => {
   serial += 1;
-  return { key: `en:card-${serial}:normal`, addedAt, finish: 'normal', quantity: 1, favorite: false, card: { id: `card-${serial}`, localId: String(serial), name: `Card ${serial}`, language: 'en', category, dexIds, types: [], rarity: 'Common', finishes: ['normal'], set: { id: 'set', name: 'Set', total: 100 } } };
+
+  return {
+    key: `en:card-${serial}:normal`,
+    addedAt,
+    finish: 'normal',
+    quantity: 1,
+    favorite: false,
+    card: {
+      id: `card-${serial}`,
+      localId: String(serial),
+      name: `Card ${serial}`,
+      language: 'en',
+      category,
+      dexIds,
+      types: [],
+      rarity: 'Common',
+      finishes: ['normal'],
+      set: { id: 'set', name: 'Set', total: 100 },
+    },
+  };
 };
-const ids = list => list.map(d => d.id);
+
+const ids = (list) => list.map((d) => d.id);
 
 test('recent discoveries are ordered by when each Pokémon was first found', () => {
   // Saved newest first, like addCard does.
   const entries = [entry([25], at(5, 9)), entry([4], at(4)), entry([1], at(3)), entry([25], at(2))];
-  assert.deepEqual(recentDiscoveries(entries), [{ id: 4, at: at(4) }, { id: 1, at: at(3) }, { id: 25, at: at(2) }]);
+  assert.deepEqual(recentDiscoveries(entries), [
+    { id: 4, at: at(4) },
+    { id: 1, at: at(3) },
+    { id: 25, at: at(2) },
+  ]);
 });
 
 test('trainer and energy cards are not discoveries, and repeated species count once', () => {
@@ -55,21 +84,37 @@ test('discovery dates read as today, yesterday or a short date', () => {
 
 test('region progress counts discovered Pokémon by National Pokédex number', () => {
   const regions = regionProgress([1, 151, 152, 25, 25, 1025, 0, 2000]);
-  assert.deepEqual(regions.map(r => r.id), REGIONS.map(r => r.id));
-  const kanto = regions[0], johto = regions[1], paldea = regions[8];
+  assert.deepEqual(
+    regions.map((r) => r.id),
+    REGIONS.map((r) => r.id),
+  );
+
+  const kanto = regions[0],
+    johto = regions[1],
+    paldea = regions[8];
+
   assert.deepEqual([kanto.discovered, kanto.total, kanto.complete], [3, 151, false]);
   assert.deepEqual([johto.discovered, johto.total], [1, 100]);
   assert.deepEqual([paldea.discovered, paldea.total], [1, 120]);
-  assert.equal(regions.reduce((n, r) => n + r.total, 0), 1025);
-  assert.ok(regions.every(r => !r.active));
+  assert.equal(
+    regions.reduce((n, r) => n + r.total, 0),
+    1025,
+  );
+  assert.ok(regions.every((r) => !r.active));
 });
 
 test('a region with every Pokémon found is complete, and the shown region is active', () => {
   const johto = Array.from({ length: 100 }, (_, i) => 152 + i);
   const regions = regionProgress(new Set(johto), 'johto');
-  assert.deepEqual(regions.filter(r => r.complete).map(r => r.id), ['johto']);
-  assert.deepEqual(regions.filter(r => r.active).map(r => r.id), ['johto']);
-  assert.ok(regionProgress(johto, 'discovered').every(r => !r.active));
+  assert.deepEqual(
+    regions.filter((r) => r.complete).map((r) => r.id),
+    ['johto'],
+  );
+  assert.deepEqual(
+    regions.filter((r) => r.active).map((r) => r.id),
+    ['johto'],
+  );
+  assert.ok(regionProgress(johto, 'discovered').every((r) => !r.active));
 });
 
 test('region ranges use three digit Pokédex numbers', () => {

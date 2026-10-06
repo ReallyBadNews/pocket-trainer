@@ -1,1 +1,1 @@
-{"platforms":["apple"],"apple":{"modules":["CardScannerModule"]}}
+{ "platforms": ["apple"], "apple": { "modules": ["CardScannerModule"] } }

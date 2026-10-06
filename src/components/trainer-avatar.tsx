@@ -1,9 +1,6 @@
 import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
-import {
-  TRAINER_OUTFIT_COLORS,
-  type TrainerAppearance,
-} from '@/lib/model';
+import { TRAINER_OUTFIT_COLORS, type TrainerAppearance } from '@/lib/model';
 import type { TrainerAccessoryId } from '@/lib/trainer-accessories';
 
 export const TRAINER_SKIN_COLORS: Record<TrainerAppearance['skinTone'], string> = {
@@ -166,24 +163,66 @@ export const TRAINER_ACCESSORY_IMAGES = {
 
 export function TrainerAvatar({ appearance, size = 48 }: { appearance: TrainerAppearance; size?: number }) {
   const faceKey = `${appearance.skinTone}-${appearance.hairStyle}-${appearance.hairColor}` as keyof typeof FACE_IMAGES;
-  const headwearKey = appearance.headwear === 'none'
-    ? null
-    : `${appearance.headwear}-${appearance.outfit}` as keyof typeof HEADWEAR_IMAGES;
+
+  const headwearKey =
+    appearance.headwear === 'none'
+      ? null
+      : (`${appearance.headwear}-${appearance.outfit}` as keyof typeof HEADWEAR_IMAGES);
+
   const accessory = appearance.accessory ?? 'none';
   const layerStyle = [StyleSheet.absoluteFill, { width: size, height: size }];
 
-  return <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[s.avatar, {
-    width: size,
-    height: size,
-    borderRadius: size / 2,
-    borderWidth: Math.max(2, size * .025),
-    borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
-  }]}>
-    <Image accessible={false} source={OUTFIT_IMAGES[appearance.outfit]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
-    <Image accessible={false} source={FACE_IMAGES[faceKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />
-    {accessory !== 'none' && <Image accessible={false} source={TRAINER_ACCESSORY_IMAGES[accessory]} recyclingKey={accessory} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />}
-    {headwearKey && <Image accessible={false} source={HEADWEAR_IMAGES[headwearKey]} style={layerStyle} contentFit="contain" cachePolicy="memory-disk" />}
-  </View>;
+  return (
+    <View
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
+      style={[
+        s.avatar,
+        {
+          width: size,
+          height: size,
+          borderRadius: size / 2,
+          borderWidth: Math.max(2, size * 0.025),
+          borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
+        },
+      ]}
+    >
+      <Image
+        accessible={false}
+        source={OUTFIT_IMAGES[appearance.outfit]}
+        style={layerStyle}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+      />
+      <Image
+        accessible={false}
+        source={FACE_IMAGES[faceKey]}
+        style={layerStyle}
+        contentFit="contain"
+        cachePolicy="memory-disk"
+      />
+      {accessory !== 'none' && (
+        <Image
+          accessible={false}
+          source={TRAINER_ACCESSORY_IMAGES[accessory]}
+          recyclingKey={accessory}
+          style={layerStyle}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+        />
+      )}
+      {headwearKey && (
+        <Image
+          accessible={false}
+          source={HEADWEAR_IMAGES[headwearKey]}
+          style={layerStyle}
+          contentFit="contain"
+          cachePolicy="memory-disk"
+        />
+      )}
+    </View>
+  );
 }
 
 const s = StyleSheet.create({

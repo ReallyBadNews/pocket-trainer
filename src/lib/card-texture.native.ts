@@ -9,14 +9,20 @@ export async function loadCardTexture(source: string | number): Promise<CardText
   // Expo GL's stb decoder only accepts PNG/JPEG, so serialize a valid PNG.
   // Release builds serve bundled assets from disk via expo-updates: `uri` is empty, only `localUri` is set.
   const asset = typeof source === 'number' ? await Asset.fromModule(source).downloadAsync() : undefined;
-  const uri = asset ? asset.localUri ?? asset.uri : source as string;
+  const uri = asset ? (asset.localUri ?? asset.uri) : (source as string);
   const image = await Image.loadAsync(uri);
   const { ImageManipulator, SaveFormat } = require('expo-image-manipulator') as typeof import('expo-image-manipulator');
   const context = ImageManipulator.manipulate(image);
   let rendered: Awaited<ReturnType<typeof context.renderAsync>> | undefined;
+
   try {
     rendered = await context.renderAsync();
     const result = await rendered.saveAsync({ format: SaveFormat.PNG });
+
     return { localUri: result.uri };
-  } finally { rendered?.release(); context.release(); image.release(); }
+  } finally {
+    rendered?.release();
+    context.release();
+    image.release();
+  }
 }
