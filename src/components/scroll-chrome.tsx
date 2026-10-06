@@ -49,7 +49,7 @@ export function useChromeScroll() {
   const web = Platform.OS === 'web';
 
   useEffect(() => {
-    progress.value = 0;
+    progress.set(0);
 
     return () => {
       cancelAnimation(idle);
@@ -60,11 +60,11 @@ export function useChromeScroll() {
   // This depends on the full viewport, not the list height changing every frame.
   // Keep the short-page check on the UI thread instead of sending layout events to JS.
   useAnimatedReaction(
-    () => !paused.value && contentHeight.value > 0 && contentHeight.value <= viewportHeight.value + 1,
+    () => !paused.get() && contentHeight.get() > 0 && contentHeight.get() <= viewportHeight.get() + 1,
     (short) => {
       if (short) {
         cancelAnimation(idle);
-        progress.value = withTiming(0, { duration: 180 });
+        progress.set(withTiming(0, { duration: 180 }));
       }
     },
   );
@@ -72,78 +72,82 @@ export function useChromeScroll() {
   const settle = () => {
     'worklet';
 
-    if (paused.value) return;
+    if (paused.get()) return;
     cancelAnimation(idle);
-    snapping.value = true;
-    progress.value = withTiming(scrollChromeSnap(progress.value, offset.value, distance), { duration: 220 }, () => {
-      snapping.value = false;
-    });
+    snapping.set(true);
+    progress.set(
+      withTiming(scrollChromeSnap(progress.get(), offset.get(), distance), { duration: 220 }, () => {
+        snapping.set(false);
+      }),
+    );
   };
 
   const settleSoon = () => {
     'worklet';
     cancelAnimation(idle);
 
-    if (progress.value === 0 || progress.value === 1) return;
-    idle.value = 0;
+    if (progress.get() === 0 || progress.get() === 1) return;
+    idle.set(0);
     // Web has no drag/momentum callbacks; wait until wheel/touch scrolling is idle.
-    idle.value = withDelay(
-      160,
-      withTiming(1, { duration: 0 }, (finished) => {
-        if (finished) settle();
-      }),
+    idle.set(
+      withDelay(
+        160,
+        withTiming(1, { duration: 0 }, (finished) => {
+          if (finished) settle();
+        }),
+      ),
     );
   };
 
   const beginDrag = () => {
     'worklet';
-    dragging.value = true;
+    dragging.set(true);
     cancelAnimation(idle);
     cancelAnimation(progress);
-    snapping.value = false;
+    snapping.set(false);
   };
 
   const endDrag = () => {
     'worklet';
-    dragging.value = false;
+    dragging.set(false);
     settleSoon();
   };
 
   const onScroll = useAnimatedScrollHandler({
     onBeginDrag: beginDrag,
     onScroll: (event) => {
-      if (paused.value) return;
+      if (paused.get()) return;
       const height = event.contentSize.height;
       const viewport = event.layoutMeasurement.height;
 
       const next = scrollChromeStep(
-        progress.value,
-        offset.value,
+        progress.get(),
+        offset.get(),
         event.contentOffset.y,
         height,
         viewport,
-        viewportHeight.value,
+        viewportHeight.get(),
         distance,
       );
 
-      offset.value = next.offset;
+      offset.set(next.offset);
 
-      if (snapping.value) {
+      if (snapping.get()) {
         cancelAnimation(progress);
-        snapping.value = false;
+        snapping.set(false);
       }
 
-      progress.value = next.progress;
+      progress.set(next.progress);
 
-      if (!dragging.value && !momentum.value) settleSoon();
+      if (!dragging.get() && !momentum.get()) settleSoon();
     },
     onEndDrag: endDrag,
     onMomentumBegin: () => {
-      momentum.value = true;
+      momentum.set(true);
       cancelAnimation(idle);
     },
     onMomentumEnd: () => {
-      momentum.value = false;
+      momentum.set(false);
       settle();
     },
   });
@@ -156,13 +160,14 @@ export function useChromeScroll() {
     onTouchEnd: web ? endDrag : undefined,
     onTouchCancel: web ? endDrag : undefined,
     // Prevent browser anchoring from treating responsive reflow as user scrolling.
+    // SAFETY: react-native-web passes `overflowAnchor` through to CSS; React Native's ViewStyle doesn't list it.
     style: web ? ({ overflowAnchor: 'none' } as ViewStyle) : undefined,
     // Reserve space for the overlays without resizing the list or reflowing its rows.
     contentContainerStyle: { paddingTop: 20 + distance, paddingBottom: Math.max(40, insets.bottom + 16) + bottomInset },
     contentInsetAdjustmentBehavior: 'never' as const,
     automaticallyAdjustContentInsets: false,
     onContentSizeChange: (_width: number, height: number) => {
-      contentHeight.value = height;
+      contentHeight.set(height);
     },
   };
 }

@@ -118,7 +118,7 @@ export function createBadgeRenderer(
   let mesh: ReturnType<typeof packBadgeMeshes>;
   let uniforms: Record<string, WebGLUniformLocation | null> = {};
 
-  function fail(error: unknown) {
+  function fail(cause: unknown) {
     if (disposed || failed) return;
     failed = true;
     ready = false;
@@ -127,7 +127,7 @@ export function createBadgeRenderer(
     if (frame !== undefined) cancelAnimationFrame(frame);
     frame = undefined;
 
-    if (__DEV__) console.warn('Badge preview:', error);
+    if (__DEV__) console.warn('Badge preview:', cause);
     options.onError();
   }
 

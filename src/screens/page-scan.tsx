@@ -2,7 +2,7 @@ import Animated, { FlipInYLeft, ZoomIn } from 'react-native-reanimated';
 import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { ActionRow, Button, C, CardArt, ErrorNotice, Icon, R, S, Segmented, Txt, tick } from '@/components/pokedex-ui';
 import { fetchCard, type ScanCandidate } from '@/lib/catalog';
@@ -11,7 +11,7 @@ import type { ScanLanguage } from '@/lib/language-detect';
 import { identifyProgressively } from '@/lib/scan-pipeline';
 import { pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
-import { defaultFinish, discoveredIds, type Card, type CardBrief } from '@/lib/model';
+import { defaultFinish, discoveredIds, withScanPhoto, type Card, type CardBrief } from '@/lib/model';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 import { PocketReview } from '@/components/pocket-review';
@@ -88,18 +88,24 @@ export function PageScan({
 
     return () => {
       alive.current = false;
-      generation.current++;
     };
   }, []);
   // "Scan the next page" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
+  const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {
     if (captureRequest === handledCapture.current) return;
     handledCapture.current = captureRequest;
-    void takePhoto();
+    captureRequested();
   }, [captureRequest]);
-  useEffect(() => {
+
+  // A page photographed from the live camera is read once, when the screen opens with it.
+  const openedWithLivePhoto = useEffectEvent(() => {
     if (livePhoto) acceptLive(livePhoto);
+  });
+
+  useEffect(() => {
+    openedWithLivePhoto();
   }, []);
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const summary = pageSummary(pockets);
@@ -167,7 +173,7 @@ export function PageScan({
       if (!isCurrent()) return;
       const status = pocketStatus(text, matches);
       const top = matches[0]?.card;
-      const choice = top ? { ...top, ...(!top.image && photoUri ? { localImage: photoUri } : {}) } : null;
+      const choice = top ? withScanPhoto(top, photoUri) : null;
       updatePocket(index, { status, matches, choice, photoUri });
 
       if (choice) loadDetails(choice);
@@ -279,7 +285,7 @@ export function PageScan({
 
   function choose(index: number, card: CardBrief) {
     const pocket = pockets[index];
-    const choice = { ...card, ...(!card.image && pocket.photoUri ? { localImage: pocket.photoUri } : {}) };
+    const choice = withScanPhoto(card, pocket.photoUri);
     updatePocket(index, { choice, confirmed: true, skipped: false });
     loadDetails(choice);
   }
@@ -297,7 +303,7 @@ export function PageScan({
           const full = details[detailKey(card)] ?? (await fetchCard(card));
 
           return {
-            card: { ...full, ...(card.localImage ? { localImage: card.localImage } : {}) },
+            card: card.localImage ? { ...full, localImage: card.localImage } : full,
             finish: defaultFinish(full),
             quantity: 1,
           };

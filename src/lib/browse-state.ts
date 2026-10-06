@@ -61,11 +61,11 @@ function useTrainerSlice<T>(
   const state = useSyncExternalStore(store.subscribe, store.get);
   const value = state.trainerId === trainer.id ? state.value : fallback;
 
-  const update = (patch: Partial<T> | ((current: T) => T)) =>
+  const update = (patch: Partial<T>) =>
     store.set((current) => {
       const base = current.trainerId === trainer.id ? current.value : fallback;
 
-      return { trainerId: trainer.id, value: typeof patch === 'function' ? patch(base) : { ...base, ...patch } };
+      return { trainerId: trainer.id, value: { ...base, ...patch } };
     });
 
   return [value, update] as const;

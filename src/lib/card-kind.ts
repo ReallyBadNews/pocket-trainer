@@ -13,7 +13,15 @@ export const CARD_FILTERS: { id: CardFilter; label: string }[] = [
   { id: 'stadium', label: 'Stadium' },
 ];
 
+// SAFETY: scripts/refresh-card-types.py writes language → card id → type code; the import's inferred type lists every id.
 const types = index as Record<string, Record<string, number>>;
+
+const TRAINER_TYPES = new Map([
+  [4, 'Item'],
+  [5, 'Stadium'],
+  [6, 'Supporter'],
+  [7, 'Tool'],
+]);
 
 const categoryForCode = (code: number) =>
   code === 1 ? 'Pokemon' : code === 3 ? 'Energy' : code >= 2 ? 'Trainer' : 'Card';
@@ -27,12 +35,7 @@ export function cardCategory(card: CardBrief): string {
 export function trainerType(card: CardBrief): string | undefined {
   if (cardCategory(card) !== 'Trainer') return undefined;
 
-  return (
-    card.trainerType ??
-    ({ 4: 'Item', 5: 'Stadium', 6: 'Supporter', 7: 'Tool' } as Record<number, string>)[
-      (types[card.language]?.[card.id] ?? 0) & 15
-    ]
-  );
+  return card.trainerType ?? TRAINER_TYPES.get((types[card.language]?.[card.id] ?? 0) & 15);
 }
 
 export const isTagTeam = (card: CardBrief) => card.tagTeam ?? !!((types[card.language]?.[card.id] ?? 0) & 16);

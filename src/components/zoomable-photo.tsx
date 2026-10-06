@@ -77,36 +77,36 @@ function PhotoViewer({
 
   const pinch = Gesture.Pinch()
     .onStart((e) => {
-      pinching.value = true;
-      startScale.value = scale.value;
-      anchorX.value = (e.focalX - width / 2 - x.value) / scale.value;
-      anchorY.value = (e.focalY - height / 2 - y.value) / scale.value;
+      pinching.set(true);
+      startScale.set(scale.get());
+      anchorX.set((e.focalX - width / 2 - x.get()) / scale.get());
+      anchorY.set((e.focalY - height / 2 - y.get()) / scale.get());
     })
     .onUpdate((e) => {
-      scale.value = Math.max(1, Math.min(5, startScale.value * e.scale));
-      x.value = bound(e.focalX - width / 2 - anchorX.value * scale.value, fitted.width, width, scale.value);
-      y.value = bound(e.focalY - height / 2 - anchorY.value * scale.value, fitted.height, height, scale.value);
+      scale.set(Math.max(1, Math.min(5, startScale.get() * e.scale)));
+      x.set(bound(e.focalX - width / 2 - anchorX.get() * scale.get(), fitted.width, width, scale.get()));
+      y.set(bound(e.focalY - height / 2 - anchorY.get() * scale.get(), fitted.height, height, scale.get()));
     })
     .onFinalize(() => {
-      pinching.value = false;
+      pinching.set(false);
     });
 
   const pan = Gesture.Pan()
     .maxPointers(1)
     .onChange((e) => {
-      if (pinching.value) return;
-      x.value = bound(x.value + e.changeX, fitted.width, width, scale.value);
-      y.value = bound(y.value + e.changeY, fitted.height, height, scale.value);
+      if (pinching.get()) return;
+      x.set(bound(x.get() + e.changeX, fitted.width, width, scale.get()));
+      y.set(bound(y.get() + e.changeY, fitted.height, height, scale.get()));
     });
 
   const animated = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],
+    transform: [{ translateX: x.get() }, { translateY: y.get() }, { scale: scale.get() }],
   }));
 
   function reset() {
-    scale.value = 1;
-    x.value = 0;
-    y.value = 0;
+    scale.set(1);
+    x.set(0);
+    y.set(0);
   }
 
   return (

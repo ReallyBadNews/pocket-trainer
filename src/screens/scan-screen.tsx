@@ -3,7 +3,7 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   ActionRow,
@@ -37,7 +37,7 @@ import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/l
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
-import { defaultFinish, type Card, type CardBrief, type Language } from '@/lib/model';
+import { defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
 import { useCollection } from '@/lib/collection-context';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardCrop } from '@/components/card-crop';
@@ -130,7 +130,6 @@ function ScanSession({
 
     return () => {
       alive.current = false;
-      generation.current++;
     };
   }, []);
   const [busy, setBusy] = useState(false);
@@ -365,16 +364,14 @@ function ScanSession({
 
   // "Scan another card" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
+  const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {
     if (captureRequest === handledCapture.current || mode !== 'card') return;
     handledCapture.current = captureRequest;
-    void takePhoto();
+    captureRequested();
   }, [captureRequest, mode]);
 
-  const withPhoto = (card: CardBrief) => ({
-    ...card,
-    ...(!card.image && photo?.startsWith('file://') ? { localImage: photo } : {}),
-  });
+  const withPhoto = (card: CardBrief) => withScanPhoto(card, photo?.startsWith('file://') ? photo : undefined);
 
   async function quickAdd(brief: CardBrief) {
     if (quickBusy) return;

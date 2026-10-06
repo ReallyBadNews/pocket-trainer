@@ -54,7 +54,7 @@ export function PageFrame({
   const [headerHeight, setHeaderHeight] = useState(64);
   const [footerHeight, setFooterHeight] = useState(0);
   const { distance, progress, bottomInset } = chrome;
-  const headerStyle = useAnimatedStyle(() => ({ transform: [{ translateY: distance * (1 - progress.value) }] }));
+  const headerStyle = useAnimatedStyle(() => ({ transform: [{ translateY: distance * (1 - progress.get()) }] }));
 
   const contentContainerStyle = {
     paddingTop: distance + headerHeight + S.lg,

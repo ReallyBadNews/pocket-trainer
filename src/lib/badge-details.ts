@@ -3,9 +3,8 @@ import { LANGUAGES, type Language } from './languages';
 import { badgeProgress, type Trainer } from './model';
 import type { SetProgress } from './set-progress';
 
-/** Route params are only strings in theory; anything that isn't a known id gets the not-found page. */
-export const findBadge = (id: unknown): Badge | undefined =>
-  typeof id === 'string' ? BADGES.find((badge) => badge.id === id) : undefined;
+/** Anything that isn't a known id, including a missing or repeated route param, gets the not-found page. */
+export const findBadge = (id: string | undefined): Badge | undefined => BADGES.find((badge) => badge.id === id);
 
 export type BadgeStatus = { progress: number; earned: boolean; closest?: SetProgress };
 

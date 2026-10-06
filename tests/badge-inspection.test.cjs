@@ -159,7 +159,7 @@ test('invalid mesh data is rejected before it can reach unchecked native GL call
   const vertices = [...mesh.vertices];
   vertices[6] = 20;
   assert.throws(() => packBadgeMeshes([{ ...mesh, vertices }]), /material/);
-  assert.throws(() => packBadgeMeshes([{ ...mesh, vertices: new Array(65_537 * 7).fill(0) }]), /16-bit/);
+  assert.throws(() => packBadgeMeshes([{ ...mesh, vertices: Array.from({ length: 65_537 * 7 }, () => 0) }]), /16-bit/);
 });
 
 test('gestures retain full revolutions while limiting pitch and magnification', () => {

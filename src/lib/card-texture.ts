@@ -3,9 +3,7 @@ import { Asset } from 'expo-asset';
 export type CardTextureImage = TexImageSource;
 
 /** Browser images must finish decoding before WebGL uploads them. */
-export async function loadCardTexture(source: string | number): Promise<CardTextureImage> {
-  const uri = typeof source === 'number' ? Asset.fromModule(source).uri : source;
-
+export async function loadCardTexture(uri: string): Promise<CardTextureImage> {
   return new Promise((resolve, reject) => {
     const image = new Image();
     image.crossOrigin = 'anonymous';
@@ -14,3 +12,5 @@ export async function loadCardTexture(source: string | number): Promise<CardText
     image.src = uri;
   });
 }
+
+export const loadBundledCardTexture = (module: number) => loadCardTexture(Asset.fromModule(module).uri);

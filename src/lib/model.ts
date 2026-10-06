@@ -1,7 +1,9 @@
+import * as v from 'valibot';
 import { pokemonIds } from './card-kind';
-import { isLanguage, type Language } from './languages';
+import { LanguageSchema, type Language } from './languages';
 import type { Badge } from './badges';
 import { QUIZ_LENGTH } from './quiz';
+import { DateText, DexId, lenient, TcgdexImage, Text, withoutUndefined } from './schema';
 import { completedSetCount } from './set-progress';
 import {
   awardTrainerAccessories,
@@ -14,15 +16,18 @@ export { BADGES } from './badges';
 
 export type { Language } from './languages';
 
-export type Finish =
-  | 'normal'
-  | 'holo'
-  | 'reverse'
-  | 'firstEdition'
-  | 'firstEditionHolo'
-  | 'firstEditionReverse'
-  | 'wPromo'
-  | 'unsure';
+export const FINISHES = [
+  'normal',
+  'holo',
+  'reverse',
+  'firstEdition',
+  'firstEditionHolo',
+  'firstEditionReverse',
+  'wPromo',
+  'unsure',
+] as const;
+
+export type Finish = (typeof FINISHES)[number];
 
 export type CardBrief = {
   id: string;
@@ -148,6 +153,10 @@ export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:$
 
 export const wishKey = (card: CardBrief) => `${card.language}:${card.id}`;
 
+/** A scan photo stands in for the card art only when the catalog has none. */
+export const withScanPhoto = <T extends CardBrief>(card: T, photo?: string): T =>
+  !card.image && photo ? { ...card, localImage: photo } : card;
+
 export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatMap((e) => pokemonIds(e.card)));
 
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);
@@ -162,12 +171,9 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
   const existing = trainer.entries.find((e) => e.key === key);
 
   if (existing && existing.quantity + quantity > 999) throw new Error('You can save up to 999 copies of one printing.');
-  // Wish granted: any printing of a wished card takes it off the wishlist.
-  const wishlist = trainer.wishlist?.filter((w) => w.key !== wishKey(card));
 
-  return awardTrainerAccessories({
+  const next: Trainer = {
     ...trainer,
-    ...(wishlist ? { wishlist } : {}),
     entries: existing
       ? trainer.entries.map((e) =>
           e.key === key
@@ -179,7 +185,12 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
             : e,
         )
       : [{ key, card, finish, quantity, favorite: false, addedAt: new Date().toISOString() }, ...trainer.entries],
-  });
+  };
+
+  // Wish granted: any printing of a wished card takes it off the wishlist.
+  if (trainer.wishlist) next.wishlist = trainer.wishlist.filter((w) => w.key !== wishKey(card));
+
+  return awardTrainerAccessories(next);
 }
 
 /** With exactly one known printing, pick it; otherwise leave it for the collector to confirm. */
@@ -268,217 +279,165 @@ export function badgeProgress(
   return Math.min(count, badge.target);
 }
 
-const isQuizScore = (v: unknown): v is number =>
-  typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= QUIZ_LENGTH;
+const QuizScore = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(QUIZ_LENGTH));
 
 /** Keeps only a trainer's best score; a lower or equal score leaves them unchanged. */
 export function recordQuizScore(trainer: Trainer, score: number): Trainer {
-  if (!isQuizScore(score)) throw new Error('Invalid quiz score.');
+  if (!v.is(QuizScore, score)) throw new Error('Invalid quiz score.');
 
   return score > (trainer.quizBest ?? 0) ? { ...trainer, quizBest: score } : trainer;
 }
 
-const isRecord = (value: unknown): value is Record<string, unknown> =>
-  !!value && typeof value === 'object' && !Array.isArray(value);
+const SavedDate = v.pipe(Text(), DateText);
 
-const str = (v: unknown, max = 300): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
+const FinishSchema = v.picklist(FINISHES);
 
-const safeImage = (v: unknown): v is string =>
-  typeof v === 'string' && /^https:\/\/assets\.tcgdex\.net\//.test(v) && v.length < 500;
+const briefDetails = {
+  category: lenient(Text(50)),
+  trainerType: lenient(Text(50)),
+  energyType: lenient(Text(50)),
+  tagTeam: lenient(v.boolean()),
+};
+
+const WishCard = v.pipe(
+  v.object({
+    id: Text(100),
+    localId: Text(50),
+    name: Text(),
+    language: LanguageSchema,
+    image: v.optional(TcgdexImage),
+    ...briefDetails,
+  }),
+  v.transform(withoutUndefined),
+);
+
+const Wish = v.pipe(
+  v.object({
+    card: WishCard,
+    dexIds: v.pipe(
+      v.fallback(v.array(lenient(DexId)), () => []),
+      v.transform((ids) => [...new Set(ids.filter((id) => id !== undefined))].slice(0, 10)),
+    ),
+    addedAt: SavedDate,
+  }),
+  v.transform(({ card, dexIds, addedAt }): Wish => ({ key: wishKey(card), card, dexIds, addedAt })),
+);
 
 /** Wishes are a nice-to-have: a bad one is dropped instead of rejecting the whole binder. */
-function parseWishlist(value: unknown): Wish[] {
-  if (!Array.isArray(value)) return [];
-  const wishes = new Map<string, Wish>();
+const Wishlist = v.pipe(
+  v.fallback(v.array(lenient(Wish)), () => []),
+  v.transform((saved) => {
+    const wishes = new Map<string, Wish>();
 
-  for (const w of value) {
-    if (wishes.size >= WISHLIST_LIMIT) break;
+    for (const wish of saved) if (wish && !wishes.has(wish.key)) wishes.set(wish.key, wish);
 
-    if (!isRecord(w) || !isRecord(w.card) || !str(w.addedAt) || !Number.isFinite(Date.parse(w.addedAt))) continue;
-    const c = w.card;
+    return [...wishes.values()].slice(0, WISHLIST_LIMIT);
+  }),
+);
 
-    if (
-      !str(c.id, 100) ||
-      !str(c.localId, 50) ||
-      !str(c.name) ||
-      !isLanguage(c.language) ||
-      (c.image !== undefined && !safeImage(c.image))
-    )
-      continue;
+const SavedCard = v.pipe(
+  v.object({
+    id: Text(100),
+    localId: Text(50),
+    name: Text(),
+    language: LanguageSchema,
+    set: v.object({ id: Text(100), name: Text(), total: v.pipe(v.number(), v.integer(), v.minValue(0)) }),
+    dexIds: v.array(DexId),
+    types: v.array(Text(50)),
+    category: Text(),
+    rarity: Text(),
+    finishes: v.array(FinishSchema),
+    image: v.optional(TcgdexImage),
+    trainerType: briefDetails.trainerType,
+    energyType: briefDetails.energyType,
+    tagTeam: briefDetails.tagTeam,
+    hp: lenient(v.pipe(v.number(), v.finite())),
+    description: lenient(v.pipe(v.string(), v.maxLength(2999))),
+    localImage: lenient(v.pipe(v.string(), v.startsWith('file://'))),
+  }),
+  v.transform(withoutUndefined),
+);
 
-    const card: CardBrief = {
-      id: c.id,
-      localId: c.localId,
-      name: c.name,
-      language: c.language,
-      ...(safeImage(c.image) ? { image: c.image } : {}),
-      ...(str(c.category, 50) ? { category: c.category } : {}),
-      ...(str(c.trainerType, 50) ? { trainerType: c.trainerType } : {}),
-      ...(str(c.energyType, 50) ? { energyType: c.energyType } : {}),
-      ...(typeof c.tagTeam === 'boolean' ? { tagTeam: c.tagTeam } : {}),
-    };
+const SavedEntry = v.pipe(
+  v.object({
+    key: v.string(),
+    card: SavedCard,
+    finish: FinishSchema,
+    quantity: v.pipe(v.number(), v.integer(), v.minValue(1), v.maxValue(999)),
+    favorite: v.boolean(),
+    addedAt: SavedDate,
+  }),
+  v.check((entry) => entry.key === entryKey(entry.card, entry.finish)),
+);
 
-    const dexIds = Array.isArray(w.dexIds)
-      ? [...new Set(w.dexIds.filter((n): n is number => Number.isInteger(n) && n > 0 && n < 10000))].slice(0, 10)
-      : [];
+const AppearanceSchema = v.object({
+  skinTone: v.picklist(TRAINER_SKIN_TONES),
+  hairStyle: v.picklist(TRAINER_HAIR_STYLES),
+  hairColor: v.picklist(TRAINER_HAIR_COLORS),
+  outfit: v.picklist(TRAINER_OUTFITS),
+  headwear: v.picklist(TRAINER_HEADWEAR),
+  // Unknown or unearned cosmetics fall back to none without blocking the collection.
+  accessory: v.optional(
+    v.fallback(v.picklist(['none', ...TRAINER_ACCESSORIES.map((accessory) => accessory.id)]), 'none'),
+  ),
+});
 
-    const key = wishKey(card);
+const SavedTrainer = v.pipe(
+  v.object({
+    id: Text(100),
+    name: Text(32),
+    color: v.pipe(Text(7), v.regex(/^#[0-9a-f]{6}$/i)),
+    appearance: v.optional(v.pipe(AppearanceSchema, v.transform(withoutUndefined))),
+    entries: v.pipe(
+      v.array(SavedEntry),
+      v.maxLength(20000),
+      v.check((entries) => new Set(entries.map((e) => e.key)).size === entries.length),
+    ),
+    // Cosmetic history and game scores never block an otherwise valid binder.
+    quizBest: lenient(QuizScore),
+    wishlist: Wishlist,
+    unlockedAccessories: lenient(
+      v.pipe(
+        v.array(v.unknown()),
+        v.transform((saved) =>
+          TRAINER_ACCESSORIES.flatMap((accessory) => (saved.includes(accessory.id) ? [accessory.id] : [])),
+        ),
+      ),
+    ),
+  }),
+  v.transform(withoutUndefined),
+);
 
-    if (!wishes.has(key)) wishes.set(key, { key, card, dexIds, addedAt: w.addedAt });
-  }
-
-  return [...wishes.values()];
-}
+const SavedCollection = v.pipe(
+  v.object({
+    version: v.literal(1),
+    activeId: Text(),
+    trainers: v.pipe(v.array(SavedTrainer), v.minLength(1), v.maxLength(20)),
+    // Saves from before the lock existed, and every backup, open locked; only Settings can unlock.
+    grownUpLock: v.optional(v.boolean(), true),
+  }),
+  v.transform(({ version, activeId, trainers, grownUpLock }): Collection => ({
+    version,
+    activeId,
+    grownUpLock,
+    trainers: trainers.map(({ appearance, ...trainer }, index) =>
+      awardTrainerAccessories({ ...trainer, appearance: appearance ?? trainerAppearanceFor(index) }),
+    ),
+  })),
+  v.check(
+    ({ activeId, trainers }) =>
+      new Set(trainers.map((t) => t.id)).size === trainers.length && trainers.some((t) => t.id === activeId),
+  ),
+);
 
 /** Reject invalid backups before changing any saved data. Rebuild objects to discard unknown fields. */
 export function parseCollection(raw: string): Collection {
   if (raw.length > 20_000_000) throw new Error('This backup is too large.');
-  const data: unknown = JSON.parse(raw);
+  const result = v.safeParse(SavedCollection, JSON.parse(raw));
 
-  const invalid = () => {
-    throw new Error('This file is not a valid Pocket Trainer backup.');
-  };
+  if (!result.success) throw new Error('This file is not a valid Pocket Trainer backup.');
 
-  if (
-    !isRecord(data) ||
-    data.version !== 1 ||
-    !Array.isArray(data.trainers) ||
-    !data.trainers.length ||
-    data.trainers.length > 20 ||
-    !str(data.activeId)
-  )
-    return invalid();
-
-  if (data.grownUpLock !== undefined && typeof data.grownUpLock !== 'boolean') return invalid();
-
-  const trainers: Trainer[] = data.trainers.map((t: unknown, trainerIndex) => {
-    if (
-      !isRecord(t) ||
-      !str(t.id, 100) ||
-      !str(t.name, 32) ||
-      !str(t.color, 7) ||
-      !/^#[0-9a-f]{6}$/i.test(t.color) ||
-      !Array.isArray(t.entries) ||
-      t.entries.length > 20000
-    )
-      return invalid();
-    const fallbackAppearance = trainerAppearanceFor(trainerIndex);
-    let appearance = fallbackAppearance;
-
-    if (t.appearance !== undefined) {
-      if (
-        !isRecord(t.appearance) ||
-        !TRAINER_SKIN_TONES.includes(t.appearance.skinTone as TrainerAppearance['skinTone']) ||
-        !TRAINER_HAIR_STYLES.includes(t.appearance.hairStyle as TrainerAppearance['hairStyle']) ||
-        !TRAINER_HAIR_COLORS.includes(t.appearance.hairColor as TrainerAppearance['hairColor']) ||
-        !TRAINER_OUTFITS.includes(t.appearance.outfit as TrainerAppearance['outfit']) ||
-        !TRAINER_HEADWEAR.includes(t.appearance.headwear as TrainerAppearance['headwear'])
-      )
-        return invalid();
-      appearance = {
-        skinTone: t.appearance.skinTone as TrainerAppearance['skinTone'],
-        hairStyle: t.appearance.hairStyle as TrainerAppearance['hairStyle'],
-        hairColor: t.appearance.hairColor as TrainerAppearance['hairColor'],
-        outfit: t.appearance.outfit as TrainerAppearance['outfit'],
-        headwear: t.appearance.headwear as TrainerAppearance['headwear'],
-        ...(t.appearance.accessory !== undefined
-          ? { accessory: t.appearance.accessory as TrainerAccessorySelection }
-          : {}),
-      };
-    }
-
-    const entries: Entry[] = t.entries.map((e: unknown) => {
-      if (
-        !isRecord(e) ||
-        !isRecord(e.card) ||
-        !str(e.finish) ||
-        !Object.hasOwn(FINISH_LABELS, e.finish) ||
-        typeof e.quantity !== 'number' ||
-        !Number.isInteger(e.quantity) ||
-        e.quantity < 1 ||
-        e.quantity > 999 ||
-        typeof e.favorite !== 'boolean' ||
-        !str(e.addedAt) ||
-        !Number.isFinite(Date.parse(e.addedAt))
-      )
-        return invalid();
-      const c = e.card;
-
-      if (
-        !str(c.id, 100) ||
-        !str(c.localId, 50) ||
-        !str(c.name) ||
-        !isLanguage(c.language) ||
-        !isRecord(c.set) ||
-        !str(c.set.id, 100) ||
-        !str(c.set.name) ||
-        typeof c.set.total !== 'number' ||
-        !Number.isInteger(c.set.total) ||
-        c.set.total < 0 ||
-        !Array.isArray(c.dexIds) ||
-        !c.dexIds.every((n) => Number.isInteger(n) && n > 0 && n < 10000) ||
-        !Array.isArray(c.types) ||
-        !c.types.every((v) => str(v, 50)) ||
-        !str(c.category) ||
-        !str(c.rarity) ||
-        !Array.isArray(c.finishes) ||
-        !c.finishes.every((v) => typeof v === 'string' && Object.hasOwn(FINISH_LABELS, v)) ||
-        (c.image !== undefined && !safeImage(c.image))
-      )
-        return invalid();
-
-      const card: Card = {
-        id: c.id,
-        localId: c.localId,
-        name: c.name,
-        language: c.language as Language,
-        set: { id: c.set.id, name: c.set.name, total: c.set.total },
-        dexIds: c.dexIds as number[],
-        types: c.types as string[],
-        category: c.category,
-        rarity: c.rarity,
-        finishes: c.finishes as Finish[],
-        ...(str(c.trainerType, 50) ? { trainerType: c.trainerType } : {}),
-        ...(str(c.energyType, 50) ? { energyType: c.energyType } : {}),
-        ...(typeof c.tagTeam === 'boolean' ? { tagTeam: c.tagTeam } : {}),
-        ...(safeImage(c.image) ? { image: c.image } : {}),
-        ...(typeof c.hp === 'number' && Number.isFinite(c.hp) ? { hp: c.hp } : {}),
-        ...(typeof c.description === 'string' && c.description.length < 3000 ? { description: c.description } : {}),
-        ...(typeof c.localImage === 'string' && /^file:\/\//.test(c.localImage) ? { localImage: c.localImage } : {}),
-      };
-
-      const finish = e.finish as Finish;
-
-      if (e.key !== entryKey(card, finish)) return invalid();
-
-      return { key: e.key as string, card, finish, quantity: e.quantity, favorite: e.favorite, addedAt: e.addedAt };
-    });
-
-    if (new Set(entries.map((e) => e.key)).size !== entries.length) return invalid();
-    // Cosmetic history and game scores never block an otherwise valid binder.
-    const savedAccessories = Array.isArray(t.unlockedAccessories) ? t.unlockedAccessories : [];
-
-    const unlockedAccessories = TRAINER_ACCESSORIES.filter((accessory) => savedAccessories.includes(accessory.id)).map(
-      (accessory) => accessory.id,
-    );
-
-    return awardTrainerAccessories({
-      id: t.id,
-      name: t.name,
-      color: t.color,
-      appearance,
-      entries,
-      ...(isQuizScore(t.quizBest) ? { quizBest: t.quizBest } : {}),
-      wishlist: parseWishlist(t.wishlist),
-      ...(Array.isArray(t.unlockedAccessories) ? { unlockedAccessories } : {}),
-    });
-  });
-
-  if (new Set(trainers.map((t) => t.id)).size !== trainers.length || !trainers.some((t) => t.id === data.activeId))
-    return invalid();
-
-  // Saves from before the lock existed, and every backup, open locked; only Settings can unlock.
-  return { version: 1, activeId: data.activeId as string, trainers, grownUpLock: data.grownUpLock ?? true };
+  return result.output;
 }
 
 const portableWishes = (t: Trainer) =>

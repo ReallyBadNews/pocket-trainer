@@ -21,8 +21,8 @@ export function unlockedTrainerAccessories(trainer: Trainer): TrainerAccessoryId
   const saved = Array.isArray(trainer.unlockedAccessories) ? trainer.unlockedAccessories : [];
   const discovered = new Set(trainer.entries.flatMap((entry) => pokemonIds(entry.card))).size;
 
-  return TRAINER_ACCESSORIES.filter((accessory) => saved.includes(accessory.id) || discovered >= accessory.target).map(
-    (accessory) => accessory.id,
+  return TRAINER_ACCESSORIES.flatMap((accessory) =>
+    saved.includes(accessory.id) || discovered >= accessory.target ? [accessory.id] : [],
   );
 }
 
@@ -39,7 +39,7 @@ export function awardTrainerAccessories(trainer: Trainer): Trainer {
 
   if (unlocked.length || hadValidLedger) next = { ...trainer, unlockedAccessories: unlocked };
   else if (saved !== undefined) {
-    const { unlockedAccessories: discarded, ...rest } = trainer;
+    const { unlockedAccessories: _discarded, ...rest } = trainer;
     next = rest;
   }
 

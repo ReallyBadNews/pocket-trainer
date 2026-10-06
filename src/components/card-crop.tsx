@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { useMemo, useRef, useState } from 'react';
-import { PanResponder, StyleSheet, View } from 'react-native';
+import { PanResponder, StyleSheet, View, type PanResponderGestureState } from 'react-native';
 import { Button, ButtonRow, C, S, Txt } from './pokedex-ui';
+import { useEventHandler } from '@/hooks/use-event-handler';
 import { fullCrop, resizeCrop, type Crop } from '@/lib/scan-types';
 
 export function CardCrop({
@@ -21,9 +22,18 @@ export function CardCrop({
   const [available, setAvailable] = useState(260);
   const width = Math.min(available, (430 * photo.width) / photo.height);
   const height = (width * photo.height) / photo.width;
-  const latest = useRef({ crop, width, height, onDrag });
-  latest.current = { crop, width, height, onDrag };
   const start = useRef(crop);
+
+  const grab = useEventHandler(() => {
+    start.current = crop;
+    onDrag(true);
+  });
+
+  const move = useEventHandler((corner: number, gesture: PanResponderGestureState) =>
+    setCrop(resizeCrop(start.current, corner, gesture.dx / width, gesture.dy / height)),
+  );
+
+  const release = useEventHandler(() => onDrag(false));
 
   const responders = useMemo(
     () =>
@@ -31,20 +41,14 @@ export function CardCrop({
         PanResponder.create({
           onStartShouldSetPanResponder: () => true,
           onMoveShouldSetPanResponder: () => true,
-          onPanResponderGrant: () => {
-            start.current = latest.current.crop;
-            latest.current.onDrag(true);
-          },
-          onPanResponderMove: (_, gesture) =>
-            setCrop(
-              resizeCrop(start.current, corner, gesture.dx / latest.current.width, gesture.dy / latest.current.height),
-            ),
-          onPanResponderRelease: () => latest.current.onDrag(false),
-          onPanResponderTerminate: () => latest.current.onDrag(false),
+          onPanResponderGrant: grab,
+          onPanResponderMove: (_, gesture) => move(corner, gesture),
+          onPanResponderRelease: release,
+          onPanResponderTerminate: release,
           onPanResponderTerminationRequest: () => false,
         }),
       ),
-    [],
+    [grab, move, release],
   );
 
   const [x, y, w, h] = crop;

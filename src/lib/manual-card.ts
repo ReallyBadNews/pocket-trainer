@@ -30,7 +30,7 @@ export function makeManualCard(input: {
     throw new Error('Choose a valid Pokémon.');
   const localId = number[1].replace(/\s+/g, ' ');
 
-  return {
+  const card: Card = {
     id: `manual-${setCode}-${localId.replace(/\s/g, '')}-${Number(number[2])}`,
     language: input.language,
     name,
@@ -41,6 +41,9 @@ export function makeManualCard(input: {
     types: [],
     rarity: 'Unknown',
     finishes: ['normal', 'holo', 'reverse', 'unsure'],
-    ...(input.photoUri?.startsWith('file://') ? { localImage: input.photoUri } : {}),
   };
+
+  if (input.photoUri?.startsWith('file://')) card.localImage = input.photoUri;
+
+  return card;
 }

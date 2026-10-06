@@ -162,12 +162,9 @@ export const TRAINER_ACCESSORY_IMAGES = {
 } as const satisfies Record<TrainerAccessoryId, number>;
 
 export function TrainerAvatar({ appearance, size = 48 }: { appearance: TrainerAppearance; size?: number }) {
-  const faceKey = `${appearance.skinTone}-${appearance.hairStyle}-${appearance.hairColor}` as keyof typeof FACE_IMAGES;
+  const faceKey = `${appearance.skinTone}-${appearance.hairStyle}-${appearance.hairColor}` as const;
 
-  const headwearKey =
-    appearance.headwear === 'none'
-      ? null
-      : (`${appearance.headwear}-${appearance.outfit}` as keyof typeof HEADWEAR_IMAGES);
+  const headwearKey = appearance.headwear === 'none' ? null : (`${appearance.headwear}-${appearance.outfit}` as const);
 
   const accessory = appearance.accessory ?? 'none';
   const layerStyle = [StyleSheet.absoluteFill, { width: size, height: size }];

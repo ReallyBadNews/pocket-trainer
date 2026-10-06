@@ -1,9 +1,10 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useSyncExternalStore } from 'react';
+import * as v from 'valibot';
 import { AppState } from 'react-native';
 import { PriceClient } from './price-client';
 import { fetchCardData } from './card-api';
 import { readPrices, writePrices } from './storage';
-import { priceKey } from './pricing';
+import { FrankfurterRate, priceKey } from './pricing';
 import type { CardBrief } from './model';
 
 export const prices = new PriceClient({
@@ -17,7 +18,7 @@ export const prices = new PriceClient({
 
     if (!response.ok) throw new Error('Exchange rate unavailable.');
 
-    return response.json();
+    return v.parse(FrankfurterRate, await response.json());
   },
 });
 
@@ -32,13 +33,15 @@ AppState.addEventListener('change', (state) => {
 export function usePricing(cards: CardBrief[], priority = 10, enabled = true) {
   const state = useSyncExternalStore(prices.subscribe, prices.getState);
   const keys = cards.map(priceKey).join('|');
+  // Requests follow the cards' identities (`keys`), not a new array from every render.
+  const ensure = useEffectEvent((isActive: () => boolean) => prices.ensure(cards, isActive, priority));
   useEffect(() => {
     void prices.hydrate();
   }, []);
   useEffect(() => {
     if (!enabled) return;
     let active = true;
-    const timer = setTimeout(() => void prices.ensure(cards, () => active, priority), priority === 0 ? 0 : 200);
+    const timer = setTimeout(() => void ensure(() => active), priority === 0 ? 0 : 200);
 
     return () => {
       active = false;

@@ -36,7 +36,6 @@ export function usePokedexVoice() {
 
     return () => {
       alive.current = false;
-      generation.current++;
       void Speech.stop();
       player.current?.remove();
       player.current = null;

@@ -18,11 +18,14 @@ const {
   missingPriceReason,
   needsRefresh,
   parsePriceCache,
+  FrankfurterRate,
 } = require('../.test-build/lib/pricing');
+
+const v = require('valibot');
 
 const { PriceClient } = require('../.test-build/lib/price-client');
 
-const { fetchCardData } = require('../.test-build/lib/card-api');
+const { CardResponse, fetchCardData } = require('../.test-build/lib/card-api');
 
 const { changePrinting, entryKey, freshCollection, addCard } = require('../.test-build/lib/model');
 
@@ -39,7 +42,15 @@ const brief = (id = 'base1-58', language = 'en') => ({
   localId: id.split('-').at(-1),
 });
 
-const sample = (id, language = 'en') => fixtures.find((f) => f.language === language && f.data.id === id).data;
+const raw = (id, language = 'en') => fixtures.find((f) => f.language === language && f.data.id === id).data;
+
+// Responses are decoded where they're fetched; minimal test responses get the names every TCGdex card has.
+const cardData = (data) => v.parse(CardResponse, { localId: '1', name: 'Test card', ...data });
+
+const sample = (id, language = 'en') => cardData(raw(id, language));
+
+// Production fetchers reject a malformed exchange rate before the client sees it.
+const brokenRate = async () => v.parse(FrankfurterRate, {});
 
 const snapshot = (id, language = 'en') => parseCardPricing(brief(id, language), sample(id, language), now);
 
@@ -87,7 +98,8 @@ test('Japanese prices retain language and EUR provenance and require an exchange
   assert.equal(quote.converted, true);
   assert.deepEqual(quote.sources, ['Cardmarket']);
   assert.equal(quotePrice(jp, 'reverse', fx, now), null);
-  assert.throws(() => parseExchangeRate({ base: 'USD', quote: 'EUR', date: fx.date, rate: 1.1622 }, now));
+  assert.equal(v.safeParse(FrankfurterRate, { base: 'USD', quote: 'EUR', date: fx.date, rate: 1.1622 }).success, false);
+  assert.deepEqual(parseExchangeRate(v.parse(FrankfurterRate, { base: 'EUR', quote: 'USD', ...fx }), now), fx);
 });
 
 test('unknown printing shows a range; special and first-edition finishes never borrow regular prices', () => {
@@ -106,7 +118,7 @@ test('unknown printing shows a range; special and first-edition finishes never b
     },
   };
 
-  const edition = parseCardPricing(brief('test-1'), data, now);
+  const edition = parseCardPricing(brief('test-1'), cardData(data), now);
   assert.equal(quotePrice(edition, 'firstEditionHolo', fx, now).low, 1234);
   assert.equal(quotePrice(edition, 'holo', fx, now), null);
 });
@@ -115,20 +127,20 @@ test('missing, zero, malformed and wrong-currency prices remain unavailable', ()
   for (const marketPrice of [null, undefined, 0, -1, NaN, Infinity, '500', 1e20]) {
     const s = parseCardPricing(
       brief(),
-      {
+      cardData({
         id: card.id,
         pricing: { tcgplayer: { unit: 'USD', updated: new Date(now).toISOString(), normal: { marketPrice } } },
-      },
+      }),
       now,
     );
 
     assert.equal(quotePrice(s, 'normal', fx, now), null);
   }
 
-  const wrong = structuredClone(sample('base1-58'));
+  const wrong = structuredClone(raw('base1-58'));
   wrong.pricing.tcgplayer.unit = 'JPY';
   wrong.pricing.cardmarket = null;
-  assert.equal(quotePrice(parseCardPricing(brief(), wrong, now), 'normal', fx, now), null);
+  assert.equal(quotePrice(parseCardPricing(brief(), cardData(wrong), now), 'normal', fx, now), null);
   assert.throws(() => parseCardPricing(brief('different'), sample('base1-58'), now));
 });
 
@@ -216,11 +228,11 @@ test('price requests coalesce, stay within three active calls, and cancel queued
     now: () => now,
     read: async () => null,
     write: async () => {},
-    exchange: async () => ({}),
+    exchange: brokenRate,
     card: (c) =>
       new Promise((resolve) => {
         calls.push(c.id);
-        pending.push(() => resolve({ id: c.id }));
+        pending.push(() => resolve(cardData({ id: c.id })));
       }),
   });
 
@@ -474,7 +486,7 @@ test('an early refresh skips a shared card response older than the snapshot it r
     now: () => clock,
     read: async () => JSON.stringify({ version: 1, snapshots: [cached], fx }),
     write: async () => {},
-    exchange: async () => ({}),
+    exchange: brokenRate,
     card: async (c, force, after) => {
       calls.push({ force, after });
 
@@ -495,7 +507,7 @@ test('an early refresh skips a shared card response older than the snapshot it r
   global.fetch = async () => {
     requests++;
 
-    return { ok: true, json: async () => ({ id: 'shared-1' }) };
+    return { ok: true, json: async () => ({ id: 'shared-1', localId: '1', name: 'Shared' }) };
   };
 
   try {
@@ -517,8 +529,8 @@ test('a burst of settled prices repaints listeners once with a fresh state, and 
     now: () => now,
     read: async () => null,
     write: async () => {},
-    exchange: async () => ({}),
-    card: (c) => new Promise((resolve) => pending.push(() => resolve({ id: c.id }))),
+    exchange: brokenRate,
+    card: (c) => new Promise((resolve) => pending.push(() => resolve(cardData({ id: c.id })))),
   });
 
   let repaints = 0;

@@ -1,4 +1,5 @@
 import { requireOptionalNativeModule } from 'expo';
+import * as v from 'valibot';
 import type { Language } from './model';
 import type { ScanLanguage } from './language-detect';
 import {
@@ -13,7 +14,7 @@ import type { Crop, ScanResult } from './scan-types';
 import type { CameraOptics } from './live-capture';
 
 const module = requireOptionalNativeModule<{
-  backCameraOptics(): Partial<CameraOptics>;
+  backCameraOptics(): Record<string, number>;
   recognize(uri: string, language: string, words: string[], crop: number[]): Promise<ScanResult>;
   refine(uri: string, language: string, words: string[]): Promise<ScanText>;
   compare(uri: string, urls: string[]): Promise<number[]>;
@@ -21,12 +22,20 @@ const module = requireOptionalNativeModule<{
 
 export const canRecognize = !!module;
 
+const CameraOpticsSchema = v.object({
+  minimumFocusDistance: v.number(),
+  fieldOfView: v.number(),
+  aspect: v.number(),
+  maxZoom: v.number(),
+}) satisfies v.GenericSchema<unknown, CameraOptics>;
+
 /** Read once the camera is running, so the lens reports the format it is actually using. */
 export function backCameraOptics(): CameraOptics | null {
   try {
-    const optics = module?.backCameraOptics();
+    // The module reports every value, or none when there is no back camera.
+    const optics = v.safeParse(CameraOpticsSchema, module?.backCameraOptics());
 
-    return optics?.minimumFocusDistance !== undefined ? (optics as CameraOptics) : null;
+    return optics.success ? optics.output : null;
   } catch {
     return null;
   }

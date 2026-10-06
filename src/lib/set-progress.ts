@@ -140,8 +140,7 @@ function summarize(group: SetGroup): SetProgress {
 /** Sets with at least one owned card, closest to complete first. Open-ended sets without a printed size are skipped. */
 export function setProgress(trainer: Trainer, catalog?: SetCatalog): SetProgress[] {
   return [...groupSets(trainer, catalog).values()]
-    .filter((g) => g.official > 0)
-    .map(summarize)
+    .flatMap((group) => (group.official > 0 ? [summarize(group)] : []))
     .sort(
       (a, b) =>
         b.owned / b.official - a.owned / a.official ||

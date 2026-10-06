@@ -23,17 +23,19 @@ export const wishesForSpecies = (trainer: Trainer, id: number) =>
 export function wishBrief(card: CardBrief): CardBrief {
   const { id, localId, name, image, language, category, trainerType, energyType, tagTeam } = card;
 
-  return {
-    id,
-    localId,
-    name,
-    language,
-    ...(image ? { image } : {}),
-    ...(category ? { category } : {}),
-    ...(trainerType ? { trainerType } : {}),
-    ...(energyType ? { energyType } : {}),
-    ...(tagTeam !== undefined ? { tagTeam } : {}),
-  };
+  const brief: CardBrief = { id, localId, name, language };
+
+  if (image) brief.image = image;
+
+  if (category) brief.category = category;
+
+  if (trainerType) brief.trainerType = trainerType;
+
+  if (energyType) brief.energyType = energyType;
+
+  if (tagTeam !== undefined) brief.tagTeam = tagTeam;
+
+  return brief;
 }
 
 export function addWish(

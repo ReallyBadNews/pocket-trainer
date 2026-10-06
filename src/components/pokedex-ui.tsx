@@ -18,9 +18,8 @@ import {
   type StyleProp,
   type ViewStyle,
   type TextProps,
-  type TextStyle,
 } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
 import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
 import type { Card, CardBrief } from '@/lib/model';
@@ -170,7 +169,7 @@ export function Txt({
   ...props
 }: TextProps & { muted?: boolean; variant?: keyof typeof typeStyles }) {
   // Small text would otherwise inherit the 22pt body line height and look double spaced.
-  const own = StyleSheet.flatten(style) as TextStyle | undefined;
+  const own = StyleSheet.flatten(style);
   const leading = own?.fontSize && own.lineHeight === undefined ? { lineHeight: Math.round(own.fontSize * 1.3) } : null;
 
   return (

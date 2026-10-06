@@ -58,10 +58,10 @@ export function PokedexShell() {
   const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || wishlistOpen);
   useLayoutEffect(() => {
     cancelAnimation(progress);
-    progress.value = 0;
+    progress.set(0);
   }, [tab, pathname, trainer.id, progress]);
   useLayoutEffect(() => {
-    chrome.paused.value = modalOpen;
+    chrome.paused.set(modalOpen);
 
     if (modalOpen) cancelAnimation(progress);
   }, [modalOpen, chrome.paused, progress]);
@@ -75,7 +75,7 @@ export function PokedexShell() {
 
     if (router.canDismiss()) router.dismissAll();
   }, [trainer.id]);
-  const topStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -headerHeight * progress.value }] }));
+  const topStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -headerHeight * progress.get() }] }));
 
   /** Another tab opens on its first page; the current tab pops back to it. */
   function goToTab(name: TabName) {
@@ -158,7 +158,7 @@ export function PokedexShell() {
         <View
           style={s.viewport}
           onLayout={(event) => {
-            chrome.viewportHeight.value = Math.max(0, event.nativeEvent.layout.height - PINNED_CHROME_HEIGHT);
+            chrome.viewportHeight.set(Math.max(0, event.nativeEvent.layout.height - PINNED_CHROME_HEIGHT));
           }}
         >
           <Animated.View style={[s.topChrome, topStyle]}>
@@ -343,7 +343,7 @@ export function PokedexShell() {
                   key={item.name}
                   item={item}
                   onFocus={() => {
-                    progress.value = 0;
+                    progress.set(0);
                   }}
                   onSwitch={() => {
                     if (item.name === 'scan') startScan();
