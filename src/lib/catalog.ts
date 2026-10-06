@@ -440,15 +440,22 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
   const key = `${brief.language}:${brief.id}`;
   const cached = detailCache.get(key);
 
-  if (cached && Date.now() - cached.at < DAY)
-    return { ...cached.card, ...(brief.localImage ? { localImage: brief.localImage } : {}) };
+  if (cached && Date.now() - cached.at < DAY) {
+    const card = { ...cached.card };
+
+    if (brief.localImage) card.localImage = brief.localImage;
+
+    return card;
+  }
+
   const data = await fetchCardData(brief);
+  const { set, variants, name, localId } = data;
 
-  if (typeof data.id !== 'string' || !data.set || !Array.isArray(data.dexId ?? []))
+  if (!set || name === undefined || localId === undefined)
     throw new Error('This card has incomplete catalog data. Please try another printing.');
-  const available = (['normal', 'holo', 'reverse'] as Finish[]).filter((f) => data.variants?.[f] === true);
+  const available: Finish[] = (['normal', 'holo', 'reverse'] as const).filter((f) => variants[f] === true);
 
-  if (data.variants?.firstEdition) {
+  if (variants.firstEdition) {
     if (available.includes('normal')) available.push('firstEdition');
 
     if (available.includes('holo')) available.push('firstEditionHolo');
@@ -456,23 +463,18 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
     if (available.includes('reverse')) available.push('firstEditionReverse');
   }
 
-  if (data.variants?.wPromo) available.push('wPromo');
+  if (variants.wPromo) available.push('wPromo');
 
   for (const finish of parseCardPricing(brief, data).finishes) if (!available.includes(finish)) available.push(finish);
 
   const card: Card = {
     ...brief,
     id: data.id,
-    name: data.name,
-    localId: data.localId,
-    image:
-      typeof data.image === 'string' && data.image.startsWith('https://assets.tcgdex.net/')
-        ? data.image
-        : (brief.image ?? artOverrides[brief.language]?.[brief.id]),
-    set: { id: data.set.id, name: data.set.name, total: data.set.cardCount?.official ?? 0 },
-    dexIds: (data.category === 'Pokemon' ? (data.dexId ?? []) : []).filter(
-      (id: unknown) => Number.isInteger(id) && Number(id) > 0,
-    ),
+    name,
+    localId,
+    image: data.image ?? brief.image ?? artOverrides[brief.language]?.[brief.id],
+    set: { id: set.id, name: set.name, total: set.cardCount?.official ?? 0 },
+    dexIds: data.category === 'Pokemon' ? (data.dexId ?? []) : [],
     types: data.types ?? [],
     category: data.category ?? cardCategory(brief),
     trainerType: data.trainerType ?? trainerType(brief),

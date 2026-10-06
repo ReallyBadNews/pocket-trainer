@@ -1,3 +1,4 @@
+import type { CardData } from './card-api';
 import type { CardBrief } from './model';
 import {
   DAY,
@@ -7,6 +8,7 @@ import {
   parsePriceCache,
   priceKey,
   type ExchangeRate,
+  type FrankfurterRate,
   type PriceSnapshot,
 } from './pricing';
 
@@ -14,8 +16,8 @@ import {
 type Job = { card: CardBrief; priority: number; force: boolean; after: number; consumers: (() => boolean)[] };
 
 type Dependencies = {
-  card: (card: CardBrief, force: boolean, after: number) => Promise<unknown>;
-  exchange: () => Promise<unknown>;
+  card: (card: CardBrief, force: boolean, after: number) => Promise<CardData>;
+  exchange: () => Promise<FrankfurterRate>;
   read: () => Promise<string | null>;
   write: (raw: string) => Promise<void>;
   now?: () => number;

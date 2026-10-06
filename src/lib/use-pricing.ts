@@ -1,9 +1,10 @@
 import { useEffect, useEffectEvent, useSyncExternalStore } from 'react';
+import * as v from 'valibot';
 import { AppState } from 'react-native';
 import { PriceClient } from './price-client';
 import { fetchCardData } from './card-api';
 import { readPrices, writePrices } from './storage';
-import { priceKey } from './pricing';
+import { FrankfurterRate, priceKey } from './pricing';
 import type { CardBrief } from './model';
 
 export const prices = new PriceClient({
@@ -17,7 +18,7 @@ export const prices = new PriceClient({
 
     if (!response.ok) throw new Error('Exchange rate unavailable.');
 
-    return response.json();
+    return v.parse(FrankfurterRate, await response.json());
   },
 });
 

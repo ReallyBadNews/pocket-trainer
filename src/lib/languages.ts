@@ -1,3 +1,5 @@
+import * as v from 'valibot';
+
 export const LANGUAGES = ['en', 'ja', 'ko', 'zh-cn', 'zh-tw'] as const;
 
 export type Language = (typeof LANGUAGES)[number];
@@ -21,4 +23,6 @@ export const LANGUAGE_CODES: Record<Language, string> = {
 /** Upstream catalogs that are still sparse offer manual entry for missing printings. */
 export const PARTIAL_CATALOGS: readonly Language[] = ['ko', 'zh-cn', 'zh-tw'];
 
-export const isLanguage = (value: unknown): value is Language => LANGUAGES.includes(value as Language);
+export const LanguageSchema = v.picklist(LANGUAGES);
+
+export const isLanguage = (value: unknown): value is Language => v.is(LanguageSchema, value);

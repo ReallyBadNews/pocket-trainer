@@ -4,6 +4,10 @@ const assert = require('node:assert/strict');
 
 const { parseCardPricing, quotePrice } = require('../.test-build/lib/pricing');
 
+const v = require('valibot');
+
+const { CardResponse } = require('../.test-build/lib/card-api');
+
 const { eur, printingFinishes, printingPrices, sourceDates } = require('../.test-build/lib/printing-prices');
 
 const fixtures = require('./fixtures/prices.json');
@@ -15,7 +19,8 @@ const fx = { rate: 1.1622, date: '2026-09-04', checkedAt: now };
 const snapshot = (id, language = 'en') =>
   parseCardPricing(
     { id, language, name: 'Test card', localId: id.split('-').at(-1) },
-    fixtures.find((f) => f.language === language && f.data.id === id).data,
+    // Responses are decoded where they're fetched, as in production.
+    v.parse(CardResponse, fixtures.find((f) => f.language === language && f.data.id === id).data),
     now,
   );
 

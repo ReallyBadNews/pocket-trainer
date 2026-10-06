@@ -1,5 +1,8 @@
+import * as v from 'valibot';
+import type { CardData } from './card-api';
 import { isLanguage } from './languages';
 import type { CardBrief, Entry, Finish } from './model';
+import { DateText, lenient, PositivePrice } from './schema';
 
 export type MarketPrice = {
   finish: Finish;
@@ -29,17 +32,7 @@ export const HOUR = 3_600_000;
 
 export const DAY = 86_400_000;
 
-const record = (value: unknown): value is Record<string, any> =>
-  !!value && typeof value === 'object' && !Array.isArray(value);
-
-const positive = (value: unknown): value is number =>
-  typeof value === 'number' && Number.isFinite(value) && value > 0 && value <= 100_000_000;
-
-const timestamp = (value: unknown): value is number => typeof value === 'number' && Number.isFinite(value) && value > 0;
-
-const validDate = (value: unknown): value is string => typeof value === 'string' && Number.isFinite(Date.parse(value));
-
-const finishes: Finish[] = [
+const finishes = [
   'normal',
   'holo',
   'reverse',
@@ -47,36 +40,36 @@ const finishes: Finish[] = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
-];
+] as const satisfies Finish[];
 
-const variantMap: Record<string, Finish> = {
-  normal: 'normal',
-  unlimited: 'normal',
-  unlimitednormal: 'normal',
-  holo: 'holo',
-  holofoil: 'holo',
-  unlimitedholofoil: 'holo',
-  reverse: 'reverse',
-  reverseholo: 'reverse',
-  reverseholofoil: 'reverse',
-  '1stedition': 'firstEdition',
-  '1steditionnormal': 'firstEdition',
-  firstedition: 'firstEdition',
-  '1steditionholofoil': 'firstEditionHolo',
-  firsteditionholo: 'firstEditionHolo',
-  firsteditionholofoil: 'firstEditionHolo',
-  '1steditionreverseholofoil': 'firstEditionReverse',
-  firsteditionreverse: 'firstEditionReverse',
-  wpromo: 'wPromo',
-};
+const variantMap = new Map<string, Finish>([
+  ['normal', 'normal'],
+  ['unlimited', 'normal'],
+  ['unlimitednormal', 'normal'],
+  ['holo', 'holo'],
+  ['holofoil', 'holo'],
+  ['unlimitedholofoil', 'holo'],
+  ['reverse', 'reverse'],
+  ['reverseholo', 'reverse'],
+  ['reverseholofoil', 'reverse'],
+  ['1stedition', 'firstEdition'],
+  ['1steditionnormal', 'firstEdition'],
+  ['firstedition', 'firstEdition'],
+  ['1steditionholofoil', 'firstEditionHolo'],
+  ['firsteditionholo', 'firstEditionHolo'],
+  ['firsteditionholofoil', 'firstEditionHolo'],
+  ['1steditionreverseholofoil', 'firstEditionReverse'],
+  ['firsteditionreverse', 'firstEditionReverse'],
+  ['wpromo', 'wPromo'],
+]);
 
 export const marketFinish = (value: string): Finish | undefined =>
-  variantMap[value.toLowerCase().replace(/[^a-z0-9]/g, '')];
+  variantMap.get(value.toLowerCase().replace(/[^a-z0-9]/g, ''));
 
 /** Use only actual positive market/trend prices, never asking-price highs or a missing-price zero. */
-export function parseCardPricing(card: CardBrief, data: unknown, now = Date.now()): PriceSnapshot {
-  if (!record(data) || data.id !== card.id) throw new Error('The price response did not match this card.');
-  const variants = record(data.variants) ? data.variants : {};
+export function parseCardPricing(card: CardBrief, data: CardData, now = Date.now()): PriceSnapshot {
+  if (data.id !== card.id) throw new Error('The price response did not match this card.');
+  const { variants } = data;
   const available = new Set<Finish>(finishes.filter((f) => variants[f] === true));
 
   if (variants.firstEdition) {
@@ -92,11 +85,11 @@ export function parseCardPricing(card: CardBrief, data: unknown, now = Date.now(
   const prices: MarketPrice[] = [];
   const tcg = data.pricing?.tcgplayer;
 
-  if (record(tcg) && tcg.unit === 'USD' && validDate(tcg.updated)) {
-    for (const [name, value] of Object.entries(tcg)) {
+  if (tcg) {
+    for (const [name, value] of Object.entries(tcg.variants)) {
       const finish = marketFinish(name);
 
-      if (finish && record(value) && positive(value.marketPrice)) {
+      if (finish && value) {
         prices.push({
           finish,
           amount: value.marketPrice,
@@ -112,9 +105,9 @@ export function parseCardPricing(card: CardBrief, data: unknown, now = Date.now(
   const cm = data.pricing?.cardmarket;
   // Cardmarket's base trend is usable when the catalog identifies one primary printing.
   // Its "*-holo" fields do not reliably distinguish all special/reverse variants, so omit them.
-  const primary = (['normal', 'holo'] as Finish[]).filter((f) => variants[f] === true);
+  const primary = (['normal', 'holo'] as const).filter((f) => variants[f] === true);
 
-  if (record(cm) && cm.unit === 'EUR' && validDate(cm.updated) && positive(cm.trend) && primary.length === 1) {
+  if (cm && primary.length === 1) {
     const finish = primary[0];
     // Conflicting catalog flags (e.g. GX marked Regular but priced as Holo) cannot justify a second price.
     const usdPrimary = prices.filter((p) => p.finish === 'normal' || p.finish === 'holo');
@@ -141,12 +134,21 @@ export function needsRefresh(snapshot: PriceSnapshot, now = Date.now()) {
   return newest > 0 && snapshot.checkedAt - newest < DAY && now - newest >= DAY + HOUR && age >= HOUR;
 }
 
-export function parseExchangeRate(data: unknown, now = Date.now()): ExchangeRate {
-  if (!record(data) || data.base !== 'EUR' || data.quote !== 'USD' || !positive(data.rate) || !validDate(data.date))
-    throw new Error('Exchange rate unavailable.');
+/** The ECB's euro to US dollar rate from Frankfurter. */
+export const FrankfurterRate = v.object({
+  base: v.literal('EUR'),
+  quote: v.literal('USD'),
+  rate: PositivePrice,
+  date: DateText,
+});
 
-  return { rate: data.rate, date: data.date, checkedAt: now };
-}
+export type FrankfurterRate = v.InferOutput<typeof FrankfurterRate>;
+
+export const parseExchangeRate = ({ rate, date }: FrankfurterRate, now = Date.now()): ExchangeRate => ({
+  rate,
+  date,
+  checkedAt: now,
+});
 
 /** Return cents so copy counts and totals sum the same amounts displayed on cards. */
 export function quotePrice(
@@ -328,56 +330,78 @@ export function missingPriceReason(
   return 'unlisted';
 }
 
-/** Price cache is disposable and separate from the family's collection backups. */
-export function parsePriceCache(
-  raw: string | null,
-  now = Date.now(),
-): { snapshots: Record<string, PriceSnapshot>; fx?: ExchangeRate } {
-  const snapshots: Record<string, PriceSnapshot> = {};
+export type PriceCache = { snapshots: Record<string, PriceSnapshot>; fx?: ExchangeRate };
 
-  if (!raw || raw.length > 10_000_000) return { snapshots };
+const CachedPrice = v.union([
+  v.object({
+    finish: v.picklist(finishes),
+    amount: PositivePrice,
+    currency: v.literal('USD'),
+    source: v.literal('TCGplayer'),
+    updatedAt: DateText,
+  }),
+  v.object({
+    finish: v.picklist(finishes),
+    amount: PositivePrice,
+    currency: v.literal('EUR'),
+    source: v.literal('Cardmarket'),
+    updatedAt: DateText,
+  }),
+]);
+
+const CachedKey = v.pipe(
+  v.string(),
+  v.regex(/^[a-z-]+:[\w.!%?-]{1,100}$/),
+  v.check((key) => isLanguage(key.split(':')[0])),
+);
+
+/** Snapshots and the rate can't be checked in the future; a bad snapshot or rate is skipped, not fatal. */
+function priceCacheSchema(now: number) {
+  const CheckedAt = v.pipe(v.number(), v.finite(), v.gtValue(0), v.maxValue(now + DAY));
+
+  return v.object({
+    version: v.literal(1),
+    snapshots: v.pipe(
+      v.array(v.unknown()),
+      v.transform((saved) => saved.slice(0, 5000)),
+      v.array(
+        lenient(
+          v.object({
+            key: CachedKey,
+            checkedAt: CheckedAt,
+            prices: v.pipe(
+              v.array(lenient(CachedPrice)),
+              v.transform((prices) => prices.filter((price) => price !== undefined)),
+            ),
+            finishes: v.array(v.picklist(finishes)),
+          }),
+        ),
+      ),
+    ),
+    fx: lenient(v.object({ rate: PositivePrice, date: DateText, checkedAt: CheckedAt })),
+  });
+}
+
+/** Price cache is disposable and separate from the family's collection backups. */
+export function parsePriceCache(raw: string | null, now = Date.now()): PriceCache {
+  if (!raw || raw.length > 10_000_000) return { snapshots: {} };
+  let saved;
 
   try {
-    const data = JSON.parse(raw);
-
-    if (data.version !== 1 || !Array.isArray(data.snapshots)) return { snapshots };
-
-    for (const s of data.snapshots.slice(0, 5000)) {
-      if (
-        !record(s) ||
-        typeof s.key !== 'string' ||
-        !isLanguage(s.key.split(':')[0]) ||
-        !/^[a-z-]+:[\w.!%?-]{1,100}$/.test(s.key) ||
-        !timestamp(s.checkedAt) ||
-        s.checkedAt > now + DAY ||
-        !Array.isArray(s.prices) ||
-        !Array.isArray(s.finishes)
-      )
-        continue;
-
-      if (!s.finishes.every((f: unknown) => finishes.includes(f as Finish))) continue;
-
-      const prices = s.prices.filter(
-        (p: unknown): p is MarketPrice =>
-          record(p) &&
-          finishes.includes(p.finish) &&
-          positive(p.amount) &&
-          validDate(p.updatedAt) &&
-          ((p.source === 'TCGplayer' && p.currency === 'USD') || (p.source === 'Cardmarket' && p.currency === 'EUR')),
-      );
-
-      snapshots[s.key] = { key: s.key, checkedAt: s.checkedAt, finishes: s.finishes, prices };
-    }
-
-    const fx = data.fx;
-
-    return {
-      snapshots,
-      ...(record(fx) && positive(fx.rate) && validDate(fx.date) && timestamp(fx.checkedAt) && fx.checkedAt <= now + DAY
-        ? { fx: { rate: fx.rate, date: fx.date, checkedAt: fx.checkedAt } }
-        : {}),
-    };
+    saved = JSON.parse(raw);
   } catch {
-    return { snapshots };
+    return { snapshots: {} };
   }
+
+  const result = v.safeParse(priceCacheSchema(now), saved);
+
+  if (!result.success) return { snapshots: {} };
+  const snapshots: Record<string, PriceSnapshot> = {};
+
+  for (const snapshot of result.output.snapshots) if (snapshot) snapshots[snapshot.key] = snapshot;
+  const cache: PriceCache = { snapshots };
+
+  if (result.output.fx) cache.fx = result.output.fx;
+
+  return cache;
 }
