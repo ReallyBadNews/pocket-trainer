@@ -16,14 +16,14 @@ test('holo and reverse holo use distinct masks; full-art rarities retain a full 
   assert.equal(cardSurface({ rarity: 'Double rare' }, 'reverse'), 'reverse-foil');
   assert.equal(cardSurface({ rarity: 'Rare' }, 'firstEditionReverse'), 'reverse-foil');
 });
-test('back previews exclude unverified languages, vintage Japanese and special backs', () => {
+test('modern Japanese cards get their own back; everything else falls back to the blue back', () => {
   const card = { name: 'Pikachu', id: 'sv03.5-025', language: 'en' };
   assert.equal(cardBack(card), 'international');
   assert.equal(cardBack({ ...card, language: 'ja', id: 'SV2a-025' }), 'japanese-modern');
-  assert.equal(cardBack({ ...card, language: 'ja', id: 'base1-025' }), 'unavailable');
-  for (const language of ['ko', 'zh-tw', 'zh-cn']) assert.equal(cardBack({ ...card, language }), 'unavailable');
-  assert.equal(cardBack({ ...card, name: 'Ancient Mew' }), 'unavailable');
-  assert.equal(cardBack({ ...card, set: { id: 'wcs', name: 'World Championships', total: 60 } }), 'unavailable');
+  assert.equal(cardBack({ ...card, language: 'ja', id: 'base1-025' }), 'international');
+  for (const language of ['ko', 'zh-tw', 'zh-cn']) assert.equal(cardBack({ ...card, language }), 'international');
+  assert.equal(cardBack({ ...card, name: 'Ancient Mew' }), 'international');
+  assert.equal(cardBack({ ...card, set: { id: 'wcs', name: 'World Championships', total: 60 } }), 'international');
 });
 test('flip lands on the opposite face from both front and back without losing zoom', () => {
   for (const yaw of [-12, -Math.PI, -1.2, 0, 1.2, Math.PI, 12]) {

@@ -46,7 +46,7 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
   const pinchStart = useRef(1);
   const back = cardBack(card);
   const surface = cardSurface(card, finish);
-  const backSource = back === 'unavailable' ? undefined : BACKS[back];
+  const backSource = BACKS[back];
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', state => {

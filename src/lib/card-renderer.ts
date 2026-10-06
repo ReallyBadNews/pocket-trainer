@@ -55,7 +55,8 @@ void main() {
   bool front = vSurface < .5;
   bool back = vSurface > .5 && vSurface < 1.5;
   vec3 color = front ? texture2D(uFront, vUv).rgb :
-    back && uHasBack > .5 ? texture2D(uBack, vUv).rgb : vec3(.75, .77, .70);
+    // Without back artwork, keep the card back's border blue rather than bare paper.
+    back ? (uHasBack > .5 ? texture2D(uBack, vUv).rgb : vec3(0., .235, .431)) : vec3(.75, .77, .70);
   if (!front && !back) {
     // The card's thin paper edge catches light without a plastic frame.
     color *= .5 + .45 * max(dot(normal, light), 0.);
