@@ -3,7 +3,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 import { Page, openPage } from '@/components/page';
 import { CollectionValueHero, dateLabel, useCollectionValue } from '@/components/card-values';
-import { ActionRow, Button, C, CardArt, Icon, Progress, R, S, ToolbarAction, Txt, pressFx, tick } from '@/components/pokedex-ui';
+import { ActionRow, Button, C, CardArt, Icon, LinkButton, Progress, R, S, SectionHeader, Txt, pressFx, tick } from '@/components/pokedex-ui';
 import { needsPrinting } from '@/lib/binder-order';
 import { showAllBinderCardsBy } from '@/lib/browse-state';
 import { catalogSet } from '@/lib/catalog';
@@ -103,19 +103,19 @@ export function CollectionValuePage() {
       </View>
       {checking
         ? <View accessible accessibilityLiveRegion="polite" style={s.updating}><ActivityIndicator size="small" color={C.muted} /><Txt muted variant="caption">Updating…</Txt></View>
-        : <ToolbarAction title="Refresh prices" onPress={refresh} style={s.leading} />}
+        : <LinkButton title="Refresh prices" onPress={refresh} />}
     </Section>
   </Page>;
 }
 
 function Section({ title, detail, children }: { title: string; detail?: string; children: ReactNode }) {
   return <View style={s.section}>
-    <View style={s.heading}><Txt accessibilityRole="header" variant="subtitle">{title}</Txt>{detail && <Txt muted variant="caption">{detail}</Txt>}</View>
+    <SectionHeader title={title} detail={detail} />
     {children}
   </View>;
 }
 
-const Chevron = () => <View style={s.chevron}><Icon name="back" size={16} color={C.muted} /></View>;
+const Chevron = () => <Icon name="chevron" size={16} color={C.muted} />;
 
 function ValueCardRow({ rank, row: { entry, quote }, onPress }: { rank: number; row: RankedEntry; onPress: () => void }) {
   const each = quoteLabel(quote), stack = entry.quantity > 1 ? quoteLabel(quote, entry.quantity) : undefined;
@@ -163,7 +163,6 @@ function MissingRow({ entry, reason, onPress }: { entry: Entry; reason: MissingP
 const tabular: TextStyle = { fontVariant: ['tabular-nums'] };
 const s = StyleSheet.create({
   section: { gap: S.md },
-  heading: { gap: 2 },
   row: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   compactRow: { paddingVertical: S.sm },
   rowText: { flex: 1, minWidth: 0, gap: 2 },
@@ -175,14 +174,12 @@ const s = StyleSheet.create({
   valueLine: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: S.xs, marginTop: 2 },
   value: { color: C.ink, fontSize: 19, lineHeight: 25, fontWeight: '700', letterSpacing: -.2, ...tabular },
   tabular,
-  chevron: { transform: [{ rotate: '180deg' }] },
   group: { minHeight: 44, gap: S.sm, paddingVertical: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   groupTop: { flexDirection: 'row', alignItems: 'center', gap: S.md },
   groupValue: { color: C.ink, fontSize: 17, lineHeight: 22, fontWeight: '700', ...tabular, flexShrink: 0 },
   reach: { gap: 2 },
   reachAmount: { color: C.ink, fontSize: 26, lineHeight: 32, fontWeight: '800', letterSpacing: -.5, ...tabular },
   leadingButton: { alignSelf: 'flex-start' },
-  leading: { alignSelf: 'flex-start', marginLeft: -S.sm },
   notes: { gap: S.md },
   attention: { color: '#786037', fontWeight: '600' },
   updating: { minHeight: 44, flexDirection: 'row', alignItems: 'center', gap: S.sm },

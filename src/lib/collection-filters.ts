@@ -59,7 +59,7 @@ export function binderFilterCounts(entries: readonly Entry[], filters: BinderFil
 }
 
 export type SetShow = 'progress' | 'complete' | 'all';
-export const SET_SHOWS: { id: SetShow; label: string }[] = [{ id: 'progress', label: 'In progress' }, { id: 'complete', label: 'Complete' }, { id: 'all', label: 'All' }];
+export const SET_SHOWS: { id: SetShow; label: string }[] = [{ id: 'progress', label: 'To finish' }, { id: 'complete', label: 'Complete' }, { id: 'all', label: 'All' }];
 export type SetSort = 'closest' | 'name' | 'collected';
 export const SET_SORTS: { id: SetSort; label: string }[] = [{ id: 'closest', label: 'Closest to finishing' }, { id: 'name', label: 'Name' }, { id: 'collected', label: 'Most collected' }];
 /** Unfinished sets are the ones worth hunting, unless every set is done. */

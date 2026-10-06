@@ -1,5 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, View, type TextStyle } from 'react-native';
-import { C, CardArt, Icon, R, S, ToolbarAction, Txt, pressFx, tick } from './pokedex-ui';
+import { C, CardArt, Icon, LinkButton, R, S, Txt, pressFx, tick } from './pokedex-ui';
 import { PriceAmount, dateLabel } from './card-values';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey, quoteLabel, quotePrice, usd } from '@/lib/pricing';
@@ -49,7 +49,7 @@ export function CardPriceDetails({ card, finish, quantity, disabled = false, onC
       {refreshFailed && !updating && <Txt variant="caption" muted>{quote ? 'Refresh failed. Showing the saved estimate.' : 'Could not refresh prices. Check your connection and try again.'}</Txt>}
       {!quote && !waiting && !failed && <Txt variant="caption" muted>No matching price is available for this printing. It stays in your binder and is left out of the value total.</Txt>}
       <Txt variant="caption" muted>Ungraded market estimate in US dollars. Condition affects what a buyer will pay.</Txt>
-      {updating ? <Txt accessibilityLiveRegion="polite" variant="caption" muted style={s.updating}>Updating…</Txt> : <ToolbarAction title="Refresh price" onPress={() => { void client.ensure([card], () => true, 0, true); void client.ensureFx(true); }} style={s.refresh} />}
+      {updating ? <Txt accessibilityLiveRegion="polite" variant="caption" muted style={s.updating}>Updating…</Txt> : <LinkButton title="Refresh price" onPress={() => { void client.ensure([card], () => true, 0, true); void client.ensureFx(true); }} />}
     </View>
   </ScrollView>;
 }
@@ -90,5 +90,5 @@ const s = StyleSheet.create({
   sourceAmount: { color: C.ink, fontSize: 17, lineHeight: 22, fontWeight: '700', letterSpacing: -.2, ...tabular, textAlign: 'right' },
   right: { textAlign: 'right' }, tabular,
   attention: { color: '#786037', fontWeight: '600' },
-  updating: { paddingVertical: 13 }, refresh: { alignSelf: 'flex-start' },
+  updating: { paddingVertical: 13 },
 });

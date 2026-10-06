@@ -39,7 +39,8 @@ export function TrainerAccessoryPicker({ trainer, appearance, busy, onChoose }: 
             <TrainerAvatar appearance={{ ...appearance, accessory: choice.id }} size={56} />
           </View>
           <View style={s.copy}><Txt variant="cardTitle">{choice.name}</Txt><Txt variant="caption" muted>{detail}</Txt></View>
-          {checked ? <Icon name="check" size={20} /> : !unlocked ? <Icon name="lock" size={18} color={C.muted} /> : <View style={s.chevron}><Icon name="back" size={16} color={C.muted} /></View>}
+          {/* Choosing returns to Appearance rather than opening a page, so rows get a check or a lock, never a chevron. */}
+          {checked ? <Icon name="check" size={20} /> : !unlocked && <Icon name="lock" size={18} color={C.muted} />}
         </Pressable>;
       })}
     </View>
@@ -51,5 +52,4 @@ const s = StyleSheet.create({
   preview: { flexDirection: 'row', alignItems: 'center', gap: S.lg, paddingVertical: S.lg, marginBottom: S.sm },
   row: { minHeight: 80, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   copy: { flex: 1, minWidth: 0, gap: S.xs }, lockedArt: { opacity: .5 }, busy: { opacity: .6 },
-  chevron: { transform: [{ rotate: '180deg' }] },
 });

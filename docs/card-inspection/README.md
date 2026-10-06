@@ -1,6 +1,6 @@
 # Interactive card inspection
 
-The full card view uses a rounded, thin Blender mesh with catalog artwork on the front. Drag to turn and tilt, pinch to zoom, or use Flip and Reset. Flat photo preserves the readable image viewer. The existing crafted Pokédex render also appears in About.
+The full card view uses a rounded, thin Blender mesh with catalog artwork on the front. Drag to turn and tilt, pinch to zoom, or use Flip and Reset. The 3D / Photo switch keeps the readable image viewer. The existing crafted Pokédex render also appears in About.
 
 Motion follows the user's input. The renderer stops drawing at rest and releases its context when hidden. Reduce Motion disables the automatic flip/reset transition and the modal fade. Explicit buttons and accessibility actions supplement gestures, following Apple's [motion](https://developer.apple.com/design/human-interface-guidelines/motion) and [gesture](https://developer.apple.com/design/human-interface-guidelines/gestures) guidance.
 
@@ -14,7 +14,7 @@ The before screenshot is the previous stack head (`f8929472a7050c7ff82f0bd29f5b1
 | --- | --- |
 | ![Previous full card view](card-view-before.png) | ![Interactive card front](card-view-after.png) |
 
-| Turned card | Standard international back | Flat photo |
+| Turned card | Standard international back | Photo |
 | --- | --- | --- |
 | ![Tilt and foil](card-turned-after.png) | ![Card back](card-back-after.png) | ![Readable flat photograph](card-flat-after.png) |
 

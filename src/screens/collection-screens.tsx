@@ -3,7 +3,7 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { C, CardArt, CardCaption, ChoiceMenu, Icon, IconButton, S, SearchBox, ToolbarAction, Txt, Button, mono, ui } from '@/components/pokedex-ui';
+import { ActionRow, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ControlButton, Icon, IconButton, LinkButton, S, SearchBox, Segmented, Txt, Button, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { catalogSet, species, speciesImage, normalize } from '@/lib/catalog';
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
@@ -14,7 +14,6 @@ import { isShiny } from '@/lib/shine';
 import { BINDER_SORTS, needsPrinting, sortBinderEntries } from '@/lib/binder-order';
 import { usePricing } from '@/lib/use-pricing';
 import { speciesTypes, typeCounts, typeLabel, type PokemonType } from '@/lib/species-details';
-import { QuizInvite } from './quiz-screen';
 import { setProgress } from '@/lib/set-progress';
 import { BINDER_VIEWS, BinderPages } from '@/components/binder-pages';
 import { wishesOf } from '@/lib/wishlist';
@@ -44,17 +43,19 @@ export function DexScreen() {
   const visible = useMemo(() => species.filter(s => (show !== 'discovered' || discovered.has(s.id)) && (!region || (s.id >= region.first && s.id <= region.last)) && (!activeType || speciesTypes(s.id).includes(activeType)) && (!query || normalize(`${LANGUAGES.map(lang => s[lang] ?? '').join('')}${s.id}`).includes(normalize(query)))), [query, show, region, discovered, activeType]);
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" columnWrapperStyle={{ gap: S.md }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
-      <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} discovered</Txt><QuizInvite onPlay={nav.openQuiz} /><ToolbarAction title="Overview" onPress={() => openPage('/discoveries')} /></View></View>
+      <View><View style={s.titleRow}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Your Pokédex</Txt><IconButton icon="quiz" label="Play Who’s That Pokémon?" onPress={nav.openQuiz} /></View><Txt muted variant="caption">{discovered.size} discovered</Txt></View>
       {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => openPage('/collection-value')} />}
+      {discovered.size > 0 && <ActionRow icon="dex" title="Pokédex overview" value={`${discovered.size} of ${species.length}`} onPress={() => openPage('/discoveries')} />}
       <SearchBox value={query} onChange={value => setBrowse({ query: value })} placeholder="Find a Pokémon by name or number" />
-      <View style={s.toolbar}>
-        <ChoiceMenu<DexShow> compact label="Show Pokémon" options={DEX_SHOWS} value={show} onChange={value => setBrowse({ show: value })} style={s.menu} />
-        {types.length > 0 && <ChoiceMenu<PokemonType | 'all'> compact label="Pokémon type" options={[{ id: 'all', label: 'Every type' }, ...types.map(t => ({ id: t.type, label: `${typeLabel(t.type)} (${t.count})` }))]} value={activeType ?? 'all'} onChange={value => setBrowse({ type: value === 'all' ? null : value })} style={s.menu} />}
-      </View>
+      {/* Two peer menus split the width, and stack rather than squeeze at the largest text sizes. */}
+      <ButtonRow>
+        <ChoiceMenu<DexShow> compact label="Show Pokémon" options={DEX_SHOWS} value={show} onChange={value => setBrowse({ show: value })} />
+        {types.length > 0 && <ChoiceMenu<PokemonType | 'all'> compact label="Pokémon type" options={[{ id: 'all', label: 'Every type' }, ...types.map(t => ({ id: t.type, label: `${typeLabel(t.type)} (${t.count})` }))]} value={activeType ?? 'all'} onChange={value => setBrowse({ type: value === 'all' ? null : value })} />}
+      </ButtonRow>
       {!discovered.size && show !== 'discovered' && !query && !activeType && <View style={s.section}>
         <Txt accessibilityRole="header" variant="subtitle">Your first discovery is waiting</Txt><Txt muted variant="caption">Add a Pokémon card to bring its entry to life.</Txt><Button size="medium" title="Scan a card" icon="scan" onPress={() => nav.openScan()} style={{ alignSelf: 'flex-start' }} />
       </View>}
-      {(query || activeType || show !== 'all') && <View style={s.sectionHeading}><Txt muted variant="caption">{visible.length} Pokémon shown</Txt><ToolbarAction title="Clear" onPress={() => setBrowse(() => DEFAULT_DEX_BROWSE)} /></View>}
+      {(query || activeType || show !== 'all') && <View style={s.results}><Txt muted variant="caption" style={s.resultsText}>{visible.length} Pokémon shown</Txt><LinkButton title="Clear filters" onPress={() => setBrowse(() => DEFAULT_DEX_BROWSE)} /></View>}
     </View>}
     ListEmptyComponent={<View style={s.empty}>{!discovered.size && !query && <Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 104, height: 104 }} contentFit="contain" />}<Txt style={ui.subtitle}>{query || activeType ? 'No Pokémon found' : 'Your first discovery is waiting'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{query ? 'Try another name, or a number like 25.' : activeType ? `No ${typeLabel(activeType)} Pokémon here. Try another type or filter.` : 'Add a Pokémon card to bring its entry to life.'}</Txt>{!discovered.size && !query && <Button title="Scan a card" icon="scan" onPress={() => nav.openScan()} style={{ marginTop: 10 }} />}</View>}
     renderItem={({ item }) => {
@@ -85,24 +86,26 @@ export function BinderScreen() {
   const filtered = trainer.entries.filter(e => matchesBinderFilters(e, browse) && matchesBinderQuery(e, query));
   const entries = sortBinderEntries(filtered, sort, client.snapshots, client.fx);
   const priceSort = sort === 'priceHigh' || sort === 'priceLow';
-  const hasSets = useMemo(() => setProgress(trainer, catalogSet).length > 0, [trainer]);
+  const sets = useMemo(() => setProgress(trainer, catalogSet), [trainer]);
+  const completeSets = sets.filter(set => set.complete).length;
   const pages = view === 'pages';
   const activeFilters = activeBinderFilters(browse);
   const clearFilters = () => setBrowse({ ...DEFAULT_BINDER_BROWSE, sort });
   // Pages keep this vertical list, so the app chrome still collapses; the carousel lives in the header.
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
     ListHeaderComponent={<View style={s.header}>
-      <View><View style={s.collectionTitle}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Binder</Txt><IconButton icon="plus" label="Add card" color={C.redDark} onPress={() => nav.openScan()} /><IconButton icon="star" label={`Wishlist (${wishCount})`} onPress={nav.openWishlist} /></View><Txt muted variant="caption">{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'}{duplicateCards(trainer) ? ` · ${duplicateCards(trainer)} ${duplicateCards(trainer) === 1 ? 'double' : 'doubles'}` : ''}</Txt></View>
+      <View><View style={s.titleRow}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Binder</Txt><IconButton icon="plus" label="Add card" color={C.redDark} onPress={() => nav.openScan()} /><IconButton icon="star" label={`Wishlist (${wishCount})`} onPress={nav.openWishlist} /></View><Txt muted variant="caption">{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'}{duplicateCards(trainer) ? ` · ${duplicateCards(trainer)} ${duplicateCards(trainer) === 1 ? 'double' : 'doubles'}` : ''}</Txt></View>
       {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => openPage('/collection-value')} />}
+      {sets.length > 0 && <ActionRow icon="binder" title="Your sets" value={completeSets ? `${completeSets} complete` : `${sets.length} started`} onPress={() => openPage('/sets')} />}
       <SearchBox value={query} onChange={value => setBrowse({ query: value })} placeholder="Search your cards" />
-      <View style={s.toolbar}>
-        <ChoiceMenu compact triggerTitle="View" label="Binder view" options={BINDER_VIEWS} value={view} onChange={setView} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
-        <ChoiceMenu compact triggerTitle="Sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={value => setBrowse({ sort: value })} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
-        <ToolbarAction title={activeFilters ? `Filter (${activeFilters})` : 'Filter'} onPress={() => openPage('/binder-filters')} style={[s.tool, { flexBasis: (activeFilters ? 96 : 74) * Math.min(fontScale, 1.4) }]} />
-        {hasSets && <ToolbarAction title="Sets" onPress={() => openPage('/sets')} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />}
-      </View>
+      <Segmented label="Binder view" options={BINDER_VIEWS} value={view} onChange={setView} />
+      {/* Equal columns that stack at the largest text sizes, so neither control ever sits alone on a wrapped line. */}
+      <ButtonRow>
+        <ChoiceMenu compact icon="sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={value => setBrowse({ sort: value })} />
+        <ControlButton icon="filter" title="Filter" count={activeFilters} accessibilityHint="Shows only favorites, doubles, a language, a kind of card or printings to confirm" onPress={() => openPage('/binder-filters')} />
+      </ButtonRow>
       {priceSort && <Txt muted variant="caption">Uses the lower estimate in each range. Unpriced cards appear last.</Txt>}
-      {(activeFilters > 0 || query) && <View style={s.sectionHeading}><Txt muted variant="caption" style={{ flexShrink: 1 }}>{entries.length} {entries.length === 1 ? 'card' : 'cards'}{browse.needsPrinting ? ' to confirm' : ' shown'}</Txt><ToolbarAction title="Clear filters" onPress={clearFilters} /></View>}
+      {(activeFilters > 0 || query) && <View style={s.results}><Txt muted variant="caption" style={s.resultsText}>{entries.length} {entries.length === 1 ? 'card' : 'cards'}{browse.needsPrinting ? ' to confirm' : ' shown'}</Txt><LinkButton title="Clear filters" onPress={clearFilters} /></View>}
       {pages && entries.length > 0 && <BinderPages entries={entries} onEntry={nav.openEntry} />}
     </View>}
     ListEmptyComponent={pages && entries.length > 0 ? null : <View style={s.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 150, height: 150 }} contentFit="contain" /><Txt style={ui.subtitle}>{browse.needsPrinting && !confirmationCount ? 'All printings confirmed' : trainer.entries.length ? 'No cards match these filters' : 'A home for every card'}</Txt><Txt muted style={{ textAlign: 'center', maxWidth: 280 }}>{browse.needsPrinting && !confirmationCount ? 'Your saved cards each have a printing selected.' : trainer.entries.length ? 'Try a different search or clear your filters.' : 'Add your English, Japanese, Korean and Chinese cards. Your favorites and extra copies will be easy to find.'}</Txt><Button title={trainer.entries.length ? 'Show all cards' : 'Add a card'} onPress={trainer.entries.length ? clearFilters : () => nav.openScan()} style={{ marginTop: 10 }} /></View>}
@@ -116,13 +119,10 @@ export function BinderScreen() {
 const PAD = S.xl;
 const s = StyleSheet.create({
   list: { padding: PAD, paddingBottom: 32 }, header: { gap: S.sm, marginBottom: S.lg },
-  summaryRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', columnGap: S.xs },
-  summaryCopy: { flexGrow: 1, flexShrink: 1, minWidth: 0, paddingVertical: S.sm },
-  collectionTitle: { flexDirection: 'row', alignItems: 'center', gap: S.xs },
-  toolbar: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', gap: S.xs },
-  tool: { flexGrow: 1, flexShrink: 0, maxWidth: '100%' },
-  menu: { flex: 1, minWidth: 0 },
-  sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: S.md, rowGap: S.xs },
+  titleRow: { flexDirection: 'row', alignItems: 'center', gap: S.xs },
+  // The count wraps beside its action; "Clear filters" stays on the first line.
+  results: { flexDirection: 'row', alignItems: 'center', gap: S.md },
+  resultsText: { flex: 1, minWidth: 0 },
   section: { gap: S.sm },
   pokemon: { paddingVertical: S.sm, paddingHorizontal: S.xs, marginBottom: S.md },
   dexNumber: { fontFamily: mono, fontSize: 12, lineHeight: 18, color: C.muted },

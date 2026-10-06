@@ -18,7 +18,8 @@ import simplifiedSets from '@/data/sets-zh-cn.json';
 import traditionalSets from '@/data/sets-zh-tw.json';
 
 type Filter = 'all' | 'missing' | 'owned';
-const FILTERS: { id: Filter; label: string }[] = [{ id: 'all', label: 'Every card' }, { id: 'missing', label: 'Still to find' }, { id: 'owned', label: 'Collected' }];
+// Same words as a badge's Pokémon checklist; the counts sit in the caption so each segment stays one short line.
+const FILTERS: { id: Filter; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'missing', label: 'To find' }, { id: 'owned', label: 'Collected' }];
 type Row = { key: string; bonus?: true; slots: SetSlot[] };
 
 // Web export pre-renders a checklist for every catalog set that has a size to finish (open-ended promo runs don't).
@@ -62,15 +63,21 @@ function SetChecklist({ set }: { set: SetProgress }) {
     return [...toRows(visible.filter(slot => slot.main), 'main'), ...(bonus.length ? [{ key: 'bonus', bonus: true as const, slots: [] }, ...toRows(bonus, 'bonus')] : [])];
   }, [slots, filter, columns]);
   const left = set.official - set.owned;
+  // Main-set counts match the status line; bonus cards get their own section further down.
+  const bonus = slots.filter(slot => !slot.main).length;
+  const counts = [`${left} to find`, `${set.owned} collected`, bonus > 0 && `${bonus} bonus ${bonus === 1 ? 'card' : 'cards'}`].filter(Boolean).join(' · ');
   const openSlot = (slot: SetSlot) => slot.entry ? nav.openEntry(slot.entry) : slot.card && nav.openCard(slot.card);
 
   return <PageFrame title={set.name}>{scroll => <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={rows} keyExtractor={row => row.key} contentContainerStyle={scroll.contentContainerStyle} showsVerticalScrollIndicator={false} initialNumToRender={5} maxToRenderPerBatch={6} windowSize={5}
     ListHeaderComponent={<View style={c.header}>
       <Txt muted variant="caption">{LANGUAGE_LABELS[set.language]}</Txt>
-      <View style={c.status}><Txt variant="label" style={{ flexShrink: 1, color: set.complete ? '#80611F' : C.ink }}>{set.complete ? 'You finished this set!' : `${left} ${left === 1 ? 'card' : 'cards'} to find`}</Txt><Txt variant="readout" style={{ fontWeight: '600' }}>{set.owned} / {set.official}</Txt></View>
+      <View style={c.status}><Txt variant="label" style={{ flex: 1, minWidth: 0, color: set.complete ? '#80611F' : C.ink }}>{set.complete ? 'You finished this set!' : `${left} ${left === 1 ? 'card' : 'cards'} to find`}</Txt><Txt variant="readout" style={{ fontWeight: '600' }}>{set.owned} / {set.official}</Txt></View>
       <Progress value={set.owned} total={set.official} color={set.complete ? '#A98428' : '#679255'} />
       <Txt muted variant="caption">Each number counts once, in any finish. Tap a card to see it up close.</Txt>
-      <Segmented label="Show set cards" options={FILTERS} value={filter} onChange={setFilter} />
+      <View style={c.filter}>
+        <Segmented label="Show set cards" options={FILTERS} value={filter} onChange={setFilter} />
+        <Txt muted variant="caption">{counts}</Txt>
+      </View>
     </View>}
     ListEmptyComponent={<View style={c.empty}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 80, height: 80 }} contentFit="contain" /><Txt muted style={{ textAlign: 'center' }}>{filter === 'missing' ? 'Nothing left to find here. Amazing!' : 'No cards from this set yet.'}</Txt></View>}
     renderItem={({ item }) => item.bonus
@@ -92,7 +99,8 @@ function Tile({ slot, onPress }: { slot: SetSlot; onPress: (slot: SetSlot) => vo
 
 const c = StyleSheet.create({
   header: { paddingHorizontal: S.xl, paddingBottom: S.lg, gap: S.md },
-  status: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', columnGap: S.md, rowGap: S.xs },
+  status: { flexDirection: 'row', alignItems: 'center', gap: S.md },
+  filter: { gap: S.xs },
   row: { flexDirection: 'row', gap: S.sm, paddingHorizontal: S.xl, marginBottom: S.md }, tile: { flex: 1, minWidth: 0 },
   unknown: { alignItems: 'center', justifyContent: 'center', backgroundColor: '#E6ECDD', borderWidth: 1, borderStyle: 'dashed', borderColor: '#C4D0B7' },
   check: { position: 'absolute', top: 4, right: 4, backgroundColor: '#679255', borderRadius: 10, padding: 3 },

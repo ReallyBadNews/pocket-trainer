@@ -18,6 +18,8 @@ import { setProgress, type SetProgress } from '@/lib/set-progress';
 
 const GOLD = '#80611F', GREEN = '#679255';
 const plural = (n: number, one: string) => `${n} ${n === 1 ? one : `${one}s`}`;
+// Same words as a set checklist; the counts sit in a caption so each segment stays one short line.
+const FILTERS: { id: SpeciesFilter; label: string }[] = [{ id: 'all', label: 'All' }, { id: 'todo', label: 'To find' }, { id: 'owned', label: 'Collected' }];
 
 // Web export pre-renders one page per badge.
 export function generateStaticParams() {
@@ -75,13 +77,15 @@ function SpeciesChecklist({ badge, discovered, header }: { badge: Badge; discove
   const counts = goalCounts(goals);
   const visible = filterGoals(goals, filter);
   const columns = speciesColumns((listWidth || Math.min(width, 1100)) - S.xl * 2, fontScale);
-  const filters: { id: SpeciesFilter; label: string }[] = [{ id: 'all', label: `All (${counts.all})` }, { id: 'todo', label: `Still to find (${counts.todo})` }, { id: 'owned', label: `Collected (${counts.owned})` }];
   return <PageFrame title={badge.name}>{scroll => <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={goal => String(goal.id)} columnWrapperStyle={s.gridRow} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} initialNumToRender={12} maxToRenderPerBatch={12}
     ListHeaderComponent={<View style={s.listHeader}>
       {header}
       <View style={s.section}>
         <View style={s.stack}><Txt accessibilityRole="header" variant="subtitle">Pokémon to collect</Txt><Txt muted variant="caption">Tap a Pokémon to see its cards.</Txt></View>
-        <Segmented label="Show Pokémon" options={filters} value={filter} onChange={setFilter} />
+        <View style={s.stack}>
+          <Segmented label="Show Pokémon" options={FILTERS} value={filter} onChange={setFilter} />
+          <Txt muted variant="caption">{counts.todo} to find · {counts.owned} collected</Txt>
+        </View>
       </View>
     </View>}
     ListEmptyComponent={<View style={s.empty}>
@@ -154,7 +158,7 @@ function SetRow({ set }: { set: SetProgress }) {
       <View style={s.setProgress}><Progress value={set.owned} total={set.official} color={set.complete ? '#A98428' : GREEN} /></View>
       <Txt variant="caption" style={[s.setCount, set.complete && { color: GOLD }]}>{set.complete ? `Finished! All ${set.official} cards` : `${set.owned} of ${set.official} · ${left} to go`}</Txt>
     </View>
-    <View style={s.chevron}><Icon name="back" size={16} color={C.muted} /></View>
+    <Icon name="chevron" size={16} color={C.muted} />
   </Pressable>;
 }
 
@@ -190,7 +194,6 @@ const s = StyleSheet.create({
   setRow: { flexDirection: 'row', alignItems: 'center', gap: S.md, minHeight: 44, paddingVertical: S.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   setProgress: { marginVertical: S.xs },
   setCount: { color: C.muted, fontWeight: '600', flexShrink: 1 },
-  chevron: { transform: [{ rotate: '180deg' }] },
   empty: { alignItems: 'center', paddingVertical: 28, gap: 12 },
   emptyText: { textAlign: 'center', maxWidth: 330 },
 });

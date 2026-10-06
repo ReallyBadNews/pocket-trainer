@@ -2,7 +2,7 @@ import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { goBack, Page } from '@/components/page';
-import { ActionRow, Button, C, Icon, Progress, S, ToolbarAction, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
+import { ActionRow, Button, C, Icon, LinkButton, Progress, S, SectionHeader, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { DEFAULT_BINDER_BROWSE, DEFAULT_DEX_BROWSE, useBinderBrowse, useDexBrowse } from '@/lib/browse-state';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
@@ -37,7 +37,7 @@ export function DiscoveriesPage() {
   const showRegion = (region: RegionProgress) => { tick(); updateBrowse({ show: region.active ? 'all' : region.id }); goBack(); };
   return <Page title="Pokédex overview">
     <View style={s.section}>
-      <Txt accessibilityRole="header" variant="subtitle">Your discoveries</Txt>
+      <SectionHeader title="Your discoveries" />
       {found ? <>
         <View accessible accessibilityLabel={`${found} of ${total} Pokémon discovered`} style={s.count}><Txt variant="title" style={s.tabular}>{found}</Txt><Txt muted style={{ flexShrink: 1 }}>of {total} Pokémon discovered</Txt></View>
         <Progress value={found} total={total} color={found >= total ? GOLD : GREEN} />
@@ -54,16 +54,16 @@ export function DiscoveriesPage() {
         <View accessible accessibilityLabel={trainer.quizBest ? `Best quiz score: ${trainer.quizBest} out of ${QUIZ_LENGTH}` : 'No quiz score yet'} style={ui.actionRow}><Txt style={s.rowTitle}>Best quiz score</Txt><Txt variant="readout" muted={!trainer.quizBest} style={!!trainer.quizBest && s.strong}>{trainer.quizBest ? `${trainer.quizBest}/${QUIZ_LENGTH}` : 'Not played yet'}</Txt></View>
       </View>
       {/* Scanning leads an empty Pokédex, so the game steps back to a plain action there. */}
-      <Button size="medium" title="Play Who’s That Pokémon?" icon="star" secondary={!found} onPress={nav.openQuiz} style={s.start} />
+      <Button size="medium" title="Play Who’s That Pokémon?" icon="quiz" secondary={!found} onPress={nav.openQuiz} style={s.start} />
     </View>
 
     {recent.length > 0 && <View style={s.section}>
-      <View style={s.sectionHeading}><Txt accessibilityRole="header" variant="subtitle" style={s.headingTitle}>Recently discovered</Txt>{found > recent.length && <ToolbarAction title={`See all ${found}`} onPress={() => { updateBrowse(() => ({ ...DEFAULT_DEX_BROWSE, show: 'discovered' })); goBack(); }} />}</View>
+      <SectionHeader title="Recently discovered" action={found > recent.length && <LinkButton title={`See all ${found}`} onPress={() => { updateBrowse(() => ({ ...DEFAULT_DEX_BROWSE, show: 'discovered' })); goBack(); }} />} />
       <RecentGrid recent={recent} onSpecies={nav.openSpecies} />
     </View>}
 
     <View style={s.section}>
-      <View style={s.sectionHeading}><Txt accessibilityRole="header" variant="subtitle" style={s.headingTitle}>Regions</Txt><Txt muted variant="caption" style={s.headingNote}>{activeRegion ? `Showing ${activeRegion.name}` : regionsComplete ? `${regionsComplete} of ${REGIONS.length} complete!` : 'Tap one to explore it'}</Txt></View>
+      <SectionHeader title="Regions" detail={activeRegion ? `Showing ${activeRegion.name}` : regionsComplete ? `${regionsComplete} of ${REGIONS.length} complete!` : 'Tap one to explore it'} />
       <View>{regions.map(region => <Pressable key={region.id} accessibilityRole="button" accessibilityLabel={`${region.name}, numbers ${region.first} to ${region.last}: ${region.discovered} of ${region.total} discovered${region.complete ? ', region complete' : ''}. ${region.active ? 'Showing now. Show every region' : 'Show these Pokémon'}`} accessibilityState={{ selected: region.active }} onPress={() => showRegion(region)} style={state => [s.regionRow, pressFx(state)]}>
         <View style={s.regionTop}>
           <View style={s.regionName}><Txt variant="cardTitle">{region.name}</Txt><Txt style={s.mono}>{regionRange(region)}</Txt></View>
@@ -79,7 +79,7 @@ export function DiscoveriesPage() {
     </View>
 
     {types.length > 0 && <View style={s.section}>
-      <View style={s.sectionHeading}><Txt accessibilityRole="header" variant="subtitle" style={s.headingTitle}>Your types</Txt><Txt muted variant="caption" style={s.headingNote}>{types.length} of {POKEMON_TYPES.length} found</Txt></View>
+      <SectionHeader title="Your types" detail={`${types.length} of ${POKEMON_TYPES.length} found`} />
       <View style={s.typeBar} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">{types.map(t => <View key={t.type} style={{ flex: t.count, backgroundColor: TYPE_COLORS[t.type] }} />)}</View>
       <View>{types.map(t => <Pressable key={t.type} accessibilityRole="button" accessibilityLabel={`${typeLabel(t.type)}, ${t.count} discovered. ${activeType === t.type ? 'Show every type' : 'Show this type'}`} accessibilityState={{ selected: activeType === t.type }} onPress={() => { tick(); updateBrowse({ type: activeType === t.type ? null : t.type }); goBack(); }} style={state => [s.typeRow, pressFx(state)]}>
         <View style={[s.typeDot, { backgroundColor: TYPE_COLORS[t.type] }]} /><Txt style={{ flex: 1 }}>{typeLabel(t.type)}</Txt><Txt muted variant="readout">{t.count}</Txt>{activeType === t.type && <Icon name="check" size={18} />}
@@ -107,8 +107,6 @@ function RecentGrid({ recent, onSpecies }: { recent: RecentDiscovery[]; onSpecie
 
 const s = StyleSheet.create({
   section: { gap: S.sm },
-  sectionHeading: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: S.md, rowGap: S.xs },
-  headingTitle: { flexShrink: 1 }, headingNote: { flexShrink: 1 },
   count: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: S.sm },
   tabular: { fontVariant: ['tabular-nums'] }, strong: { fontWeight: '600' }, center: { textAlign: 'center' },
   rowTitle: { flex: 1, minWidth: 0, fontWeight: '500' },

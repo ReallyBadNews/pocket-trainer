@@ -1,6 +1,6 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { Page, goBack } from '@/components/page';
-import { Button, ButtonRow, C, Icon, S, ToolbarAction, Txt, pressFx, tick, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, Icon, LinkButton, S, Txt, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { useBinderBrowse } from '@/lib/browse-state';
 import { CARD_FILTERS } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
@@ -17,12 +17,13 @@ export function BinderFiltersPage() {
   const active = activeBinderFilters(browse);
   const query = browse.query.trim();
   return <Page title="Filter cards" footer={<ButtonRow>
-    <Button secondary title="Reset" disabled={!active} accessibilityHint="Shows every card again. Keeps your search and sort." onPress={() => update(DEFAULT_BINDER_FILTERS)} />
+    <Button secondary title="Clear filters" disabled={!active} accessibilityHint="Shows every card again. Keeps your search and sort." onPress={() => update(DEFAULT_BINDER_FILTERS)} />
     <Button title={`Show ${cards(counts.total)}`} onPress={goBack} />
   </ButtonRow>}>
     <View style={s.intro}>
       <Txt muted variant="caption">The number beside each choice is how many cards you’d see.</Txt>
-      {!!query && <View style={s.search}><Txt variant="label" style={{ flexShrink: 1 }}>Also matching “{query}”</Txt><ToolbarAction title="Clear search" onPress={() => update({ query: '' })} /></View>}
+      {/* The note wraps; Clear search keeps its place beside the first line. */}
+      {!!query && <View style={s.search}><Txt variant="label" style={s.label}>Also matching “{query}”</Txt><LinkButton title="Clear search" onPress={() => update({ query: '' })} /></View>}
     </View>
     <Choices label="Show" options={BINDER_SHOWS.map(id => ({ id, label: id, count: counts.show[id] }))} value={browse.show} onChange={show => update({ show })} />
     <Choices label="Card kind" options={CARD_FILTERS.map(option => ({ ...option, count: counts.kind[option.id] }))} value={browse.kind} onChange={kind => update({ kind })} />
@@ -49,7 +50,7 @@ function Choices<T extends string>({ label, detail, options, value, onChange }: 
 
 const s = StyleSheet.create({
   intro: { gap: S.sm },
-  search: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', columnGap: S.md },
+  search: { flexDirection: 'row', alignItems: 'center', gap: S.md },
   section: { gap: S.xs },
   label: { flex: 1, minWidth: 0 },
   check: { width: 20, alignItems: 'flex-end' },

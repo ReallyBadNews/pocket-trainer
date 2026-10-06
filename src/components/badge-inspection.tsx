@@ -109,5 +109,5 @@ const s = StyleSheet.create({
   loading: { ...StyleSheet.absoluteFill, alignItems: 'center', justifyContent: 'center' },
   footer: { paddingHorizontal: 20, paddingBottom: 8, gap: 12 },
   description: { maxHeight: 112 }, descriptionContent: { paddingHorizontal: 12 },
-  controls: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 24 },
+  controls: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
 });

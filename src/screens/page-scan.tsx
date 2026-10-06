@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Button, C, CardArt, ChoiceMenu, ErrorNotice, Icon, R, S, Txt, tick } from '@/components/pokedex-ui';
+import { ActionRow, Button, C, CardArt, ErrorNotice, Icon, R, S, Segmented, Txt, tick } from '@/components/pokedex-ui';
 import { fetchCard, type ScanCandidate } from '@/lib/catalog';
 import { canRecognize, compareCardArtwork, recognizeCard, refineCard } from '@/lib/scanner';
 import type { ScanLanguage } from '@/lib/language-detect';
@@ -214,11 +214,12 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
   </Modal><Animated.ScrollView {...scroll} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
     <View style={{ gap: S.lg }}>
       {header}
-      <ChoiceMenu disabled={busy || adding} label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} />
+      {/* The same control as in the camera; changeLayout ignores taps while a page is being read or added. */}
+      <Segmented label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => changeLayout(PAGE_LAYOUTS.find(option => option.id === id)!)} style={(busy || adding) && s.locked} />
       {!photo ? <>
         <View style={s.captureGuide}><Icon name="binder" size={34} color={C.muted} /><Txt muted variant="caption" style={{ textAlign: 'center' }}>Hold the phone flat above one binder page. Tilt it slightly if the sleeves shine.</Txt></View>
         <Button title="Open camera" icon="camera" onPress={() => takePhoto()} disabled={busy || adding} />
-        <Button title="Photos" size="medium" icon="photo" secondary onPress={() => takePhoto(true)} disabled={busy || adding} />
+        <ActionRow icon="photo" title="Pick from Photos" disabled={busy || adding} onPress={() => takePhoto(true)} />
       </> : <View onLayout={e => setGridWidth(e.nativeEvent.layout.width)} style={[s.grid, { gap }]}>
         {tileWidth > 0 && pockets.map((pocket, index) => {
           const card = pocket.choice ? details[detailKey(pocket.choice)] : undefined;
@@ -253,6 +254,7 @@ export function PageScan({ header, language, captureRequest, livePhoto, onCardPh
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 40 },
   captureGuide: { alignItems: 'center', justifyContent: 'center', gap: S.sm, paddingVertical: S.md },
+  locked: { opacity: .45, pointerEvents: 'none' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', padding: S.sm, backgroundColor: '#2C4037', borderRadius: R.lg },
   tile: { overflow: 'hidden', borderRadius: R.sm + 2, backgroundColor: '#1F2F27', borderWidth: 3, borderColor: 'transparent' },
   tileCheck: { borderColor: C.gold },
