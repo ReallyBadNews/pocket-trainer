@@ -60,6 +60,7 @@ export function useBinderView() {
 export function showOnlyNeedsPrinting(trainerId: string) {
   binder.set(() => ({ trainerId, value: { ...DEFAULT_BINDER_BROWSE, needsPrinting: true } }));
 }
-export function sortBinderBy(trainerId: string, sort: BinderSort) {
-  binder.set(current => ({ trainerId, value: { ...(current.trainerId === trainerId ? current.value : DEFAULT_BINDER_BROWSE), sort } }));
+/** Every card, in one order: "See all cards by price" shouldn't land on a list still narrowed by old filters. */
+export function showAllBinderCardsBy(trainerId: string, sort: BinderSort) {
+  binder.set(() => ({ trainerId, value: { ...DEFAULT_BINDER_BROWSE, sort } }));
 }

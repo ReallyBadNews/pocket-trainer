@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View, type TextStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 import { C, Icon, R, S, Txt, pressFx, tick } from './pokedex-ui';
 import { usePricing } from '@/lib/use-pricing';
 import { collectionValue, priceKey, quoteLabel, quotePrice, usd } from '@/lib/pricing';
@@ -51,22 +51,51 @@ export function CardValuePanel({ card, finish, quantity, onPress }: { card: Card
 }
 
 /**
- * The headline counts unconfirmed printings at their lowest available price, so it only goes up as printings are
- * confirmed; the high end of the range is shown beside it.
+ * The collection total, coverage and loading state, worked out in one place so the readout and the collection value
+ * page always agree. `checking` means requests are in flight; `updating` also covers cards not looked up yet.
  */
-export function CollectionValue({ entries, onPress }: { entries: Entry[]; onPress: () => void }) {
-  const client = usePricing(entries.map(e => e.card), 20);
+export function useCollectionValue(entries: Entry[]) {
+  const cards = entries.map(e => e.card);
+  const client = usePricing(cards, 20);
   const value = collectionValue(entries, client.snapshots, client.fx);
   const total = value.priced + value.missing;
   const checking = entries.some(e => client.pending.has(priceKey(e.card))) || client.pending.has('fx');
   const unresolved = !client.ready || entries.some(e => !client.snapshots[priceKey(e.card)] && !client.errors.has(priceKey(e.card)));
-  const updating = checking || unresolved;
-  const status = [value.missing ? `${value.priced} of ${total} cards priced` : total === 1 ? 'Your card is priced' : `All ${total} cards priced`, value.high > value.low && `up to ${usd(value.high)}`, updating && 'updating…'].filter(Boolean).join(' · ');
+  const coverage = value.missing ? `${value.priced} of ${total} cards priced` : total === 1 ? 'Your card is priced' : `All ${total} cards priced`;
+  const refresh = () => { void client.ensure(cards, () => true, 20, true); void client.ensureFx(true); };
+  return { client, value, total, coverage, checking, updating: checking || unresolved, refresh };
+}
+export type CollectionPricing = ReturnType<typeof useCollectionValue>;
+
+/**
+ * The headline counts unconfirmed printings at their lowest available price, so it only goes up as printings are
+ * confirmed; the high end of the range is shown beside it.
+ */
+export function CollectionValue({ entries, onPress }: { entries: Entry[]; onPress: () => void }) {
+  const { value, coverage, updating } = useCollectionValue(entries);
+  const status = [coverage, value.high > value.low && `up to ${usd(value.high)}`, updating && 'updating…'].filter(Boolean).join(' · ');
   return <ValueReadout label="Collection value" onPress={onPress} accessibilityHint="Opens your most valuable cards and how the total is worked out"
     accessibilityLabel={`Collection value, ${value.priced ? `about ${usd(value.low)}` : updating ? 'looking up prices' : 'not priced yet'}. ${status}`}>
     {value.priced ? <Txt variant="readout" style={s.total}>{usd(value.low)}</Txt> : <Txt muted style={s.emptyAmount}>{updating ? 'Looking up prices…' : 'Not priced yet'}</Txt>}
     <Txt muted variant="caption">{status}</Txt>
   </ValueReadout>;
+}
+
+/** The collection value page's headline: the same readout window, larger, with nothing to tap. */
+export function CollectionValueHero({ pricing, newest }: { pricing: CollectionPricing; newest?: string }) {
+  const { value, coverage, updating } = pricing;
+  const range = value.high > value.low ? `up to ${usd(value.high)}` : undefined;
+  const label = [`Collection value, ${value.priced ? `about ${usd(value.low)}` : updating ? 'looking up prices' : 'not priced yet'}`, range, coverage, updating && 'updating prices', newest && `prices from ${dateLabel(newest)}`].filter(Boolean).join('. ');
+  return <View accessible accessibilityRole="summary" accessibilityLabel={label} style={[s.readout, s.hero]}>
+    <Txt variant="caption" style={s.readoutLabel}>Collection value</Txt>
+    {value.priced ? <Txt variant="readout" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={.5} style={s.heroTotal}>{usd(value.low)}</Txt> : <Txt muted style={s.emptyAmount}>{updating ? 'Looking up prices…' : 'Not priced yet'}</Txt>}
+    {range && <Txt variant="label" style={s.heroRange}>{range}</Txt>}
+    <Txt variant="caption" style={s.heroCoverage}>{coverage}</Txt>
+    {(updating || newest) && <View style={s.heroStatus}>
+      {updating && <ActivityIndicator size="small" color={C.muted} />}
+      <Txt muted variant="caption" style={{ flexShrink: 1 }}>{[updating && 'Updating prices…', newest && `Prices from ${dateLabel(newest)}`].filter(Boolean).join(' · ')}</Txt>
+    </View>}
+  </View>;
 }
 
 const tabular: TextStyle = { fontVariant: ['tabular-nums'] };
@@ -83,6 +112,11 @@ const s = StyleSheet.create({
   rangeDash: { color: '#7A8C73', fontSize: 24, lineHeight: 34, fontWeight: '400' },
   tagDash: { fontSize: 16, lineHeight: 22 },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
+  hero: { flexDirection: 'column', alignItems: 'stretch', gap: 2, paddingVertical: S.lg },
+  heroTotal: { color: C.ink, fontSize: 42, lineHeight: 50, fontWeight: '800', letterSpacing: -1, ...tabular },
+  heroRange: { color: C.ink, fontSize: 16, lineHeight: 22, ...tabular },
+  heroCoverage: { color: C.ink, fontWeight: '600', ...tabular },
+  heroStatus: { flexDirection: 'row', alignItems: 'center', gap: S.sm, marginTop: S.xs },
   tabular,
   attentionCaption: { color: '#786037', fontWeight: '600' },
 });

@@ -14,9 +14,11 @@ import { isWished, removeWish, restoreWish, toggleWish, wishesForSpecies, wishes
 import { exportFile, importFile } from '@/lib/files';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
+import { CardPriceDetails } from '@/components/card-price-details';
 import { TRAINER_APPEARANCE_LABELS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
+import { printingFinishes } from '@/lib/printing-prices';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
@@ -34,6 +36,8 @@ export function Sheet({ title, onClose, onBack, children, busy = false, dismissi
   return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => dismissible && !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal={!overlay} accessibilityElementsHidden={!!overlay} importantForAccessibility={overlay ? 'no-hide-descendants' : 'auto'} style={m.sheet}><SheetHeader title={title} onClose={onClose} onBack={onBack} busy={busy} />{children}</View>{overlay}</KeyboardAvoidingView>;
 }
 
+type CardPage = 'card' | 'price' | 'delete';
+
 export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (added: AddedCards) => void; onBusyChange: (busy: boolean) => void }) {
   const { trainer, updateTrainer } = useCollection();
   const addCards = useAddCards();
@@ -43,10 +47,10 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [loading, setLoading] = useState(!entry);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
-  const cardScroll = useRef<ScrollView>(null);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState<Finish>(entry?.finish ?? 'unsure');
-  const [removing, setRemoving] = useState(false);
+  // Price details and the delete check are pages of this sheet, so Back keeps the printing and copies chosen here.
+  const [page, setPage] = useState<CardPage>('card');
   const { locked, requireGrownUp, gate } = useGrownUpCheck();
   const liveEntry = entry ? trainer.entries.find(e => e.key === entry.key) : undefined;
   const wished = isWished(trainer, brief);
@@ -55,7 +59,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [wishing, setWishing] = useState(false);
   const [wishError, setWishError] = useState<string | null>(null);
   const priceClient = usePricing([brief], 0);
-  const printingChoices: Finish[] = [...new Set([...(card?.finishes ?? []), ...(priceClient.snapshots[priceKey(brief)]?.finishes ?? [])].filter(f => f !== 'unsure')), 'unsure'];
+  const printingChoices: Finish[] = [...printingFinishes(card?.finishes ?? [], priceClient.snapshots[priceKey(brief)]), 'unsure'];
   useEffect(() => {
     let active = true;
     if (entry) return;
@@ -86,7 +90,16 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     catch (e) { setWishError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'); }
     finally { setWishing(false); }
   }
-  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView ref={cardScroll} style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+  const backToCard = () => setPage('card');
+  if (page === 'price' && card) return <Sheet title="Price details" onClose={onClose} onBack={backToCard} busy={busy}><CardPriceDetails card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} disabled={busy} onChoose={value => { if (busy) return; setFinish(value); backToCard(); }} /></Sheet>;
+  if (page === 'delete' && card && liveEntry) return <Sheet title="Delete card?" onClose={onClose} onBack={backToCard} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={m.content}>
+    <View style={m.cardHero}><CardArt card={card} style={{ width: 140, maxWidth: '100%' }} /></View>
+    <View><CardCaption name={card.name} setName={card.set.name} detail={`#${collectorNumber(card)} · ${FINISH_LABELS[liveEntry.finish]}${liveEntry.quantity > 1 ? ` · ${liveEntry.quantity} copies` : ''}`} /><CardPriceTag card={card} finish={liveEntry.finish} printingHint={false} /></View>
+    <Txt>This removes {liveEntry.quantity === 1 ? card.name : `all ${liveEntry.quantity} copies of ${card.name}`} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>
+    {locked && <View style={m.lockNote}><Icon name="lock" size={18} /><Txt variant="caption" style={{ flex: 1, minWidth: 0, fontWeight: '600' }}>A grown-up answers a quick question first.</Txt></View>}
+    <ErrorNotice text={error} />
+  </ScrollView><View style={m.footer}><ButtonRow><Button title="Keep it" secondary disabled={busy} onPress={backToCard} /><Button title="Delete card" icon={locked ? 'lock' : undefined} busy={busy} style={m.destructive} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></ButtonRow></View></Sheet>;
+  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
@@ -98,12 +111,11 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
         <Txt variant="readout" muted>#{collectorNumber(card)} · {card.rarity} · {cardKindLabel(card)}{card.hp ? ` · HP ${card.hp}` : ''}</Txt>
         <Txt variant="caption" muted>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
       </View>
-      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} onPress={() => {}} />
+      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} onPress={() => !busy && setPage('price')} />
       <View style={m.section}><ChoiceMenu disabled={busy} label="Printing" options={printingChoices.map(id => ({ id, label: FINISH_LABELS[id] }))} value={finish} onChange={value => !busy && setFinish(value)} />{!entry && <Txt variant="caption" muted>Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around it. “Not sure yet” is okay.</Txt>}</View>
-      {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setRemoving(true) : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
+      {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setPage('delete') : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
         {card.description && <Txt>{card.description}</Txt>}
-        {!removing && <ActionRow title="Delete card" destructive disabled={busy} onPress={() => setRemoving(true)} />}
-        {removing && <View onLayout={event => cardScroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - S.sm), animated: true })} style={m.removeBox}><Txt variant="cardTitle">Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt variant="caption">This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>{locked && <Txt variant="caption" style={{ fontWeight: '600' }}>A grown-up answers a quick question first.</Txt>}<ActionRow title="Keep it" disabled={busy} onPress={() => setRemoving(false)} /><ActionRow title="Delete card" destructive icon={locked ? 'lock' : undefined} disabled={busy} detail={busy ? 'Deleting…' : undefined} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></View>}
+        <ActionRow title="Delete card" destructive disabled={busy} onPress={() => setPage('delete')} />
       </> : <><CopiesField finish={finish} quantity={quantity} busy={busy} minusDisabled={quantity <= 1} minusLabel="Fewer copies" plusLabel="More copies" onMinus={() => setQuantity(n => Math.max(1, n - 1))} onPlus={() => setQuantity(n => Math.min(999, n + 1))} />
         {canWish && <><WishButton wished={wished} disabled={busy || wishing} onPress={toggleWished} /><ErrorNotice text={wishError} /><Txt variant="caption" muted>{wished ? 'When you get it, add it to your binder. Wish granted!' : 'Don’t have it yet? Wish for it and share your list with family.'}</Txt></>}</>}
     </>}
@@ -402,7 +414,7 @@ const m = StyleSheet.create({
   quantityStacked: { flexDirection: 'column', alignItems: 'flex-start' }, quantityLabel: { flex: 1, minWidth: 0, gap: 2 },
   stepper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#E8EEE1', borderRadius: 8 }, stepButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   stepperNumber: { fontSize: 20, lineHeight: 26, fontWeight: '600', minWidth: 32, textAlign: 'center' },
-  removeBox: { paddingVertical: S.md, gap: S.sm }, note: { paddingVertical: S.sm },
+  lockNote: { flexDirection: 'row', alignItems: 'center', gap: S.sm }, destructive: { backgroundColor: C.redDark }, note: { paddingVertical: S.sm },
   lockRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: S.md },
   profile: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   builderPreview: { flexDirection: 'row', alignItems: 'center', gap: S.lg, padding: S.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },

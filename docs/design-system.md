@@ -42,14 +42,15 @@ Set + number       Set + number
 $8.88              $0.29–$0.44
 ```
 
-- Give each task one clear filled primary action. Secondary actions are plain text or disclosure rows; equal hit targets do not require equal visual prominence. Wishlist and achievement gold stays semantic.
-- Populated Pokédex and Binder screens lead with the collection-value readout, then search and collection content. The value is the one framed element above the collection: a tinted Pokédex readout window whose details open in place. Quiz, discoveries and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
-- Card values are content, not metadata: tiles show them in bold tabular numerals, and card details show the same readout window under the card's identity.
+- Give each task one clear filled primary action. Secondary actions are plain text or navigation rows; equal hit targets do not require equal visual prominence. Wishlist and achievement gold stays semantic.
+- Populated Pokédex and Binder screens lead with the collection-value readout, then search and collection content. The value is the one framed element above the collection: a tinted Pokédex readout window that opens the collection value page. Quiz, discoveries and set summaries are secondary destinations. Decorative art never stacks above the collection at larger text sizes.
+- Card values are content, not metadata: tiles show them in bold tabular numerals, and card details show the same readout window under the card's identity, opening price details for every printing.
 - `ButtonRow` gives actions equal columns and equal heights. It stacks when there is less than 144pt per button, with more space reserved as system text size increases.
 - Segmented controls switch closely related views. Use `ChoiceMenu` for sort, filter, language, and form values. On iOS it opens native choices; other platforms show a checked list. Form rows show the selected value. Compact toolbar triggers can use short titles such as Sort or View; accessibility announces the current selection and the menu checks it.
 - `ToolbarAction` and `ActionRow` keep secondary destinations easy to tap without another filled card. Use alignment, separators, and section gaps to group related items.
 - Filter chips remain compact, independently selected controls. Long bilingual labels may wrap inside the available width.
 - Main tabs remain available while scrolling. Only the decorative header collapses.
+- Nothing expands in place. When there is more to show, it opens its own view: a page in the tab's expo-router stack, drawn inside the Pokédex screen with a back bar (`Page`/`PageFrame`), or a sub-page with a back arrow inside a sheet. These views are full features with their own lists, actions and explanations, not overflow. The tabs, pages and their links are expo-router routes; cards, Pokémon, the wishlist, settings and the quiz open over any page from the device's sheet host.
 - Sheet navigation stays in place while saving. A busy sheet disables its navigation instead of removing it. Titles wrap beside fixed 44pt navigation controls.
 - Card captions show the name followed by one metadata block with the set and printed number. Full names and metadata wrap; details provide the complete identity. Avoid reserved blank lines and repeated estimate/printing labels.
 - Quantity controls use a short “Copies” label and a trailing stepper. Stack only when actual width or text size requires it. Deletion is a quiet destructive action.

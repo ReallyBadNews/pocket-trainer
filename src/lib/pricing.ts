@@ -110,14 +110,57 @@ export function collectionValue(entries: Entry[], snapshots: Readonly<Record<str
   return { low, high, priced, missing, unconfirmed, stale };
 }
 
-/** The saved printing worth the most per copy, ranked by the low end of its estimate like the binder's price sort. */
-export function mostValuable(entries: Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>, fx?: ExchangeRate, now = Date.now()) {
-  let best: { entry: Entry; quote: PriceQuote } | undefined;
+export type RankedEntry = { entry: Entry; quote: PriceQuote };
+
+/**
+ * Priced saved printings, worth the most per copy first. Ranked by the low end of each estimate like the binder's
+ * price sort, so a stack of cheap copies never outranks one valuable card. Unpriced printings are left out.
+ */
+export function rankByValue(entries: Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>, fx?: ExchangeRate, now = Date.now()): RankedEntry[] {
+  const ranked: RankedEntry[] = [];
   for (const entry of entries) {
     const quote = quotePrice(snapshots[priceKey(entry.card)], entry.finish, fx, now);
-    if (quote && (!best || quote.low > best.quote.low)) best = { entry, quote };
+    if (quote) ranked.push({ entry, quote });
   }
-  return best;
+  // Sorting is stable, so equal values keep collection order.
+  return ranked.sort((a, b) => b.quote.low - a.quote.low);
+}
+
+/** The saved printing worth the most per copy. */
+export const mostValuable = (entries: Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>, fx?: ExchangeRate, now = Date.now()): RankedEntry | undefined => rankByValue(entries, snapshots, fx, now)[0];
+
+export type ValueGroup<K extends string> = ReturnType<typeof collectionValue> & { key: K; copies: number; entries: Entry[] };
+
+/** Collection totals split by set, language or anything else `keyOf` names. Most valuable first, then most copies. */
+export function valueByGroup<K extends string>(entries: Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>, fx: ExchangeRate | undefined, keyOf: (entry: Entry) => K, now = Date.now()): ValueGroup<K>[] {
+  const groups = new Map<K, Entry[]>();
+  for (const entry of entries) {
+    const key = keyOf(entry), list = groups.get(key);
+    if (list) list.push(entry); else groups.set(key, [entry]);
+  }
+  return [...groups].map(([key, list]) => {
+    const value = collectionValue(list, snapshots, fx, now);
+    return { ...value, key, copies: value.priced + value.missing, entries: list };
+  }).sort((a, b) => b.low - a.low || b.copies - a.copies);
+}
+
+/** The provider's latest publish date among priced cards, for "Prices from …". */
+export function newestPriceDate(ranked: readonly RankedEntry[]): string | undefined {
+  let newest: string | undefined;
+  for (const { quote } of ranked) if (!newest || Date.parse(quote.updatedAt) > Date.parse(newest)) newest = quote.updatedAt;
+  return newest;
+}
+
+/** Why a saved printing has no price: still loading, a failed lookup, a missing exchange rate, or nothing listed. */
+export type MissingPrice = 'loading' | 'failed' | 'exchange' | 'printing' | 'unlisted';
+export function missingPriceReason(snapshot: PriceSnapshot | undefined, finish: Finish, fx: ExchangeRate | undefined, status: { pending: boolean; failed: boolean }): MissingPrice {
+  if (status.pending) return 'loading';
+  if (!snapshot) return status.failed ? 'failed' : 'loading';
+  const wanted = (p: MarketPrice) => finish === 'unsure' || p.finish === finish;
+  if (!fx && snapshot.prices.some(p => wanted(p) && p.currency === 'EUR')) return 'exchange';
+  // A chosen printing with no price while its siblings have one is often the wrong printing.
+  if (finish !== 'unsure' && snapshot.prices.some(p => p.finish !== finish)) return 'printing';
+  return 'unlisted';
 }
 
 /** Price cache is disposable and separate from the family's collection backups. */
