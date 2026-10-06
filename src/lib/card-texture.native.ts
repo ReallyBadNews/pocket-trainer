@@ -7,7 +7,9 @@ export type CardTextureImage = { localUri: string };
 export async function loadCardTexture(source: string | number): Promise<CardTextureImage> {
   // Use the same decoded-image cache as CardArt, including saved WebP copies.
   // Expo GL's stb decoder only accepts PNG/JPEG, so serialize a valid PNG.
-  const uri = typeof source === 'number' ? Asset.fromModule(source).uri : source;
+  // Release builds serve bundled assets from disk via expo-updates: `uri` is empty, only `localUri` is set.
+  const asset = typeof source === 'number' ? await Asset.fromModule(source).downloadAsync() : undefined;
+  const uri = asset ? asset.localUri ?? asset.uri : source as string;
   const image = await Image.loadAsync(uri);
   const { ImageManipulator, SaveFormat } = require('expo-image-manipulator') as typeof import('expo-image-manipulator');
   const context = ImageManipulator.manipulate(image);

@@ -10,14 +10,12 @@ export function cardSurface(card: Pick<Card, 'rarity'>, finish: Finish): CardSur
 }
 export const surfaceUniform = (surface: CardSurface) => ({ paper: 0, 'full-foil': 1, 'art-foil': 2, 'reverse-foil': 3 })[surface];
 
-export type CardBack = 'international' | 'japanese-modern' | 'unavailable';
+export type CardBack = 'international' | 'japanese-modern';
 /** These are standard-back previews, not photographs of a collector's copy. */
 export function cardBack(card: CardBrief & Partial<Pick<Card, 'set'>>): CardBack {
-  if (/ancient mew|古代のミュウ|world championships/i.test(card.name) || /world championships/i.test(card.set?.name ?? '')) return 'unavailable';
-  if (card.language === 'en') return 'international';
-  // Only catalog eras we can identify as modern. Vintage Japanese backs differ.
+  // Only catalog eras we can identify as modern. Everything else shows the generic blue back.
   if (card.language === 'ja' && /^(SV|S[1-9]|SM|XY|BW|M[1-9]|CP[1-6])/i.test(card.id)) return 'japanese-modern';
-  return 'unavailable';
+  return 'international';
 }
 
 export type CardPose = { yaw: number; pitch: number; zoom: number };
