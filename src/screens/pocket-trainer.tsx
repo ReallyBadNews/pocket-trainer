@@ -1,33 +1,36 @@
 import Animated, { cancelAnimation, useAnimatedStyle } from 'react-native-reanimated';
 import { ScrollChromeContext, useScrollChromeController } from '@/components/scroll-chrome';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { C, Icon, Txt, ui, type IconName, Button, tick } from '@/components/pokedex-ui';
+import { router, usePathname } from 'expo-router';
+import { TabSlot, useTabTrigger } from 'expo-router/ui';
+import { C, Icon, Txt, ui, Button, tick } from '@/components/pokedex-ui';
 import { TrainerAvatar } from '@/components/trainer-avatar';
 import { useCollection } from '@/lib/collection-context';
-import { DexScreen, BinderScreen } from './collection-screens';
-import { BadgesScreen } from './badges-screen';
-import { ScanScreen } from './scan-screen';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal, WishlistModal } from './collection-modals';
 import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
 import type { AddedCards } from '@/lib/use-add-cards';
 import { QuizModal } from './quiz-screen';
-import { SetChecklistModal } from './set-checklist';
-import type { SetProgress } from '@/lib/set-progress';
-import type { BinderView } from '@/components/binder-pages';
 import { useAppUpdates } from '@/lib/use-app-updates';
+import { showOnlyNeedsPrinting } from '@/lib/browse-state';
+import { PokedexNavContext, TABS, type PokedexNav, type TabName } from '@/lib/pokedex-nav';
 
 const PINNED_CHROME_HEIGHT = 23 + 4 + 26; // Hinge, screen border, and Pokédex strip.
 const BOTTOM_FRAME_HEIGHT = 20;
 
-type Tab = 'dex' | 'binder' | 'scan' | 'badge';
-export default function PocketTrainer() {
+/**
+ * The Pokédex housing around expo-router's tabs. Each tab's stack renders in the green screen through `TabSlot`;
+ * the sheet host stays here, outside every route, so a card or Pokémon can open over any page.
+ */
+export function PokedexShell() {
   const { trainer, ready, loadError, retryLoad, updateTrainer } = useCollection();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
-  const [tab, setTab] = useState<Tab>('dex');
+  const pathname = usePathname();
+  const { switchTab, getTrigger } = useTabTrigger({ name: 'dex' });
+  const tab: TabName = TABS.find(item => getTrigger(item.name)?.isFocused)?.name ?? 'dex';
   const [modalBusy, setModalBusy] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [selection, setSelection] = useState<{ brief: CardBrief; draft?: Card; entry?: Entry } | null>(null);
@@ -39,24 +42,37 @@ export default function PocketTrainer() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState('');
   const [scanSession, setScanSession] = useState(0);
-  const [printingTrainer, setPrintingTrainer] = useState<string | null>(null);
-  const [binderView, setBinderView] = useState<BinderView>('grid');
-  const [checklist, setChecklist] = useState<SetProgress | null>(null);
   const [headerHeight, setHeaderHeight] = useState(84);
   const [navHeight, setNavHeight] = useState(83);
   const chrome = useScrollChromeController(headerHeight, navHeight + BOTTOM_FRAME_HEIGHT);
   const { progress } = chrome;
-  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || checklist || wishlistOpen);
-  useLayoutEffect(() => { cancelAnimation(progress); progress.value = 0; }, [tab, trainer.id, progress]);
+  const modalOpen = !!(profileOpen || selection || speciesId !== null || discovery || quizOpen || wishlistOpen);
+  useLayoutEffect(() => { cancelAnimation(progress); progress.value = 0; }, [tab, pathname, trainer.id, progress]);
   useLayoutEffect(() => {
     chrome.paused.value = modalOpen;
     if (modalOpen) cancelAnimation(progress);
   }, [modalOpen, chrome.paused, progress]);
+  // Another trainer starts from the first page of the current tab, with a fresh scan rather than the last trainer's photo.
+  const shownTrainer = useRef(trainer.id);
+  useEffect(() => {
+    if (shownTrainer.current === trainer.id) return;
+    shownTrainer.current = trainer.id;
+    setScanQuery(''); setScanSession(session => session + 1);
+    if (router.canDismiss()) router.dismissAll();
+  }, [trainer.id]);
   const topStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -headerHeight * progress.value }] }));
+  /** Another tab opens on its first page; the current tab pops back to it. */
+  function goToTab(name: TabName) {
+    if (name === tab) { if (router.canDismiss()) router.dismissAll(); }
+    else switchTab(name, { resetOnFocus: true });
+  }
+  function startScan(query = '') {
+    setScanQuery(query); setScanSession(session => session + 1);
+  }
   function celebrate(added: AddedCards, source: 'card' | 'page') {
     setSelection(null); setUndo(added);
     // A saved card clears the old photo, matches and search. Page scans reset themselves and stay on the page reader.
-    if (source === 'card') { setScanQuery(''); setScanSession(session => session + 1); }
+    if (source === 'card') startScan();
     setDiscovery({ card: added.cards[0], newIds: added.newIds, quantity: added.quantity, granted: added.granted, source });
   }
   // The undo offer appears once the celebration closes and fades after a few seconds.
@@ -74,7 +90,18 @@ export default function PocketTrainer() {
     setUndo(null); tick();
     updateTrainer(t => undoAdditions(t, additions), trainerId).catch(() => {});
   }
-  const openScan = (query = '') => { setScanQuery(query); setSpeciesId(null); setTab('scan'); };
+  const openScan = (query = '') => { startScan(query); setSpeciesId(null); goToTab('scan'); };
+  const nav: PokedexNav = {
+    tab, goToTab, openScan,
+    openEntry: entry => setSelection({ brief: entry.card, entry }),
+    openCard: (brief, draft) => setSelection({ brief, draft }),
+    openSpecies: setSpeciesId,
+    openWishlist: () => setWishlistOpen(true),
+    openQuiz: () => setQuizOpen(true),
+    confirmPrintings: () => { showOnlyNeedsPrinting(trainer.id); goToTab('binder'); },
+    scan: { query: scanQuery, session: scanSession, captureRequest },
+    onScanAdded: celebrate,
+  };
   return <View style={s.outside}><View style={[s.device, width >= 700 && s.tablet, { paddingTop: insets.top + (width >= 700 ? 10 : 0), paddingLeft: insets.left, paddingRight: insets.right }]}>
     <View style={s.viewport} onLayout={event => { chrome.viewportHeight.value = Math.max(0, event.nativeEvent.layout.height - PINNED_CHROME_HEIGHT); }}>
     <Animated.View style={[s.topChrome, topStyle]}>
@@ -85,30 +112,41 @@ export default function PocketTrainer() {
     <View style={s.screenTop}><View style={s.screenLip}><View style={s.speaker}>{[1,2,3,4].map(n => <View key={n} style={s.speakerLine} />)}</View><Txt maxFontSizeMultiplier={1} style={s.brand}>Pokédex</Txt><View style={s.power} /></View></View>
     </Animated.View>
     <View style={s.feed}>
-      {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><View key={trainer.id} style={{ flex: 1 }}>
-        {tab === 'dex' && <DexScreen onScan={() => openScan()} onSpecies={setSpeciesId} onEntry={entry => setSelection({ brief: entry.card, entry })} onNeedsPrinting={() => { setPrintingTrainer(trainer.id); setTab('binder'); }} onQuiz={() => setQuizOpen(true)} />}
-        {tab === 'scan' && <ScanScreen sessionId={scanSession} initialQuery={scanQuery} onCard={(brief, draft) => setSelection({ brief, draft })} captureRequest={captureRequest} onAdded={celebrate} />}
-        {tab === 'binder' && <BinderScreen onlyNeedsPrinting={printingTrainer === trainer.id} onNeedsPrintingChange={value => setPrintingTrainer(value ? trainer.id : null)} onScan={() => openScan()} onEntry={entry => setSelection({ brief: entry.card, entry })} onSet={setChecklist} view={binderView} onViewChange={setBinderView} onWishlist={() => setWishlistOpen(true)} />}
-        {tab === 'badge' && <BadgesScreen onSpecies={setSpeciesId} />}
-      </View></ScrollChromeContext.Provider>}
+      {/* Tabs render their routes only once the collection has opened; the navigator itself is always mounted. */}
+      {!ready ? <View style={s.loading}>{loadError ? <><Txt style={{ textAlign: 'center' }}>{loadError}</Txt><Button title="Retry opening collection" onPress={retryLoad} /></> : <><ActivityIndicator color={C.ink} /><Txt>Opening your Pokédex…</Txt></>}</View> : <ScrollChromeContext.Provider value={chrome}><PokedexNavContext.Provider value={nav}>
+        <TabSlot style={{ flex: 1 }} />
+      </PokedexNavContext.Provider></ScrollChromeContext.Provider>}
     </View>
-    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); setChecklist(null); setWishlistOpen(false); } }}>
-    {/* The checklist and wishlist stay mounted under a card they opened, so closing that card returns to the same spot. */}
-    {checklist && <View style={selection || discovery ? s.hidden : s.fill}><SetChecklistModal set={checklist} onClose={() => setChecklist(null)} onEntry={entry => setSelection({ brief: entry.card, entry })} onCard={brief => setSelection({ brief })} /></View>}
+    <Modal visible={modalOpen} transparent animationType="fade" onRequestClose={() => { if (!modalBusy) { setProfileOpen(false); setSelection(null); setSpeciesId(null); setDiscovery(null); setQuizOpen(false); setWishlistOpen(false); } }}>
+    {/* The wishlist stays mounted under a card it opened, so closing that card returns to the same spot. */}
     {wishlistOpen && <View style={selection || discovery ? s.hidden : s.fill}><WishlistModal onClose={() => setWishlistOpen(false)} onCard={brief => setSelection({ brief })} onFind={() => { setWishlistOpen(false); openScan(); }} /></View>}
     {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
     {selection && <CardModal onBusyChange={setModalBusy} key={`${trainer.id}:${selection.brief.language}:${selection.brief.id}`} {...selection} onClose={() => setSelection(null)} onAdded={added => celebrate(added, 'card')} />}
     {/* Keyed by id so tapping an evolution stage opens that entry scrolled to the top. */}
     {speciesId !== null && <SpeciesModal key={speciesId} id={speciesId} onClose={() => setSpeciesId(null)} onFindCards={openScan} onSpecies={setSpeciesId} onEntry={entry => { setSpeciesId(null); setSelection({ brief: entry.card, entry }); }} />}
-    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setWishlistOpen(false); setChecklist(null); setTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
+    {discovery && <DiscoveryModal {...discovery} nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'} onNext={() => { setDiscovery(null); setWishlistOpen(false); goToTab('scan'); setCaptureRequest(n => n + 1); }} onClose={() => setDiscovery(null)} />}
     {quizOpen && <QuizModal onClose={() => setQuizOpen(false)} />}
     </Modal>
     {showUndo && <View pointerEvents="box-none" style={[s.toastSlot, { bottom: navHeight + BOTTOM_FRAME_HEIGHT + 10 }]}><View accessibilityLiveRegion="polite" style={s.toast}><Icon name="check" size={18} color="#BFE3B4" /><Txt variant="label" style={{ flex: 1, minWidth: 0, paddingVertical: 8, color: 'white' }}>{undo.quantity === 1 ? `Added ${undo.cards[0].name}` : `Added ${undo.quantity} cards`}</Txt><Pressable accessibilityRole="button" accessibilityLabel="Undo adding" onPress={undoAdd} style={s.undo}><Txt variant="label" style={{ color: C.gold }}>Undo</Txt></Pressable></View></View>}
-    <View style={s.bottomChrome}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{([{ id: 'dex', label: 'Pokédex', icon: 'dex' }, { id: 'binder', label: 'Binder', icon: 'binder' }, { id: 'scan', label: 'Scan', icon: 'scan' }, { id: 'badge', label: 'Badges', icon: 'badge' }] as { id: Tab; label: string; icon: IconName }[]).map(item => <Pressable key={item.id} accessibilityRole="tab" accessibilityState={{ selected: tab === item.id }} accessibilityLabel={item.label} onFocus={() => { progress.value = 0; }} onPress={() => { if (tab !== item.id) tick(); setTab(item.id); if (item.id === 'scan') setScanQuery(''); }} style={s.navItem}><View style={[s.navIcon, tab === item.id && s.navSelected]}><Icon name={item.icon} size={23} color={tab === item.id ? 'white' : '#F9B7BC'} /></View><Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: tab === item.id ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: tab === item.id ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt></Pressable>)}</View></View>
+    <View style={s.bottomChrome}><View style={s.bottomFrame}><View style={s.screenBottom} /></View><View onLayout={event => setNavHeight(event.nativeEvent.layout.height)} style={[s.nav, { paddingBottom: Math.max(12, insets.bottom) }]}>{TABS.map(item => <NavButton key={item.name} item={item} onFocus={() => { progress.value = 0; }} onSwitch={() => { if (item.name === 'scan') startScan(); }} />)}</View></View>
     </View>
     {appUpdate !== 'none' && <View accessibilityViewIsModal accessibilityLiveRegion="polite" style={s.updating}><Image source={require('../../assets/crafted/pokeball.png')} style={{ width: 104, height: 104 }} contentFit="contain" /><Txt variant="subtitle" style={{ color: 'white', textAlign: 'center' }}>Getting the newest Pokédex…</Txt><ActivityIndicator color="white" /></View>}
   </View></View>;
 }
+
+/**
+ * Tapping the current tab again pops its stack back to the first page (expo-router's stack handles `tabPress`).
+ * No long-press handler: Pressable would then skip `onPress`, and with it the haptic and the fresh scan.
+ */
+function NavButton({ item, onFocus, onSwitch }: { item: typeof TABS[number]; onFocus: () => void; onSwitch: () => void }) {
+  const { triggerProps } = useTabTrigger({ name: item.name });
+  const selected = triggerProps.isFocused;
+  return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={item.label} onFocus={onFocus} onPress={event => { if (!selected) { tick(); onSwitch(); } triggerProps.onPress?.(event); }} style={s.navItem}>
+    <View style={[s.navIcon, selected && s.navSelected]}><Icon name={item.icon} size={23} color={selected ? 'white' : '#F9B7BC'} /></View>
+    <Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: selected ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: selected ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt>
+  </Pressable>;
+}
+
 const s = StyleSheet.create({
   viewport: { flex: 1, minHeight: 0, overflow: 'hidden' },
   // The list viewport stays fixed. The decorative header collapses; tabs remain available.

@@ -31,10 +31,39 @@ export function pocketStatus(text: string, matches: ScanCandidate[]): PocketStat
 }
 
 export const pocketIncluded = (pocket: Pocket) => !!pocket.choice && !pocket.skipped && (pocket.status === 'match' || pocket.confirmed);
+/** Uncertain or unread pockets wait for the collector until they're confirmed, chosen or skipped. Empty ones don't. */
+export const pocketNeedsCheck = (pocket: Pocket) => !pocket.skipped && !pocketIncluded(pocket) && (pocket.status === 'check' || pocket.status === 'unreadable');
 export function pageSummary(pockets: Pocket[]) {
   return {
     ready: pockets.filter(pocketIncluded).length,
-    toCheck: pockets.filter(p => !p.skipped && !pocketIncluded(p) && (p.status === 'check' || p.status === 'unreadable')).length,
+    toCheck: pockets.filter(pocketNeedsCheck).length,
     reading: pockets.filter(p => p.status === 'waiting' || p.status === 'reading').length,
   };
+}
+
+/** The next other pocket still needing a check, going forward and wrapping round the page; null when none is left. */
+export function nextToCheck(pockets: Pocket[], from: number): number | null {
+  for (let step = 1; step < pockets.length; step++) {
+    const index = (from + step) % pockets.length;
+    if (pocketNeedsCheck(pockets[index])) return index;
+  }
+  return null;
+}
+
+export type PocketReviewState = 'reading' | 'ready' | 'check' | 'skipped' | 'empty' | 'unreadable';
+/** What the pocket review tells the collector about one pocket. */
+export function pocketReviewState(pocket: Pocket): PocketReviewState {
+  if (pocket.status === 'waiting' || pocket.status === 'reading') return 'reading';
+  if (pocket.skipped) return 'skipped';
+  if (pocketIncluded(pocket)) return 'ready';
+  if (pocket.choice) return 'check';
+  return pocket.status === 'empty' ? 'empty' : 'unreadable';
+}
+
+/** One line of page progress, so jumping between pockets never loses track of what's left. */
+export function reviewProgress(pockets: Pocket[]) {
+  const { ready, toCheck, reading } = pageSummary(pockets);
+  if (toCheck) return `${toCheck} left to check · ${ready} ready`;
+  if (reading) return `Still reading… ${ready} ready so far`;
+  return ready ? `All checked! ${ready} ${ready === 1 ? 'card' : 'cards'} ready to add` : 'All checked! No cards ready yet';
 }

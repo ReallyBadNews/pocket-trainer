@@ -10,12 +10,13 @@ import { cardBack, cardSurface, clampCardPose, DEFAULT_CARD_POSE, flippedCardPos
 import { createCardRenderer, type CardRenderer } from '@/lib/card-renderer';
 import { FINISH_LABELS, type Card, type Finish } from '@/lib/model';
 import { boundPhotoOffset, fitPhoto } from '@/lib/photo-geometry';
-import { C, CardArt, IconButton, pressFx, ToolbarAction, Txt, tick } from './pokedex-ui';
+import { C, CardArt, IconButton, pressFx, Segmented, ToolbarAction, Txt, tick } from './pokedex-ui';
 
 // Older development clients can still inspect the flat artwork while awaiting a native rebuild.
 const NativeGLView = (Platform.OS === 'web' || requireOptionalNativeModule('ExpoGL'))
   ? require('expo-gl').GLView as typeof GLViewType : null;
 const BACKS = { international: require('../../assets/crafted/card-backs/international.jpg'), 'japanese-modern': require('../../assets/crafted/card-backs/japanese-modern.jpg') };
+const VIEWS = [{ id: 'model', label: '3D' }, { id: 'photo', label: 'Photo' }] as const;
 
 export function CardInspection({ card, finish, children, disabled = false }: { card: Card; finish: Finish; children: ReactNode; disabled?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -87,6 +88,8 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
 
   return <GestureHandlerRootView accessibilityViewIsModal style={[s.root, { paddingTop: insets.top, paddingBottom: Math.max(insets.bottom, 12), paddingLeft: insets.left, paddingRight: insets.right }]}>
     <View style={s.header}><View style={s.identity}><Txt accessibilityRole="header" variant="subtitle" style={s.title}>{card.name}</Txt><Txt accessibilityLiveRegion="polite" variant="caption" style={s.muted}>{title}</Txt></View><IconButton round dark icon="close" label="Close card viewer" onPress={onClose} /></View>
+    {/* Both views stay visible with the current one selected, like the camera's mode switch. */}
+    {NativeGLView && !failed && <Segmented dark label="Card view" options={VIEWS} value={mode} onChange={setMode} style={s.views} />}
     {mode === 'model' && NativeGLView ? <GestureDetector gesture={Gesture.Simultaneous(pan, pinch)}><View collapsable={false} style={s.viewport} onLayout={() => runtime.current?.setPose(pose.current)} accessible accessibilityRole="adjustable" accessibilityLabel={`${card.name} card, ${backVisible ? 'back' : 'front'}`} accessibilityHint="Swipe up or down to turn the card. Additional actions flip, tilt and reset it." accessibilityActions={[{ name: 'increment', label: 'Turn right' }, { name: 'decrement', label: 'Turn left' }, { name: 'tiltUp', label: 'Tilt up' }, { name: 'tiltDown', label: 'Tilt down' }, { name: 'flip', label: 'Flip card' }, { name: 'reset', label: 'Reset card' }]} onAccessibilityAction={({ nativeEvent: { actionName } }) => {
       if (actionName === 'flip') flip();
       else if (actionName === 'reset') reset();
@@ -97,7 +100,7 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
     </View></GestureDetector> : <FlatCardPhoto key={flatReset} card={card} />}
     <View style={s.footer}>
       <Txt variant="caption" style={[s.muted, s.center]}>{mode === 'model' ? 'Drag to turn · Pinch to zoom' : 'Drag to move · Pinch to zoom'}</Txt>
-      <View style={s.controls}>{mode === 'model' && <ToolbarAction title="Flip" color={C.paper} onPress={flip} />}<ToolbarAction title="Reset" color={C.paper} onPress={reset} />{NativeGLView && !failed && <ToolbarAction title={mode === 'model' ? 'Flat photo' : '3D view'} color={C.paper} onPress={() => setMode(value => value === 'model' ? 'photo' : 'model')} />}</View>
+      <View style={s.controls}>{mode === 'model' && <ToolbarAction title="Flip" color={C.paper} onPress={flip} />}<ToolbarAction title="Reset" color={C.paper} onPress={reset} /></View>
       {mode === 'model' && surface !== 'paper' && <Txt variant="caption" style={[s.note, s.center]}>Illustrative foil. Patterns vary by printing.</Txt>}
     </View>
   </GestureHandlerRootView>;
@@ -148,7 +151,8 @@ const s = StyleSheet.create({
   note: { color: '#94AA98', paddingHorizontal: 20 },
   viewport: { flex: 1, minHeight: 0, overflow: 'hidden', marginHorizontal: 12 },
   loading: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', gap: 12 },
+  views: { marginHorizontal: 20, marginBottom: 12 },
   footer: { paddingTop: 12, gap: 4 },
-  controls: { flexDirection: 'row', justifyContent: 'space-evenly', paddingHorizontal: 16 },
+  controls: { flexDirection: 'row', justifyContent: 'center', gap: 24 },
   center: { textAlign: 'center' },
 });

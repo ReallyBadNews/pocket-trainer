@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { PAGE_LAYOUTS, pageSummary, pocketCrops, pocketIncluded, pocketStatus, waitingPocket } = require('../.test-build/lib/page-scan');
+const { PAGE_LAYOUTS, nextToCheck, pageSummary, pocketCrops, pocketIncluded, pocketNeedsCheck, pocketReviewState, pocketStatus, reviewProgress, waitingPocket } = require('../.test-build/lib/page-scan');
 const { scanCandidates } = require('../.test-build/lib/catalog');
 const { detectCardLanguage } = require('../.test-build/lib/language-detect');
 const fixture = require('./fixtures/scan-page-text.json');
@@ -39,4 +39,46 @@ test('empty, unreadable and uncertain pockets are not added without checking', (
   ];
   assert.deepEqual(pockets.map(pocketIncluded), [true, false, true, false, false, false]);
   assert.deepEqual(pageSummary(pockets), { ready: 2, toCheck: 1, reading: 1 });
+});
+
+test('pocket review says where each pocket stands', () => {
+  const pocket = change => ({ ...waitingPocket(), ...change });
+  assert.equal(pocketReviewState(pocket({})), 'reading');
+  assert.equal(pocketReviewState(pocket({ status: 'reading' })), 'reading');
+  assert.equal(pocketReviewState(pocket({ status: 'match', choice: { id: 'x' } })), 'ready');
+  assert.equal(pocketReviewState(pocket({ status: 'check', choice: { id: 'y' } })), 'check');
+  assert.equal(pocketReviewState(pocket({ status: 'check', choice: { id: 'y' }, confirmed: true })), 'ready');
+  assert.equal(pocketReviewState(pocket({ status: 'match', choice: { id: 'x' }, skipped: true })), 'skipped');
+  assert.equal(pocketReviewState(pocket({ status: 'empty' })), 'empty');
+  assert.equal(pocketReviewState(pocket({ status: 'unreadable' })), 'unreadable');
+  // A card typed in for an unreadable pocket is ready like any other choice.
+  assert.equal(pocketReviewState(pocket({ status: 'unreadable', choice: { id: 'z' }, confirmed: true })), 'ready');
+});
+
+test('confirming or skipping moves on to the next pocket that still needs checking', () => {
+  const pockets = [
+    { ...waitingPocket(), status: 'check', choice: { id: 'a' } },
+    { ...waitingPocket(), status: 'match', choice: { id: 'b' } },
+    { ...waitingPocket(), status: 'empty' },
+    { ...waitingPocket(), status: 'unreadable' },
+    { ...waitingPocket(), status: 'check', choice: { id: 'c' }, skipped: true },
+    { ...waitingPocket(), status: 'reading' },
+  ];
+  assert.deepEqual(pockets.map(pocketNeedsCheck), [true, false, false, true, false, false]);
+  assert.equal(nextToCheck(pockets, 0), 3);
+  assert.equal(nextToCheck(pockets, 3), 0, 'wraps round to the start of the page');
+  assert.equal(nextToCheck(pockets, 4), 0);
+  assert.equal(nextToCheck([pockets[0]], 0), null, 'the pocket just settled never counts');
+  assert.equal(nextToCheck(pockets.slice(1, 3), 0), null);
+  assert.equal(nextToCheck([], 0), null);
+});
+
+test('review progress keeps track of the whole page', () => {
+  const ready = { ...waitingPocket(), status: 'match', choice: { id: 'x' } };
+  const check = { ...waitingPocket(), status: 'check', choice: { id: 'y' } };
+  assert.equal(reviewProgress([ready, check, check]), '2 left to check · 1 ready');
+  assert.equal(reviewProgress([ready, waitingPocket()]), 'Still reading… 1 ready so far');
+  assert.equal(reviewProgress([ready, { ...waitingPocket(), status: 'empty' }]), 'All checked! 1 card ready to add');
+  assert.equal(reviewProgress([ready, ready]), 'All checked! 2 cards ready to add');
+  assert.equal(reviewProgress([{ ...check, skipped: true }]), 'All checked! No cards ready yet');
 });

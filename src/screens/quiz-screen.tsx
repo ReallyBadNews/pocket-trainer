@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Pressable, ScrollView, StyleSheet, View, useWindowDimensions, type StyleProp, type ViewStyle } from 'react-native';
 import Animated, { Easing, cancelAnimation, useAnimatedStyle, useSharedValue, withSequence, withSpring, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Path, Rect } from 'react-native-svg';
-import { Button, ButtonRow, C, Icon, Progress, R, S, ToolbarAction, Txt, mono, ui } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, Icon, Progress, R, S, Txt, mono, ui } from '@/components/pokedex-ui';
 import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { discoveredIds, recordQuizScore } from '@/lib/model';
@@ -46,10 +46,6 @@ function Burst({ tone, style }: { tone: keyof typeof TONES; style?: StyleProp<Vi
 
 function Star({ on, size = 44 }: { on: boolean; size?: number }) {
   return <Svg width={size} height={size} viewBox="0 0 24 24" accessible={false}><Path d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5-4.8-4.6 6.6-.9z" fill={on ? C.gold : '#DCE4D2'} stroke={on ? '#A98428' : '#B5C2A9'} strokeWidth={1.4} strokeLinejoin="round" /></Svg>;
-}
-
-export function QuizInvite({ onPlay }: { onPlay: () => void }) {
-  return <ToolbarAction title="Quiz" icon="star" onPress={onPlay} />;
 }
 
 export function QuizModal({ onClose }: { onClose: () => void }) {

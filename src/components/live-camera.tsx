@@ -17,6 +17,8 @@ import type { Crop, ScanResult } from '@/lib/scan-types';
 /** `page` is set for binder page photos; `region` is the part of the photo inside the page guide. */
 export type LivePhoto = { uri: string; width: number; height: number; region?: Crop; page?: PageLayout };
 export type LiveMatch = { scan: ScanResult; matches: ScanCandidate[]; language: Language };
+/** One card or a binder page, the same on the scan screen and in the camera. Short labels fit between the camera's 44pt buttons at large text. */
+export const SCAN_MODES = [{ id: 'card', label: 'Card', icon: 'scan' }, { id: 'page', label: 'Page', icon: 'binder' }] as const;
 
 const discard = (uri: string) => { try { new File(uri).delete(); } catch { /* Cache files are cleaned up by the system too. */ } };
 
@@ -128,7 +130,7 @@ export function LiveCamera({ mode: initialMode, layout: initialLayout, language,
     </View>}
     <View onLayout={event => setToolbarHeight(event.nativeEvent.layout.height)} style={[s.top, { paddingTop: insets.top + S.sm }]}>
       <IconButton round dark icon="close" label="Close camera" onPress={onClose} />
-      {usable ? <Segmented dark label="Camera mode" options={MODES} value={mode} onChange={switchMode} style={{ flex: 1 }} /> : <View style={{ flex: 1 }} />}
+      {usable ? <Segmented dark label="What are you scanning?" options={SCAN_MODES} value={mode} onChange={switchMode} style={{ flex: 1 }} /> : <View style={{ flex: 1 }} />}
       {usable ? <Pressable accessibilityRole="button" accessibilityLabel={torch ? 'Turn off the light' : 'Turn on the light'} accessibilityState={{ selected: torch }} hitSlop={4} onPress={() => { tick(); setTorch(on => !on); }} style={state => [s.round, torch && { backgroundColor: C.gold }, pressFx(state)]}><Icon name="bolt" size={22} color={torch ? C.ink : 'white'} /></Pressable> : <View style={{ width: 44 }} />}
     </View>
     {(failed || denied) ? <View style={s.message}>
@@ -141,13 +143,12 @@ export function LiveCamera({ mode: initialMode, layout: initialLayout, language,
       <Pressable accessibilityRole="button" accessibilityLabel={mode === 'page' ? 'Take a photo of the page' : 'Take the photo now'} disabled={!ready || shooting || found} onPress={shoot} style={({ pressed }) => [s.shutter, pressed && { transform: [{ scale: .94 }] }, (!ready || shooting) && { opacity: .5 }]}><View style={s.shutterInner} /></Pressable>
       {mode === 'card'
         ? <Txt variant="label" style={{ color: '#D6E3CB', textAlign: 'center' }}>Hold still, it snaps by itself!</Txt>
-        : <Segmented dark label="How many cards on a page?" options={PAGE_LAYOUTS} value={layout.id} onChange={id => { if (!shooting) setLayout(PAGE_LAYOUTS.find(option => option.id === id)!); }} style={{ alignSelf: 'stretch' }} />}
+        : <Segmented dark label="Page layout" options={PAGE_LAYOUTS} value={layout.id} onChange={id => { if (!shooting) setLayout(PAGE_LAYOUTS.find(option => option.id === id)!); }} style={{ alignSelf: 'stretch' }} />}
     </View></View>}
   </View>;
 }
 
 const CARD_GUIDE_WIDTH = .72;
-const MODES = [{ id: 'card', label: 'One card' }, { id: 'page', label: 'Binder page' }] as const;
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: '#101815', alignItems: 'center' },
   box: { overflow: 'hidden', backgroundColor: '#1C2621', borderRadius: 18 },

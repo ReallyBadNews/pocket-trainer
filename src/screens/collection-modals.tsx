@@ -4,7 +4,7 @@ import { Image } from 'expo-image';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, ActivityIndicator, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, Share, StyleSheet, Switch, TextInput, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ActionRow, Button, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ErrorNotice, Icon, IconButton, S, SheetHeader, ToolbarAction, TypePill, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
+import { ActionRow, Button, ButtonRow, C, CardArt, CardCaption, ChoiceMenu, ErrorNotice, Icon, IconButton, S, SheetHeader, TypePill, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
@@ -14,9 +14,11 @@ import { isWished, removeWish, restoreWish, toggleWish, wishesForSpecies, wishes
 import { exportFile, importFile } from '@/lib/files';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardPriceTag, CardValuePanel } from '@/components/card-values';
+import { CardPriceDetails } from '@/components/card-price-details';
 import { TRAINER_APPEARANCE_LABELS, TrainerAvatar } from '@/components/trainer-avatar';
 import { usePricing } from '@/lib/use-pricing';
 import { priceKey } from '@/lib/pricing';
+import { printingFinishes } from '@/lib/printing-prices';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
@@ -28,11 +30,13 @@ import { Confetti, HoloShine } from '@/components/celebration';
 import { isShiny } from '@/lib/shine';
 import Reanimated, { useReducedMotion, ZoomIn } from 'react-native-reanimated';
 
-/** `overlay` (the grown-up check) covers the sheet and hides it from screen readers while open. `onBack` adds a back arrow for sub-pages; `dismissible={false}` stops a stray tap outside from throwing away a game or unsaved work. */
-export function Sheet({ title, onClose, onBack, children, busy = false, dismissible = true, overlay }: { title: string; onClose: () => void; onBack?: () => void; children: ReactNode; busy?: boolean; dismissible?: boolean; overlay?: ReactNode }) {
+/** `overlay` (the grown-up check) covers the sheet and hides it from screen readers while open. `onBack` adds a back arrow for sub-pages; `action` is a round header button for the sheet's own action (Share); `dismissible={false}` stops a stray tap outside from throwing away a game or unsaved work. */
+export function Sheet({ title, onClose, onBack, action, children, busy = false, dismissible = true, overlay }: { title: string; onClose: () => void; onBack?: () => void; action?: ReactNode; children: ReactNode; busy?: boolean; dismissible?: boolean; overlay?: ReactNode }) {
   const insets = useSafeAreaInsets();
-  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => dismissible && !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal={!overlay} accessibilityElementsHidden={!!overlay} importantForAccessibility={overlay ? 'no-hide-descendants' : 'auto'} style={m.sheet}><SheetHeader title={title} onClose={onClose} onBack={onBack} busy={busy} />{children}</View>{overlay}</KeyboardAvoidingView>;
+  return <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[m.overlay, { paddingTop: Math.max(insets.top, 15), paddingBottom: Math.max(insets.bottom, 15) }]}><Pressable accessibilityRole="button" accessibilityLabel="Close dialog" onPress={() => dismissible && !busy && onClose()} style={StyleSheet.absoluteFill} /><View accessibilityViewIsModal={!overlay} accessibilityElementsHidden={!!overlay} importantForAccessibility={overlay ? 'no-hide-descendants' : 'auto'} style={m.sheet}><SheetHeader title={title} onClose={onClose} onBack={onBack} busy={busy} action={action} />{children}</View>{overlay}</KeyboardAvoidingView>;
 }
+
+type CardPage = 'card' | 'price' | 'delete';
 
 export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange }: { brief: CardBrief; entry?: Entry; draft?: Card; onClose: () => void; onAdded: (added: AddedCards) => void; onBusyChange: (busy: boolean) => void }) {
   const { trainer, updateTrainer } = useCollection();
@@ -43,10 +47,10 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [loading, setLoading] = useState(!entry);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
-  const cardScroll = useRef<ScrollView>(null);
   const [quantity, setQuantity] = useState(1);
   const [finish, setFinish] = useState<Finish>(entry?.finish ?? 'unsure');
-  const [removing, setRemoving] = useState(false);
+  // Price details and the delete check are pages of this sheet, so Back keeps the printing and copies chosen here.
+  const [page, setPage] = useState<CardPage>('card');
   const { locked, requireGrownUp, gate } = useGrownUpCheck();
   const liveEntry = entry ? trainer.entries.find(e => e.key === entry.key) : undefined;
   const wished = isWished(trainer, brief);
@@ -55,7 +59,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
   const [wishing, setWishing] = useState(false);
   const [wishError, setWishError] = useState<string | null>(null);
   const priceClient = usePricing([brief], 0);
-  const printingChoices: Finish[] = [...new Set([...(card?.finishes ?? []), ...(priceClient.snapshots[priceKey(brief)]?.finishes ?? [])].filter(f => f !== 'unsure')), 'unsure'];
+  const printingChoices: Finish[] = [...printingFinishes(card?.finishes ?? [], priceClient.snapshots[priceKey(brief)]), 'unsure'];
   useEffect(() => {
     let active = true;
     if (entry) return;
@@ -86,7 +90,16 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
     catch (e) { setWishError(e instanceof Error ? e.message : 'We could not update your wishlist. Please try again.'); }
     finally { setWishing(false); }
   }
-  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView ref={cardScroll} style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
+  const backToCard = () => setPage('card');
+  if (page === 'price' && card) return <Sheet title="Price details" onClose={onClose} onBack={backToCard} busy={busy}><CardPriceDetails card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} disabled={busy} onChoose={value => { if (busy) return; setFinish(value); backToCard(); }} /></Sheet>;
+  if (page === 'delete' && card && liveEntry) return <Sheet title="Delete card?" onClose={onClose} onBack={backToCard} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={m.content}>
+    <View style={m.cardHero}><CardArt card={card} style={{ width: 140, maxWidth: '100%' }} /></View>
+    <View><CardCaption name={card.name} setName={card.set.name} detail={`#${collectorNumber(card)} · ${FINISH_LABELS[liveEntry.finish]}${liveEntry.quantity > 1 ? ` · ${liveEntry.quantity} copies` : ''}`} /><CardPriceTag card={card} finish={liveEntry.finish} printingHint={false} /></View>
+    <Txt>This removes {liveEntry.quantity === 1 ? card.name : `all ${liveEntry.quantity} copies of ${card.name}`} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>
+    {locked && <View style={m.lockNote}><Icon name="lock" size={18} /><Txt variant="caption" style={{ flex: 1, minWidth: 0, fontWeight: '600' }}>A grown-up answers a quick question first.</Txt></View>}
+    <ErrorNotice text={error} />
+  </ScrollView><View style={m.footer}><ButtonRow><Button title="Keep it" secondary disabled={busy} onPress={backToCard} /><Button title="Delete card" icon={locked ? 'lock' : undefined} busy={busy} style={m.destructive} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></ButtonRow></View></Sheet>;
+  return <Sheet title={entry ? 'Card details' : 'Review card'} onClose={onClose} busy={busy} overlay={gate}><ScrollView style={m.scrolling} contentContainerStyle={m.content} keyboardShouldPersistTaps="handled">
     {loading && <View style={m.loading}><ActivityIndicator color={C.ink} /><Txt>Finding the card details…</Txt></View>}
     <ErrorNotice text={error} />
     {!loading && !card && <Button title="Try again" onPress={() => setRetry(n => n + 1)} secondary />}
@@ -98,12 +111,11 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
         <Txt variant="readout" muted>#{collectorNumber(card)} · {card.rarity} · {cardKindLabel(card)}{card.hp ? ` · HP ${card.hp}` : ''}</Txt>
         <Txt variant="caption" muted>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
       </View>
-      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} />
+      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} onPress={() => !busy && setPage('price')} />
       <View style={m.section}><ChoiceMenu disabled={busy} label="Printing" options={printingChoices.map(id => ({ id, label: FINISH_LABELS[id] }))} value={finish} onChange={value => !busy && setFinish(value)} />{!entry && <Txt variant="caption" muted>Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around it. “Not sure yet” is okay.</Txt>}</View>
-      {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setRemoving(true) : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
+      {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setPage('delete') : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
         {card.description && <Txt>{card.description}</Txt>}
-        {!removing && <ActionRow title="Delete card" destructive disabled={busy} onPress={() => setRemoving(true)} />}
-        {removing && <View onLayout={event => cardScroll.current?.scrollTo({ y: Math.max(0, event.nativeEvent.layout.y - S.sm), animated: true })} style={m.removeBox}><Txt variant="cardTitle">Delete {liveEntry.quantity === 1 ? 'this card' : `all ${liveEntry.quantity} copies`}?</Txt><Txt variant="caption">This removes {card.name} ({FINISH_LABELS[liveEntry.finish]}) from {trainer.name}'s binder. Other printings stay in your collection. You can add this card again later.</Txt>{locked && <Txt variant="caption" style={{ fontWeight: '600' }}>A grown-up answers a quick question first.</Txt>}<ActionRow title="Keep it" disabled={busy} onPress={() => setRemoving(false)} /><ActionRow title="Delete card" destructive icon={locked ? 'lock' : undefined} disabled={busy} detail={busy ? 'Deleting…' : undefined} onPress={() => requireGrownUp(() => run(async () => { await updateTrainer(t => updateQuantity(t, liveEntry.key, 0)); onClose(); }), 'delete this card')} /></View>}
+        <ActionRow title="Delete card" destructive disabled={busy} onPress={() => setPage('delete')} />
       </> : <><CopiesField finish={finish} quantity={quantity} busy={busy} minusDisabled={quantity <= 1} minusLabel="Fewer copies" plusLabel="More copies" onMinus={() => setQuantity(n => Math.max(1, n - 1))} onPlus={() => setQuantity(n => Math.min(999, n + 1))} />
         {canWish && <><WishButton wished={wished} disabled={busy || wishing} onPress={toggleWished} /><ErrorNotice text={wishError} /><Txt variant="caption" muted>{wished ? 'When you get it, add it to your binder. Wish granted!' : 'Don’t have it yet? Wish for it and share your list with family.'}</Txt></>}</>}
     </>}
@@ -132,6 +144,12 @@ function familyNote(ids: number[], discovered: ReadonlySet<number>) {
   return have.length <= 3 ? `You have ${listNames(have)}!` : `You have ${have.length} of ${ids.length} in this family!`;
 }
 
+/** Reading the entry and playing the cry look and sound the same wherever a Pokémon's entry shows. */
+function VoiceButtons({ id, name, voice }: { id: number; name: string; voice: ReturnType<typeof usePokedexVoice> }) {
+  const reading = voice.speaking === id;
+  return <ButtonRow style={{ alignSelf: 'stretch' }}><Button title={reading ? 'Stop reading' : 'Read it to me'} icon={reading ? 'stop' : 'speaker'} selected={reading} accessibilityHint={reading ? undefined : `Reads ${name}'s Pokédex entry aloud`} secondary size="medium" onPress={() => reading ? voice.stop() : void voice.speak(id)} /><Button title="Hear its cry" icon="note" accessibilityHint={`Plays ${name}'s cry`} secondary size="medium" onPress={() => void voice.cry(id)} /></ButtonRow>;
+}
+
 /** The moving sprite the games show on the Pokédex screen; newer Pokémon without one use their artwork. */
 function AnimatedSprite({ id }: { id: number }) {
   const [failed, setFailed] = useState(false);
@@ -152,7 +170,6 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
   const entry = pokedexEntry(id);
   const family = evolutionFamily(id);
   const voice = usePokedexVoice();
-  const reading = voice.speaking === id;
   const familyIds = family.flat().map(member => member.id);
   // Keep names readable rather than squeezing every stage into the sheet.
   // Large branching families wrap beside their previous stage.
@@ -166,10 +183,7 @@ export function SpeciesModal({ id, onClose, onFindCards, onEntry, onSpecies }: {
       <Txt accessibilityRole="header" variant="subtitle">Pokédex entry</Txt>
       <View style={m.entryScreen}>{owned
         ? <><View accessible accessibilityLabel={`Pokédex entry. ${entry ?? 'Coming soon.'}`} style={[ui.row, { alignItems: 'flex-start', gap: 12 }]}><AnimatedSprite id={id} /><Txt style={[m.entryText, { flex: 1 }]}>{entry ?? 'This Pokédex entry is still being written.'}</Txt></View>
-          <View style={[ui.row, { marginTop: 12, flexWrap: 'wrap' }]}>
-            <Pressable accessibilityRole="button" accessibilityLabel={reading ? 'Stop reading' : `Read ${pokemon.en}'s Pokédex entry aloud`} onPress={() => reading ? voice.stop() : voice.speak(id)} style={({ pressed }) => [m.voiceButton, reading && m.voiceActive, pressed && { opacity: .7 }]}><Icon name={reading ? 'stop' : 'speaker'} size={18} color={reading ? 'white' : C.ink} /><Txt variant="control" style={[m.voiceText, reading && { color: 'white' }]}>{reading ? 'Stop' : 'Read it to me'}</Txt></Pressable>
-            <Pressable accessibilityRole="button" accessibilityLabel={`Play ${pokemon.en}'s cry`} onPress={() => voice.cry(id)} style={({ pressed }) => [m.voiceButton, pressed && { opacity: .7 }]}><Icon name="note" size={18} /><Txt variant="control" style={m.voiceText}>Hear its cry</Txt></Pressable>
-          </View></>
+          <VoiceButtons id={id} name={pokemon.en} voice={voice} /></>
         : <View accessible accessibilityLabel={`Pokédex entry locked. Discover ${pokemon.en} to unlock it.`} style={[ui.row, { alignItems: 'flex-start' }]}><Icon name="lock" size={24} color="#6B7B64" /><View style={{ flex: 1, gap: S.xs }}><Txt style={[m.entryText, { fontWeight: '600' }]}>Discover {pokemon.en} to unlock its Pokédex entry!</Txt><Txt variant="caption" muted>Scan or add any {pokemon.en} card.</Txt></View></View>}</View>
     </View>
     <View style={{ gap: 10 }}><Txt style={ui.subtitle}>Evolution</Txt>{family.length > 1 ? <>
@@ -288,8 +302,8 @@ export function ProfilesModal({ onClose, onBusyChange }: { onClose: () => void; 
       <View style={m.lockRow}><Icon name="lock" size={20} /><Txt style={{ flex: 1, minWidth: 0 }}>Grown-up lock</Txt>{busyKey === 'lock' ? <ActivityIndicator color={C.ink} /> : <Switch accessibilityLabel="Grown-up lock" accessibilityHint={locked ? 'Turning it off asks a grown-up question first' : undefined} value={locked} disabled={busy} trackColor={{ true: C.red, false: '#C7D2BB' }} onValueChange={on => on ? run('lock', async note => { await transact(c => ({ ...c, grownUpLock: true })); note('Grown-up lock is on.'); }) : requireGrownUp(() => run('lock', async note => { await transact(c => ({ ...c, grownUpLock: false })); note('Grown-up lock is off.'); }), 'turn off the grown-up lock')} />}</View>
       <Txt variant="caption" muted>{locked ? 'A grown-up solves a math question before cards are deleted or backups are used.' : 'Anyone can delete cards or use backups.'}</Txt>
       {feedbackAt('lock')}
-      <ActionRow title="Save backup" icon="download" disabled={busy} detail={busyKey === 'export' ? 'Saving…' : undefined} onPress={() => requireGrownUp(() => run('export', () => exportFile(portableBackup(collection)), 'backup'), 'save a backup')} />
-      <ActionRow title="Load backup" icon="upload" disabled={busy} detail={busyKey === 'import' ? 'Loading…' : undefined} onPress={() => requireGrownUp(() => run('import', async note => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); note(`Added ${incoming.trainers.length} trainer${incoming.trainers.length === 1 ? '' : 's'} from the backup.`); }, 'backup'), 'load a backup')} />
+      <ActionRow title="Save backup" icon="download" chevron={false} disabled={busy} detail={busyKey === 'export' ? 'Saving…' : undefined} onPress={() => requireGrownUp(() => run('export', () => exportFile(portableBackup(collection)), 'backup'), 'save a backup')} />
+      <ActionRow title="Load backup" icon="upload" chevron={false} disabled={busy} detail={busyKey === 'import' ? 'Loading…' : undefined} onPress={() => requireGrownUp(() => run('import', async note => { const raw = await importFile(); if (!raw) return; const incoming = parseCollection(raw); await transact(c => mergeBackup(c, incoming)); note(`Added ${incoming.trainers.length} trainer${incoming.trainers.length === 1 ? '' : 's'} from the backup.`); }, 'backup'), 'load a backup')} />
       <Txt variant="caption" muted>Save everyone’s cards. Loading a backup adds trainers and erases nothing.</Txt>
       {feedbackAt('backup')}
     </View>
@@ -333,9 +347,9 @@ export function WishlistModal({ onClose, onCard, onFind }: { onClose: () => void
     // Some browsers cannot share; show the list so a grown-up can copy it. Cancelling is not an error.
     catch (e) { if (!(e instanceof Error && e.name === 'AbortError')) setShareFailed(true); }
   }
-  return <Sheet title="Your wishlist" onClose={onClose}><FlatList key={columns} data={wishes} numColumns={columns} keyExtractor={w => w.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={m.wishList}
+  return <Sheet title="Your wishlist" onClose={onClose} action={wishes.length > 0 ? <IconButton round icon="upload" label="Share wishlist" onPress={share} /> : undefined}><FlatList key={columns} data={wishes} numColumns={columns} keyExtractor={w => w.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={m.wishList}
     ListHeaderComponent={<View style={{ gap: S.lg, marginBottom: wishes.length ? S.xl : 0 }}>
-      {wishes.length > 0 && <><View style={ui.between}><Txt variant="caption" muted style={{ flex: 1 }}>{wishes.length} {wishes.length === 1 ? 'wish' : 'wishes'} · {trainer.name}</Txt><ToolbarAction title="Share wishlist" icon="upload" onPress={share} /></View><Txt variant="caption" muted>Tap a card to add it when you get it. Prices are ungraded estimates to help grown-ups shop.</Txt></>}
+      {wishes.length > 0 && <View style={{ gap: S.xs }}><Txt variant="caption" muted>{wishes.length} {wishes.length === 1 ? 'wish' : 'wishes'} · {trainer.name}</Txt><Txt variant="caption" muted>Tap a card to add it when you get it. Prices are ungraded estimates to help grown-ups shop.</Txt></View>}
       {removed && <View style={[m.note, ui.between, { paddingVertical: S.xs }]}><Txt variant="caption" style={{ flex: 1 }}>Removed {removed.wish.card.name}.</Txt><Pressable accessibilityRole="button" accessibilityLabel={`Undo. Put ${removed.wish.card.name} back on your wishlist`} hitSlop={4} onPress={() => { tick(); const { wish, index } = removed; setRemoved(null); change(t => restoreWish(t, wish, index)); }} style={state => [m.undo, pressFx(state)]}><Txt variant="label" style={{ textDecorationLine: 'underline' }}>Undo</Txt></Pressable></View>}
       <ErrorNotice text={error} />
       {shareFailed && wishes.length > 0 && <View style={[m.note, { gap: S.sm }]}><Txt variant="cardTitle">Sharing isn’t available here.</Txt><Txt variant="caption" muted>Copy this list instead:</Txt><Txt variant="caption" selectable>{wishlistShareText(trainer.name, wishes)}</Txt></View>}
@@ -379,13 +393,10 @@ export function DiscoveryModal({ card, newIds, quantity, granted = 0, nextLabel,
       </View>
       {ready && discovered && newIds.length > 1 && <View style={m.discoveryPager}>
         <IconButton icon="back" label="Previous discovery" disabled={index === 0} onPress={() => select(index - 1)} />
-        <Txt variant="caption" accessibilityLiveRegion="polite">{index + 1} of {newIds.length} new Pokémon</Txt>
+        <Txt variant="caption" accessibilityLiveRegion="polite" style={{ flexShrink: 1, textAlign: 'center' }}>{index + 1} of {newIds.length} new Pokémon</Txt>
         <View style={{ transform: [{ rotate: '180deg' }] }}><IconButton icon="back" label="Next discovery" disabled={index === newIds.length - 1} onPress={() => select(index + 1)} /></View>
       </View>}
-      {ready && pokemon && <View style={m.discoveryAudio}>
-        <ToolbarAction title={voice.speaking === id ? 'Stop reading' : 'Hear entry'} icon={voice.speaking === id ? 'stop' : 'speaker'} onPress={() => voice.speaking === id ? voice.stop() : void voice.speak(id)} />
-        <ToolbarAction title="Play cry" icon="note" onPress={() => void voice.cry(id)} />
-      </View>}
+      {ready && pokemon && <VoiceButtons id={id} name={pokemon.en} voice={voice} />}
       {ready && granted > 0 && <View style={m.wishBadge}><Icon name="star" size={18} color={WISH.star} filled /><Txt variant="caption" style={m.wishBadgeText}>{granted === 1 ? 'Wish granted. It’s off your wishlist.' : `${granted} wishes granted. They’re off your wishlist.`}</Txt></View>}
     </ScrollView>
     {ready && <View style={m.footer}><ButtonRow><Button title="Done" onPress={onClose} /><Button title={nextLabel} icon="camera" secondary onPress={onNext} /></ButtonRow></View>}
@@ -402,15 +413,13 @@ const m = StyleSheet.create({
   quantityStacked: { flexDirection: 'column', alignItems: 'flex-start' }, quantityLabel: { flex: 1, minWidth: 0, gap: 2 },
   stepper: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-start', backgroundColor: '#E8EEE1', borderRadius: 8 }, stepButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   stepperNumber: { fontSize: 20, lineHeight: 26, fontWeight: '600', minWidth: 32, textAlign: 'center' },
-  removeBox: { paddingVertical: S.md, gap: S.sm }, note: { paddingVertical: S.sm },
+  lockNote: { flexDirection: 'row', alignItems: 'center', gap: S.sm }, destructive: { backgroundColor: C.redDark }, note: { paddingVertical: S.sm },
   lockRow: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: S.sm, paddingVertical: S.md },
   profile: { minHeight: 56, flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.sm, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   builderPreview: { flexDirection: 'row', alignItems: 'center', gap: S.lg, padding: S.lg, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: C.line },
   builderContent: { paddingHorizontal: S.xl, paddingBottom: S.lg, gap: S.sm }, aboutDetails: { gap: S.md }, section: { gap: S.sm },
   input: { minHeight: 48, paddingHorizontal: 14, paddingVertical: 12, borderWidth: 1, borderColor: '#B8C6AC', borderRadius: 12, backgroundColor: '#FCFDF9', color: C.ink, fontSize: 15 },
-  entry: { gap: S.md }, entryScreen: { gap: S.sm },
-  voiceButton: { minHeight: 44, maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: S.sm, paddingVertical: S.sm, borderRadius: 8 },
-  voiceActive: { backgroundColor: C.ink }, voiceText: { flexShrink: 1 },
+  entry: { gap: S.md }, entryScreen: { gap: S.md },
   sprite: { width: 48, height: 48 }, entryText: { fontSize: 15, lineHeight: 22 },
   evolution: { flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 },
   stage: { gap: 6, justifyContent: 'center' }, stageTile: { minHeight: 88, alignItems: 'center', justifyContent: 'center', padding: 3, borderRadius: 12, borderWidth: 2, borderColor: 'transparent' },
@@ -425,6 +434,6 @@ const m = StyleSheet.create({
   wishEmpty: { alignItems: 'center', gap: S.lg, paddingVertical: S.xl }, wishEmptyStar: { width: 64, height: 64, alignItems: 'center', justifyContent: 'center' },
   savedCard: { alignItems: 'center', paddingVertical: S.lg },
   discoveryCopy: { alignSelf: 'stretch', gap: S.xs }, center: { textAlign: 'center' },
-  discoveryPager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm, flexWrap: 'wrap' },
-  discoveryAudio: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.md, flexWrap: 'wrap' },
+  // The count wraps between the arrows so neither arrow ends up alone on a second line.
+  discoveryPager: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: S.sm },
 });

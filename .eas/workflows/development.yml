@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: eas/checkout
       - run: pnpm install --frozen-lockfile
+      # Generate expo-router's typed routes (.expo/types is gitignored) so typecheck also checks every href.
+      # It runs here rather than in the typecheck script because package.json scripts are part of the native fingerprint.
+      - run: pnpm exec expo customize tsconfig.json
       - run: pnpm typecheck
       - run: pnpm test
 

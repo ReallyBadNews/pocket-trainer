@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { DAY, HOUR, priceKey, parseCardPricing, parseExchangeRate, quotePrice, quoteLabel, collectionValue, mostValuable, needsRefresh, parsePriceCache } = require('../.test-build/lib/pricing');
+const { DAY, HOUR, priceKey, parseCardPricing, parseExchangeRate, quotePrice, quoteLabel, collectionValue, mostValuable, rankByValue, valueByGroup, newestPriceDate, missingPriceReason, needsRefresh, parsePriceCache } = require('../.test-build/lib/pricing');
 const { PriceClient } = require('../.test-build/lib/price-client');
 const { fetchCardData } = require('../.test-build/lib/card-api');
 const { changePrinting, entryKey, freshCollection, addCard } = require('../.test-build/lib/model');
@@ -137,6 +137,64 @@ test('the most valuable printing ranks by its low estimate and skips unpriced ca
   const top = mostValuable([make('sm9-156', 'unsure', 10), make('missing', 'normal'), make('sm12-221', 'holo'), make('base1-58', 'normal', 3)], data, fx, now);
   assert.equal(top.entry.card.id, 'sm12-221'); assert.equal(top.quote.low, 56804);
   assert.equal(mostValuable([make('missing', 'normal')], data, fx, now), undefined);
+});
+
+test('ranking lists every priced printing by per-copy value, keeping collection order for ties', () => {
+  const make = (id, finish, quantity = 1, key = id + finish) => ({ key, card: { ...card, ...brief(id) }, finish, quantity });
+  const data = Object.fromEntries(['base1-58', 'sm12-221', 'sm9-156'].map(id => [priceKey(brief(id)), snapshot(id)]));
+  const ranked = rankByValue([make('sm9-156', 'unsure', 10), make('missing', 'normal'), make('base1-58', 'normal', 3, 'first'), make('sm12-221', 'holo'), make('sm9-156', 'reverse'), make('base1-58', 'normal', 1, 'second')], data, fx, now);
+  assert.deepEqual(ranked.map(r => r.entry.key), ['sm12-221holo', 'first', 'second', 'sm9-156reverse', 'sm9-156unsure']);
+  assert.deepEqual(ranked.map(r => r.quote.low), [56804, 1610, 1610, 63, 34]);
+  assert.equal(ranked.at(-1).quote.high, 63);
+  assert.deepEqual(rankByValue([], data, fx, now), []);
+});
+
+test('value groups add up to the collection total and put the most valuable group first', () => {
+  const make = (id, finish, quantity) => ({ key: id + finish, card: { ...card, ...brief(id) }, finish, quantity });
+  const entries = [make('base1-58', 'normal', 2), make('sm9-156', 'unsure', 3), make('missing-1', 'normal', 4), make('sm12-221', 'holo', 1), make('nothing-1', 'normal', 1)];
+  const data = Object.fromEntries(['base1-58', 'sm12-221', 'sm9-156'].map(id => [priceKey(brief(id)), snapshot(id)]));
+  const groups = valueByGroup(entries, data, fx, e => e.card.id.split('-')[0], now);
+  assert.deepEqual(groups.map(g => [g.key, g.low, g.high, g.copies, g.priced, g.missing]), [
+    ['sm12', 56804, 56804, 1, 1, 0], ['base1', 3220, 3220, 2, 2, 0], ['sm9', 102, 189, 3, 3, 0],
+    // Unpriced groups follow, larger first.
+    ['missing', 0, 0, 4, 0, 4], ['nothing', 0, 0, 1, 0, 1],
+  ]);
+  assert.equal(groups.find(g => g.key === 'sm9').unconfirmed, 3);
+  assert.deepEqual(groups[1].entries, [entries[0]]);
+  const total = collectionValue(entries, data, fx, now);
+  assert.equal(groups.reduce((sum, g) => sum + g.low, 0), total.low);
+  assert.equal(groups.reduce((sum, g) => sum + g.high, 0), total.high);
+  assert.equal(groups.reduce((sum, g) => sum + g.copies, 0), total.priced + total.missing);
+  assert.deepEqual(valueByGroup([], data, fx, e => e.card.language, now), []);
+});
+
+test('the newest price date is the latest provider update among saved cards, not a range\'s oldest source', () => {
+  const e = id => ({ key: id, card: { id, language: 'en' }, finish: 'unsure', quantity: 1 });
+  const price = (finish, updatedAt) => ({ finish, amount: 1, currency: 'USD', source: 'TCGplayer', updatedAt });
+  const snapshots = {
+    'en:a': { key: 'en:a', checkedAt: 0, finishes: [], prices: [price('normal', '2026-10-03T22:54:00.000Z'), price('reverse', '2026-10-04T22:54:00.000Z')] },
+    'en:b': { key: 'en:b', checkedAt: 0, finishes: [], prices: [price('normal', '2026-09-30T00:00:00Z')] },
+  };
+  // quotePrice would date the "Not sure yet" range for a by its older source (Oct 3).
+  assert.equal(quotePrice(snapshots['en:a'], 'unsure').updatedAt, '2026-10-03T22:54:00.000Z');
+  assert.equal(newestPriceDate([e('a'), e('b'), e('missing')], snapshots), '2026-10-04T22:54:00.000Z');
+  assert.equal(newestPriceDate([], snapshots), undefined);
+});
+
+test('missing prices explain themselves: loading, failed, exchange rate, wrong printing or not listed', () => {
+  const idle = { pending: false, failed: false };
+  assert.equal(missingPriceReason(snapshot('base1-58'), 'normal', fx, { pending: true, failed: false }), 'loading');
+  assert.equal(missingPriceReason(undefined, 'normal', fx, idle), 'loading');
+  assert.equal(missingPriceReason(undefined, 'normal', fx, { pending: false, failed: true }), 'failed');
+  const jp = snapshot('SV5K-025', 'ja');
+  assert.equal(missingPriceReason(jp, 'holo', undefined, idle), 'exchange');
+  assert.equal(missingPriceReason(jp, 'unsure', undefined, idle), 'exchange');
+  // A Holo saved for a card that only has Regular and Reverse prices.
+  assert.equal(missingPriceReason(snapshot('sm9-156'), 'holo', fx, idle), 'printing');
+  assert.equal(missingPriceReason(snapshot('sm12-221'), 'normal', fx, idle), 'printing');
+  const empty = { key: 'en:x', checkedAt: now, finishes: [], prices: [] };
+  assert.equal(missingPriceReason(empty, 'normal', fx, idle), 'unlisted');
+  assert.equal(missingPriceReason(empty, 'unsure', fx, { pending: false, failed: true }), 'unlisted');
 });
 
 test('prices refresh when the provider’s next daily update is due, without hourly retries for stalled listings', () => {
