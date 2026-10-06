@@ -5,10 +5,10 @@ on:
   push:
     branches: [main]
 
-# A new push to a PR cancels its older run. Pushes to main always run to completion.
+# A new push to a PR cancels its older run. Each push to main gets its own group, so none are cancelled.
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
