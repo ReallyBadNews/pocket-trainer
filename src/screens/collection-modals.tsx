@@ -98,7 +98,7 @@ export function CardModal({ brief, entry, draft, onClose, onAdded, onBusyChange 
         <Txt variant="readout" muted>#{collectorNumber(card)} · {card.rarity} · {cardKindLabel(card)}{card.hp ? ` · HP ${card.hp}` : ''}</Txt>
         <Txt variant="caption" muted>{pokemonIds(card).length ? `Pokédex entries: ${pokemonIds(card).map(id => speciesById.get(id)?.en ?? `#${id}`).join(' & ')}` : 'Counts toward your binder and collection badges.'}</Txt>
       </View>
-      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} />
+      <CardValuePanel card={card} finish={finish} quantity={liveEntry?.quantity ?? quantity} onPress={() => {}} />
       <View style={m.section}><ChoiceMenu disabled={busy} label="Printing" options={printingChoices.map(id => ({ id, label: FINISH_LABELS[id] }))} value={finish} onChange={value => !busy && setFinish(value)} />{!entry && <Txt variant="caption" muted>Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around it. “Not sure yet” is okay.</Txt>}</View>
       {liveEntry ? <><CopiesField finish={liveEntry.finish} quantity={liveEntry.quantity} busy={busy} minusLabel="Remove one copy" plusLabel="Add one copy" onMinus={() => liveEntry.quantity === 1 ? setRemoving(true) : run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity - 1)))} onPlus={() => run(() => updateTrainer(t => updateQuantity(t, liveEntry.key, liveEntry.quantity + 1)))} />
         {card.description && <Txt>{card.description}</Txt>}

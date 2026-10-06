@@ -69,14 +69,14 @@ export function LinkButton({ title, onPress, color = C.ink, style }: { title: st
   return <Pressable accessibilityRole="button" accessibilityLabel={title} hitSlop={4} onPress={() => { tick(); onPress(); }} style={state => [ui.link, style, pressFx(state)]}><Txt variant="label" style={{ color }}>{title}</Txt></Pressable>;
 }
 /** Secondary destinations stay readable and tappable without looking like another content card. */
-export function ToolbarAction({ title, icon, onPress, color = C.ink, expanded, style }: { title: string; icon?: IconName; onPress: () => void; color?: string; expanded?: boolean; style?: StyleProp<ViewStyle> }) {
-  return <Pressable accessibilityRole="button" accessibilityLabel={title} aria-expanded={expanded} onPress={() => { tick(); onPress(); }} style={state => [ui.toolbarAction, style, pressFx(state)]}>{icon && <Icon name={icon} size={18} color={color} />}<Txt variant="caption" style={{ color, fontWeight: '600', flexShrink: 1 }}>{title}</Txt></Pressable>;
+export function ToolbarAction({ title, icon, onPress, color = C.ink, style }: { title: string; icon?: IconName; onPress: () => void; color?: string; style?: StyleProp<ViewStyle> }) {
+  return <Pressable accessibilityRole="button" accessibilityLabel={title} onPress={() => { tick(); onPress(); }} style={state => [ui.toolbarAction, style, pressFx(state)]}>{icon && <Icon name={icon} size={18} color={color} />}<Txt variant="caption" style={{ color, fontWeight: '600', flexShrink: 1 }}>{title}</Txt></Pressable>;
 }
-/** A standard settings/disclosure row, using alignment and a separator rather than nested cards. */
-export function ActionRow({ title, value, detail, icon, onPress, disabled = false, destructive = false, expanded }: { title: string; value?: string; detail?: string; icon?: IconName; onPress: () => void; disabled?: boolean; destructive?: boolean; expanded?: boolean }) {
+/** A standard settings/navigation row, using alignment and a separator rather than nested cards. */
+export function ActionRow({ title, value, detail, icon, onPress, disabled = false, destructive = false }: { title: string; value?: string; detail?: string; icon?: IconName; onPress: () => void; disabled?: boolean; destructive?: boolean }) {
   const color = destructive ? C.redDark : C.ink;
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${value ? `, ${value}` : ''}`} accessibilityHint={detail} aria-expanded={expanded} accessibilityState={{ disabled }} disabled={disabled} onPress={() => { tick(); onPress(); }} style={state => [ui.actionRow, disabled && { opacity: .45 }, pressFx(state)]}>
-    {icon && <Icon name={icon} size={20} color={color} />}<View style={{ flex: 1, minWidth: 0, gap: 2 }}><Txt style={{ color, fontWeight: '500' }}>{title}</Txt>{detail && <Txt variant="caption" muted>{detail}</Txt>}</View>{value && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '55%', textAlign: 'right' }}>{value}</Txt>}<View style={{ transform: [{ rotate: expanded ? '-90deg' : '180deg' }] }}><Icon name="back" size={16} color={C.muted} /></View>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${title}${value ? `, ${value}` : ''}`} accessibilityHint={detail} accessibilityState={{ disabled }} disabled={disabled} onPress={() => { tick(); onPress(); }} style={state => [ui.actionRow, disabled && { opacity: .45 }, pressFx(state)]}>
+    {icon && <Icon name={icon} size={20} color={color} />}<View style={{ flex: 1, minWidth: 0, gap: 2 }}><Txt style={{ color, fontWeight: '500' }}>{title}</Txt>{detail && <Txt variant="caption" muted>{detail}</Txt>}</View>{value && <Txt variant="caption" muted style={{ flexShrink: 1, maxWidth: '55%', textAlign: 'right' }}>{value}</Txt>}<View style={{ transform: [{ rotate: '180deg' }] }}><Icon name="back" size={16} color={C.muted} /></View>
   </Pressable>;
 }
 /** Compact choices use the native iOS picker sheet; other platforms get the same checked options. */

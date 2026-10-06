@@ -11,12 +11,14 @@ import { catalogSet, speciesById } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
 import { badgeProgress, discoveredIds } from '@/lib/model';
 import { setProgress, type SetProgress } from '@/lib/set-progress';
+import { usePokedexNav } from '@/lib/pokedex-nav';
 
 type BadgeFilter = 'all' | 'todo' | 'earned';
 const FILTERS = [{ id: 'all', label: 'All' }, { id: 'todo', label: 'Not yet' }, { id: 'earned', label: 'Earned' }] as const;
 
-export function BadgesScreen({ onSpecies }: { onSpecies: (id: number) => void }) {
+export function BadgesScreen() {
   const scroll = useChromeScroll();
+  const { openSpecies: onSpecies } = usePokedexNav();
   const { trainer } = useCollection();
   const [filter, setFilter] = useState<BadgeFilter>('all');
   const [inspected, setInspected] = useState<Badge | null>(null);

@@ -54,7 +54,7 @@
     "ios": "expo start --ios",
     "web": "expo start --web",
     "lint": "expo lint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "expo customize tsconfig.json && tsc --noEmit",
     "test": "tsc -p tsconfig.test.json && node --test tests/*.test.cjs",
     "export:web": "expo export --platform web",
     "export:ios": "expo export --platform ios --output-dir dist-ios",

@@ -72,3 +72,6 @@ const c = StyleSheet.create({
   bonus: { marginHorizontal: S.xl, marginTop: S.sm, marginBottom: S.md, paddingTop: S.md, borderTopWidth: 1, borderTopColor: C.line, gap: S.xs },
   empty: { alignItems: 'center', gap: S.md, padding: S.xxl },
 });
+
+// Placeholder: the checklist is moving to its own route.
+export function SetChecklistPage() { return null; }
