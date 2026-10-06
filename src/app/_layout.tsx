@@ -21,7 +21,9 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <Tabs style={{ flex: 1 }}>
           <TabList style={{ display: 'none' }}>
-            {TABS.map(tab => <TabTrigger key={tab.name} name={tab.name} href={tab.href} />)}
+            {TABS.map((tab) => (
+              <TabTrigger key={tab.name} name={tab.name} href={tab.href} />
+            ))}
           </TabList>
           <PokedexShell />
         </Tabs>

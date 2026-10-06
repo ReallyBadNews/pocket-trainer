@@ -8,7 +8,8 @@ export const TABS = [
   { name: 'scan', href: '/scan', label: 'Scan', icon: 'scan' },
   { name: 'badges', href: '/badges', label: 'Badges', icon: 'badge' },
 ] as const;
-export type TabName = typeof TABS[number]['name'];
+
+export type TabName = (typeof TABS)[number]['name'];
 
 /**
  * Pages are expo-router routes in each tab's stack. Cards, Pokémon, the wishlist, the quiz and settings stay in the
@@ -30,9 +31,13 @@ export type PokedexNav = {
   scan: { query: string; session: number; captureRequest: number };
   onScanAdded: (added: AddedCards, source: 'card' | 'page') => void;
 };
+
 export const PokedexNavContext = createContext<PokedexNav | null>(null);
+
 export function usePokedexNav() {
   const nav = useContext(PokedexNavContext);
+
   if (!nav) throw new Error('usePokedexNav must be used inside the Pokédex shell.');
+
   return nav;
 }

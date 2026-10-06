@@ -1,30 +1,78 @@
 const { test } = require('node:test');
+
 const assert = require('node:assert/strict');
-const { freshCollection, addCard, entryKey, discoveredIds, updateQuantity, undoAdditions, changePrinting, portableBackup, parseCollection, mergeBackup } = require('../.test-build/lib/model');
-const { TRAINER_ACCESSORIES, unlockedTrainerAccessories, canEquipTrainerAccessory, awardTrainerAccessories } = require('../.test-build/lib/trainer-accessories');
+
+const {
+  freshCollection,
+  addCard,
+  entryKey,
+  discoveredIds,
+  updateQuantity,
+  undoAdditions,
+  changePrinting,
+  portableBackup,
+  parseCollection,
+  mergeBackup,
+} = require('../.test-build/lib/model');
+
+const {
+  TRAINER_ACCESSORIES,
+  unlockedTrainerAccessories,
+  canEquipTrainerAccessory,
+  awardTrainerAccessories,
+} = require('../.test-build/lib/trainer-accessories');
 
 const ids = ['fieldPin', 'explorerScarf', 'expeditionSatchel'];
-const cardFor = id => ({
-  id: `accessory-${id}`, localId: String(id), name: `Pokémon ${id}`, language: 'en',
-  set: { id: 'accessory-test', name: 'Accessory test', total: 100 }, dexIds: [id],
-  types: ['Grass'], category: 'Pokemon', rarity: 'Common', finishes: ['normal', 'holo', 'reverse', 'unsure'],
+
+const cardFor = (id) => ({
+  id: `accessory-${id}`,
+  localId: String(id),
+  name: `Pokémon ${id}`,
+  language: 'en',
+  set: { id: 'accessory-test', name: 'Accessory test', total: 100 },
+  dexIds: [id],
+  types: ['Grass'],
+  category: 'Pokemon',
+  rarity: 'Common',
+  finishes: ['normal', 'holo', 'reverse', 'unsure'],
 });
+
 function withSpecies(count) {
   let trainer = freshCollection().trainers[0];
+
   for (let id = 1; id <= count; id++) trainer = addCard(trainer, cardFor(id), 'normal', 1);
+
   return trainer;
 }
-const collectionFor = trainer => ({ ...freshCollection(), activeId: trainer.id, trainers: [trainer] });
-const restored = trainer => parseCollection(portableBackup(collectionFor(trainer))).trainers[0];
+
+const collectionFor = (trainer) => ({ ...freshCollection(), activeId: trainer.id, trainers: [trainer] });
+
+const restored = (trainer) => parseCollection(portableBackup(collectionFor(trainer))).trainers[0];
 
 test('accessories unlock at 1, 10, and 25 Pokémon without changing the trainer’s look', () => {
-  assert.deepEqual(TRAINER_ACCESSORIES.map(accessory => [accessory.id, accessory.target]), [[ids[0], 1], [ids[1], 10], [ids[2], 25]]);
-  for (const [count, expected] of [[0, []], [1, ids.slice(0, 1)], [9, ids.slice(0, 1)], [10, ids.slice(0, 2)], [24, ids.slice(0, 2)], [25, ids]]) {
+  assert.deepEqual(
+    TRAINER_ACCESSORIES.map((accessory) => [accessory.id, accessory.target]),
+    [
+      [ids[0], 1],
+      [ids[1], 10],
+      [ids[2], 25],
+    ],
+  );
+
+  for (const [count, expected] of [
+    [0, []],
+    [1, ids.slice(0, 1)],
+    [9, ids.slice(0, 1)],
+    [10, ids.slice(0, 2)],
+    [24, ids.slice(0, 2)],
+    [25, ids],
+  ]) {
     const trainer = withSpecies(count);
     assert.deepEqual(unlockedTrainerAccessories(trainer), expected, `${count} discoveries`);
     assert.deepEqual(trainer.unlockedAccessories ?? [], expected);
     assert.equal(trainer.appearance.accessory, undefined, 'new rewards are not equipped automatically');
     assert.ok(canEquipTrainerAccessory(trainer, 'none'));
+
     for (const id of ids) assert.equal(canEquipTrainerAccessory(trainer, id), expected.includes(id));
   }
 });
@@ -36,6 +84,7 @@ test('copies, languages, finishes, Trainer cards, and Energy cards do not inflat
   const misleadingDexIds = Array.from({ length: 30 }, (_, i) => i + 50);
   trainer = addCard(trainer, { ...cardFor(200), category: 'Trainer', dexIds: misleadingDexIds }, 'normal', 25);
   trainer = addCard(trainer, { ...cardFor(201), category: 'Energy', dexIds: misleadingDexIds }, 'normal', 25);
+
   for (let id = 2; id <= 9; id++) trainer = addCard(trainer, cardFor(id), 'normal', 1);
   assert.equal(discoveredIds(trainer).size, 9);
   assert.deepEqual(trainer.unlockedAccessories, ['fieldPin']);
@@ -51,6 +100,7 @@ test('a Pokémon TAG TEAM can cross a milestone with multiple distinct species',
 test('earned accessories and the equipped selection survive removing every card', () => {
   const earned = withSpecies(25);
   let trainer = { ...earned, appearance: { ...earned.appearance, accessory: 'expeditionSatchel' } };
+
   for (const entry of trainer.entries) trainer = updateQuantity(trainer, entry.key, 0);
   assert.equal(trainer.entries.length, 0);
   assert.deepEqual(trainer.unlockedAccessories, ids);
@@ -69,7 +119,9 @@ test('undoing the milestone addition retains its reward and a later equipped sel
   assert.equal(undone.appearance.accessory, 'explorerScarf');
   assert.ok(canEquipTrainerAccessory(restored(undone), 'explorerScarf'));
   const first = addCard(freshCollection().trainers[0], cardFor(1), 'normal', 1);
-  assert.deepEqual(undoAdditions(first, [{ key: entryKey(cardFor(1), 'normal'), quantity: 1 }]).unlockedAccessories, ['fieldPin']);
+  assert.deepEqual(undoAdditions(first, [{ key: entryKey(cardFor(1), 'normal'), quantity: 1 }]).unlockedAccessories, [
+    'fieldPin',
+  ]);
 });
 
 test('changing a printing preserves the permanent ledger and cosmetic selection', () => {
@@ -113,7 +165,15 @@ test('older saves silently receive eligible rewards while preserving omitted app
 
 test('unknown and duplicate cosmetic history values are dropped without rejecting the binder', () => {
   const collection = freshCollection();
-  collection.trainers[0].unlockedAccessories = ['futureAccessory', null, { id: 'fieldPin' }, 'explorerScarf', 'fieldPin', 'explorerScarf', '__proto__'];
+  collection.trainers[0].unlockedAccessories = [
+    'futureAccessory',
+    null,
+    { id: 'fieldPin' },
+    'explorerScarf',
+    'fieldPin',
+    'explorerScarf',
+    '__proto__',
+  ];
   collection.trainers[0].appearance.accessory = 'explorerScarf';
   const trainer = parseCollection(JSON.stringify(collection)).trainers[0];
   assert.deepEqual(trainer.unlockedAccessories, ['fieldPin', 'explorerScarf']);
@@ -131,6 +191,7 @@ test('malformed cosmetic ledgers and equipped values fall back safely', () => {
     assert.equal(trainer.appearance.accessory, 'none');
     assert.equal(trainer.entries.length, 0);
   }
+
   for (const value of ['futureAccessory', '__proto__', null, false, 42, [], {}]) {
     const collection = collectionFor(withSpecies(1));
     collection.trainers[0].appearance.accessory = value;
@@ -150,7 +211,12 @@ test('an unearned valid selection is cleared, and none remains an explicit valid
 });
 
 test('awarding rewards normalizes history without mutating the source trainer', () => {
-  const trainer = { ...freshCollection().trainers[0], unlockedAccessories: ['explorerScarf', 'futureAccessory', 'explorerScarf'], appearance: { ...freshCollection().trainers[0].appearance, accessory: 'explorerScarf' } };
+  const trainer = {
+    ...freshCollection().trainers[0],
+    unlockedAccessories: ['explorerScarf', 'futureAccessory', 'explorerScarf'],
+    appearance: { ...freshCollection().trainers[0].appearance, accessory: 'explorerScarf' },
+  };
+
   const normalized = awardTrainerAccessories(trainer);
   assert.deepEqual(normalized.unlockedAccessories, ['explorerScarf']);
   assert.equal(normalized.appearance.accessory, 'explorerScarf');

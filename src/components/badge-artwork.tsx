@@ -12,6 +12,20 @@ const ART = {
 };
 
 /** The same Blender object as the inspector, rendered flat for lists and fallback. */
-export function BadgeArtwork({ emblem, earned = true, size = 64 }: { emblem: BadgeEmblem; earned?: boolean; size?: number }) {
-  return <Image source={ART[emblem]} style={{ width: size, height: size, opacity: earned ? 1 : .45 }} contentFit="contain" />;
+export function BadgeArtwork({
+  emblem,
+  earned = true,
+  size = 64,
+}: {
+  emblem: BadgeEmblem;
+  earned?: boolean;
+  size?: number;
+}) {
+  return (
+    <Image
+      source={ART[emblem]}
+      style={{ width: size, height: size, opacity: earned ? 1 : 0.45 }}
+      contentFit="contain"
+    />
+  );
 }

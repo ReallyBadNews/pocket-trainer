@@ -11,6 +11,7 @@ export function DiscoveryDevice({ id, onReveal }: { id: number; onReveal: () => 
   const [revealed, setRevealed] = useState(reduced);
   const complete = useRef(false);
   const light = useSharedValue(reduced ? 1 : 0);
+
   const reveal = useCallback(() => {
     if (complete.current) return;
     complete.current = true;
@@ -18,23 +19,66 @@ export function DiscoveryDevice({ id, onReveal }: { id: number; onReveal: () => 
     setRevealed(true);
     onReveal();
   }, [light, onReveal, reduced]);
+
   useEffect(() => {
-    if (reduced) { reveal(); return; }
+    if (reduced) {
+      reveal();
+
+      return;
+    }
+
     const timer = setTimeout(reveal, 650);
+
     return () => clearTimeout(timer);
   }, [reduced, reveal]);
   const screen = useAnimatedStyle(() => ({ opacity: light.value }));
-  const illustration = <>
-    <Image source={require('../../assets/crafted/discovery-device.png')} style={StyleSheet.absoluteFill} contentFit="contain" />
-    <Animated.View pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={[s.screen, screen]}>
-      <Image source={speciesImage(id)} contentFit="contain" style={s.pokemon} />
-    </Animated.View>
-  </>;
-  return revealed ? <View style={s.device}>{illustration}</View> : <Pressable accessibilityRole="button" accessibilityLabel="Reveal the new Pokémon" accessibilityHint="Skips the short Pokédex screen wake." onPress={reveal} style={s.device}>{illustration}</Pressable>;
+
+  const illustration = (
+    <>
+      <Image
+        source={require('../../assets/crafted/discovery-device.png')}
+        style={StyleSheet.absoluteFill}
+        contentFit="contain"
+      />
+      <Animated.View
+        pointerEvents="none"
+        accessibilityElementsHidden
+        importantForAccessibility="no-hide-descendants"
+        style={[s.screen, screen]}
+      >
+        <Image source={speciesImage(id)} contentFit="contain" style={s.pokemon} />
+      </Animated.View>
+    </>
+  );
+
+  return revealed ? (
+    <View style={s.device}>{illustration}</View>
+  ) : (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Reveal the new Pokémon"
+      accessibilityHint="Skips the short Pokédex screen wake."
+      onPress={reveal}
+      style={s.device}
+    >
+      {illustration}
+    </Pressable>
+  );
 }
 
 const s = StyleSheet.create({
   device: { width: '100%', maxWidth: 330, aspectRatio: frame.width / frame.height, alignSelf: 'center' },
-  screen: { position: 'absolute', left: `${frame.screen.x * 100}%`, top: `${frame.screen.y * 100}%`, width: `${frame.screen.width * 100}%`, height: `${frame.screen.height * 100}%`, borderRadius: 4, overflow: 'hidden', backgroundColor: '#E6EFDA', alignItems: 'center', justifyContent: 'center' },
+  screen: {
+    position: 'absolute',
+    left: `${frame.screen.x * 100}%`,
+    top: `${frame.screen.y * 100}%`,
+    width: `${frame.screen.width * 100}%`,
+    height: `${frame.screen.height * 100}%`,
+    borderRadius: 4,
+    overflow: 'hidden',
+    backgroundColor: '#E6EFDA',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   pokemon: { width: '92%', height: '92%' },
 });

@@ -12,10 +12,24 @@ const EXAMPLES: Partial<Record<Language, { name: string; set: string; number: st
   ja: { name: 'ピカチュウ', set: 'SV2a', number: '025/165', script: 'Japanese' },
   ko: { name: '야나프', set: 'SV4K', number: '001/066', script: 'Korean' },
 };
-const CHINESE_EXAMPLE = { name: '四季鹿', set: 'CBB4C', number: '17 07/07', script: 'Chinese' };
-const CARD_KINDS = [{ id: 'Pokemon', label: 'Pokémon' }, { id: 'Trainer', label: 'Trainer' }, { id: 'Energy', label: 'Energy' }] as const;
 
-export function ManualCardForm({ language, photoUri, onReview }: { language: Language; photoUri?: string; onReview: (card: Card) => void }) {
+const CHINESE_EXAMPLE = { name: '四季鹿', set: 'CBB4C', number: '17 07/07', script: 'Chinese' };
+
+const CARD_KINDS = [
+  { id: 'Pokemon', label: 'Pokémon' },
+  { id: 'Trainer', label: 'Trainer' },
+  { id: 'Energy', label: 'Energy' },
+] as const;
+
+export function ManualCardForm({
+  language,
+  photoUri,
+  onReview,
+}: {
+  language: Language;
+  photoUri?: string;
+  onReview: (card: Card) => void;
+}) {
   const [name, setName] = useState('');
   const [setCode, setSetCode] = useState('');
   const [number, setNumber] = useState('');
@@ -25,23 +39,88 @@ export function ManualCardForm({ language, photoUri, onReview }: { language: Lan
   const [error, setError] = useState<string | null>(null);
   const example = EXAMPLES[language] ?? CHINESE_EXAMPLE;
   const term = normalize(pokemonQuery || name);
-  const choices = species.filter(s => dexIds.includes(s.id) || (term && (String(s.id) === term || LANGUAGES.some(lang => normalize(s[lang] ?? '').includes(term))))).slice(0, 12);
-  const field = (label: string, value: string, change: (text: string) => void, placeholder: string) => <View style={{ gap: S.xs }}><Txt variant="label">{label}</Txt><TextInput accessibilityLabel={label} value={value} onChangeText={change} placeholder={placeholder} placeholderTextColor={C.muted} autoCorrect={false} maxFontSizeMultiplier={1.4} style={{ color: C.ink, backgroundColor: '#FFFFFFA8', borderWidth: 1, borderColor: C.line, borderRadius: 12, minHeight: 48, paddingHorizontal: 15, paddingVertical: 10, fontSize: 15 }} /></View>;
-  return <View style={{ gap: S.md, marginTop: S.md }}>
-    {field('Name on card', name, setName, example.name)}
-    {field('Set code', setCode, setSetCode, example.set)}
-    {field('Number at the bottom', number, setNumber, example.number)}
-    <ChoiceMenu label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} />
-    {category === 'Pokemon' && <>
-      {field('Which Pokémon? (optional)', pokemonQuery, setPokemonQuery, `${language === 'en' ? 'Name' : `English / ${example.script} name`} or Pokédex number`)}
-      <Txt muted variant="caption">Select each Pokémon on this card to unlock its Pokédex entry.</Txt>
-      <View style={[ui.row, { flexWrap: 'wrap' }]}>{choices.map(s => <Chip key={s.id} label={[...new Set([s.en, s[language]])].join(' · ')} selected={dexIds.includes(s.id)} onPress={() => setDexIds(ids => ids.includes(s.id) ? ids.filter(id => id !== s.id) : [...ids, s.id])} />)}</View>
-    </>}
-    <Txt muted variant="caption">Saved using the details you enter. Market prices are unavailable for manual entries.</Txt>
-    <ErrorNotice text={error} />
-    <Button title="Review card" onPress={() => {
-      try { const card = makeManualCard({ language, name, setCode, number, category, dexIds, photoUri }); setError(null); onReview(card); }
-      catch (e) { setError(e instanceof Error ? e.message : 'Check the card details.'); }
-    }} />
-  </View>;
+
+  const choices = species
+    .filter(
+      (s) =>
+        dexIds.includes(s.id) ||
+        (term && (String(s.id) === term || LANGUAGES.some((lang) => normalize(s[lang] ?? '').includes(term)))),
+    )
+    .slice(0, 12);
+
+  const field = (label: string, value: string, change: (text: string) => void, placeholder: string) => (
+    <View style={{ gap: S.xs }}>
+      <Txt variant="label">{label}</Txt>
+      <TextInput
+        accessibilityLabel={label}
+        value={value}
+        onChangeText={change}
+        placeholder={placeholder}
+        placeholderTextColor={C.muted}
+        autoCorrect={false}
+        maxFontSizeMultiplier={1.4}
+        style={{
+          color: C.ink,
+          backgroundColor: '#FFFFFFA8',
+          borderWidth: 1,
+          borderColor: C.line,
+          borderRadius: 12,
+          minHeight: 48,
+          paddingHorizontal: 15,
+          paddingVertical: 10,
+          fontSize: 15,
+        }}
+      />
+    </View>
+  );
+
+  return (
+    <View style={{ gap: S.md, marginTop: S.md }}>
+      {field('Name on card', name, setName, example.name)}
+      {field('Set code', setCode, setSetCode, example.set)}
+      {field('Number at the bottom', number, setNumber, example.number)}
+      <ChoiceMenu label="Card kind" options={CARD_KINDS} value={category} onChange={setCategory} />
+      {category === 'Pokemon' && (
+        <>
+          {field(
+            'Which Pokémon? (optional)',
+            pokemonQuery,
+            setPokemonQuery,
+            `${language === 'en' ? 'Name' : `English / ${example.script} name`} or Pokédex number`,
+          )}
+          <Txt muted variant="caption">
+            Select each Pokémon on this card to unlock its Pokédex entry.
+          </Txt>
+          <View style={[ui.row, { flexWrap: 'wrap' }]}>
+            {choices.map((s) => (
+              <Chip
+                key={s.id}
+                label={[...new Set([s.en, s[language]])].join(' · ')}
+                selected={dexIds.includes(s.id)}
+                onPress={() =>
+                  setDexIds((ids) => (ids.includes(s.id) ? ids.filter((id) => id !== s.id) : [...ids, s.id]))
+                }
+              />
+            ))}
+          </View>
+        </>
+      )}
+      <Txt muted variant="caption">
+        Saved using the details you enter. Market prices are unavailable for manual entries.
+      </Txt>
+      <ErrorNotice text={error} />
+      <Button
+        title="Review card"
+        onPress={() => {
+          try {
+            const card = makeManualCard({ language, name, setCode, number, category, dexIds, photoUri });
+            setError(null);
+            onReview(card);
+          } catch (e) {
+            setError(e instanceof Error ? e.message : 'Check the card details.');
+          }
+        }}
+      />
+    </View>
+  );
 }
