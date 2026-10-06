@@ -45,7 +45,6 @@ export function useAppUpdates(idle: boolean): UpdateStep {
     if (enabled) readUpdateRestart().then(setRestartedFor, () => setRestartedFor(null));
   }, []);
   useEffect(() => {
-    setSessionOpen(true);
     const timer = setTimeout(() => setSessionOpen(false), SESSION_WINDOW);
 
     return () => clearTimeout(timer);
@@ -66,6 +65,7 @@ export function useAppUpdates(idle: boolean): UpdateStep {
       backgroundedAt = undefined;
 
       if (!fresh || starting.current) return;
+      setSessionOpen(true);
       setSession((n) => n + 1);
       Updates.checkForUpdateAsync()
         .then((result) => (result.isAvailable || result.isRollBackToEmbedded ? Updates.fetchUpdateAsync() : undefined))

@@ -1,4 +1,4 @@
-import { useEffect, useSyncExternalStore } from 'react';
+import { useEffect, useEffectEvent, useSyncExternalStore } from 'react';
 import { AppState } from 'react-native';
 import { PriceClient } from './price-client';
 import { fetchCardData } from './card-api';
@@ -32,13 +32,15 @@ AppState.addEventListener('change', (state) => {
 export function usePricing(cards: CardBrief[], priority = 10, enabled = true) {
   const state = useSyncExternalStore(prices.subscribe, prices.getState);
   const keys = cards.map(priceKey).join('|');
+  // Requests follow the cards' identities (`keys`), not a new array from every render.
+  const ensure = useEffectEvent((isActive: () => boolean) => prices.ensure(cards, isActive, priority));
   useEffect(() => {
     void prices.hydrate();
   }, []);
   useEffect(() => {
     if (!enabled) return;
     let active = true;
-    const timer = setTimeout(() => void prices.ensure(cards, () => active, priority), priority === 0 ? 0 : 200);
+    const timer = setTimeout(() => void ensure(() => active), priority === 0 ? 0 : 200);
 
     return () => {
       active = false;

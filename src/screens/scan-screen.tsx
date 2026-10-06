@@ -3,7 +3,7 @@ import { useChromeScroll } from '@/components/scroll-chrome';
 import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import {
   ActionRow,
@@ -130,7 +130,6 @@ function ScanSession({
 
     return () => {
       alive.current = false;
-      generation.current++;
     };
   }, []);
   const [busy, setBusy] = useState(false);
@@ -365,10 +364,11 @@ function ScanSession({
 
   // "Scan another card" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
+  const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {
     if (captureRequest === handledCapture.current || mode !== 'card') return;
     handledCapture.current = captureRequest;
-    void takePhoto();
+    captureRequested();
   }, [captureRequest, mode]);
 
   const withPhoto = (card: CardBrief) => ({

@@ -137,10 +137,10 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
     shade = useSharedValue(1),
     turn = useSharedValue(0);
 
-  const artStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.value }, { rotate: `${spin.value}deg` }] }));
-  const shadowStyle = useAnimatedStyle(() => ({ opacity: shade.value }));
-  const colorStyle = useAnimatedStyle(() => ({ opacity: 1 - shade.value }));
-  const burstStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.value}deg` }] }));
+  const artStyle = useAnimatedStyle(() => ({ transform: [{ scale: pop.get() }, { rotate: `${spin.get()}deg` }] }));
+  const shadowStyle = useAnimatedStyle(() => ({ opacity: shade.get() }));
+  const colorStyle = useAnimatedStyle(() => ({ opacity: 1 - shade.get() }));
+  const burstStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get()}deg` }] }));
   const question = round.questions[index];
   const answered = picked !== null;
   const correct = picked === question.answer;
@@ -182,17 +182,19 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
     AccessibilityInfo.announceForAccessibility(`${right ? 'Correct!' : 'Not quite.'} It’s ${nameOf(question.answer)}!`);
 
     if (reduced) {
-      shade.value = 0;
+      shade.set(0);
 
       return;
     }
 
-    shade.value = withTiming(0, { duration: 280 });
-    pop.value = withSequence(withTiming(0.72, { duration: 110 }), withSpring(1, { duration: 560, dampingRatio: 0.42 }));
-    spin.value = right
-      ? withTiming(360, { duration: 700, easing: Easing.out(Easing.cubic) })
-      : withSequence(withTiming(-10, { duration: 110 }), withSpring(0, { duration: 500, dampingRatio: 0.3 }));
-    turn.value = withTiming(turn.value + (right ? 60 : 22.5), { duration: 900, easing: Easing.out(Easing.quad) });
+    shade.set(withTiming(0, { duration: 280 }));
+    pop.set(withSequence(withTiming(0.72, { duration: 110 }), withSpring(1, { duration: 560, dampingRatio: 0.42 })));
+    spin.set(
+      right
+        ? withTiming(360, { duration: 700, easing: Easing.out(Easing.cubic) })
+        : withSequence(withTiming(-10, { duration: 110 }), withSpring(0, { duration: 500, dampingRatio: 0.3 })),
+    );
+    turn.set(withTiming(turn.get() + (right ? 60 : 22.5), { duration: 900, easing: Easing.out(Easing.quad) }));
   }
 
   function next() {
@@ -206,9 +208,9 @@ function QuizGame({ onAgain, onDone }: { onAgain: () => void; onDone: () => void
     }
 
     [pop, spin, shade].forEach(cancelAnimation);
-    pop.value = 1;
-    spin.value = 0;
-    shade.value = 1;
+    pop.set(1);
+    spin.set(0);
+    shade.set(1);
     setIndex((i) => i + 1);
     setPicked(null);
     setArt('loading');

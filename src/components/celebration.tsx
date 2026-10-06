@@ -30,7 +30,7 @@ function watchTilt() {
     DeviceMotion.setUpdateInterval(50);
     // Left–right tilt (gamma, radians) plus a little of the forward tilt moves the shine across the card.
     subscription = DeviceMotion.addListener(({ rotation }) => {
-      if (rotation) tilt.value = Math.max(-1, Math.min(1, rotation.gamma * 1.6 + (rotation.beta - 0.6) * 0.5));
+      if (rotation) tilt.set(Math.max(-1, Math.min(1, rotation.gamma * 1.6 + (rotation.beta - 0.6) * 0.5)));
     });
   });
 
@@ -81,17 +81,19 @@ export function HoloShine({
   }, [reduced]);
   useEffect(() => {
     if (reduced || moving) return;
-    drift.value = withRepeat(
-      withSequence(
-        withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
-        withTiming(-1, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
+    drift.set(
+      withRepeat(
+        withSequence(
+          withTiming(1, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
+          withTiming(-1, { duration: 2600, easing: Easing.inOut(Easing.sin) }),
+        ),
+        -1,
       ),
-      -1,
     );
-  }, [reduced, moving]);
+  }, [reduced, moving, drift]);
 
   const band = useAnimatedStyle(() => ({
-    transform: [{ translateX: (moving ? tilt.value : drift.value) * width * 1.05 }, { rotate: '22deg' }],
+    transform: [{ translateX: (moving ? tilt.get() : drift.get()) * width * 1.05 }, { rotate: '22deg' }],
   }));
 
   return (
@@ -133,7 +135,7 @@ function Piece({ progress, seed }: { progress: SharedValue<number>; seed: number
   }, [seed]);
 
   const style = useAnimatedStyle(() => {
-    const t = progress.value;
+    const t = progress.get();
 
     return {
       opacity: t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25,
@@ -152,8 +154,8 @@ function Piece({ progress, seed }: { progress: SharedValue<number>; seed: number
 export function Confetti({ count = 30 }: { count?: number }) {
   const progress = useSharedValue(0);
   useEffect(() => {
-    progress.value = withTiming(1, { duration: 1900, easing: Easing.out(Easing.quad) });
-  }, []);
+    progress.set(withTiming(1, { duration: 1900, easing: Easing.out(Easing.quad) }));
+  }, [progress]);
 
   return (
     <View pointerEvents="none" style={s.burst}>

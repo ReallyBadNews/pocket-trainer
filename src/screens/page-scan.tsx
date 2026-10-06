@@ -2,7 +2,7 @@ import Animated, { FlipInYLeft, ZoomIn } from 'react-native-reanimated';
 import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
 import * as ImagePicker from 'expo-image-picker';
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
 import { ActionRow, Button, C, CardArt, ErrorNotice, Icon, R, S, Segmented, Txt, tick } from '@/components/pokedex-ui';
 import { fetchCard, type ScanCandidate } from '@/lib/catalog';
@@ -88,18 +88,24 @@ export function PageScan({
 
     return () => {
       alive.current = false;
-      generation.current++;
     };
   }, []);
   // "Scan the next page" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
+  const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {
     if (captureRequest === handledCapture.current) return;
     handledCapture.current = captureRequest;
-    void takePhoto();
+    captureRequested();
   }, [captureRequest]);
-  useEffect(() => {
+
+  // A page photographed from the live camera is read once, when the screen opens with it.
+  const openedWithLivePhoto = useEffectEvent(() => {
     if (livePhoto) acceptLive(livePhoto);
+  });
+
+  useEffect(() => {
+    openedWithLivePhoto();
   }, []);
   const discovered = useMemo(() => discoveredIds(trainer), [trainer]);
   const summary = pageSummary(pockets);

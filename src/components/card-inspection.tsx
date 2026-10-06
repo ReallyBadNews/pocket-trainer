@@ -2,9 +2,17 @@ import { requireOptionalNativeModule } from 'expo';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, AppState, Modal, Platform, Pressable, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+  type GestureUpdateEvent,
+  type PanGestureHandlerEventPayload,
+  type PinchGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 import Animated, { useAnimatedStyle, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEventHandler } from '@/hooks/use-event-handler';
 import { cardImage } from '@/lib/catalog';
 import {
   cardBack,
@@ -160,28 +168,37 @@ function CardInspector({ card, finish, onClose }: { card: Card; finish: Finish; 
     });
   }
 
+  const startDrag = useEventHandler(() => {
+    dragStart.current = runtime.current?.getPose() ?? pose.current;
+  });
+
+  const drag = useEventHandler((e: GestureUpdateEvent<PanGestureHandlerEventPayload>) =>
+    setPose({
+      ...dragStart.current,
+      yaw: dragStart.current.yaw + e.translationX * 0.012,
+      pitch: dragStart.current.pitch + e.translationY * 0.007,
+    }),
+  );
+
+  const endGesture = useEventHandler(announcePose);
+
+  const startPinch = useEventHandler(() => {
+    pinchStart.current = runtime.current?.getPose().zoom ?? pose.current.zoom;
+  });
+
+  const pinchTo = useEventHandler((e: GestureUpdateEvent<PinchGestureHandlerEventPayload>) =>
+    setPose({ ...pose.current, zoom: pinchStart.current * e.scale }),
+  );
+
   const pan = Gesture.Pan()
     .maxPointers(1)
     .minDistance(1)
     .runOnJS(true)
-    .onStart(() => {
-      dragStart.current = runtime.current?.getPose() ?? pose.current;
-    })
-    .onUpdate((e) =>
-      setPose({
-        ...dragStart.current,
-        yaw: dragStart.current.yaw + e.translationX * 0.012,
-        pitch: dragStart.current.pitch + e.translationY * 0.007,
-      }),
-    )
-    .onFinalize(announcePose);
+    .onStart(startDrag)
+    .onUpdate(drag)
+    .onFinalize(endGesture);
 
-  const pinch = Gesture.Pinch()
-    .runOnJS(true)
-    .onStart(() => {
-      pinchStart.current = runtime.current?.getPose().zoom ?? pose.current.zoom;
-    })
-    .onUpdate((e) => setPose({ ...pose.current, zoom: pinchStart.current * e.scale }));
+  const pinch = Gesture.Pinch().runOnJS(true).onStart(startPinch).onUpdate(pinchTo);
 
   const title =
     mode === 'photo'
@@ -331,35 +348,30 @@ function FlatCardPhoto({ card }: { card: Card }) {
 
   const pinch = Gesture.Pinch()
     .onStart((e) => {
-      pinching.value = true;
-      startScale.value = scale.value;
-      anchorX.value = (e.focalX - width / 2 - x.value) / scale.value;
-      anchorY.value = (e.focalY - height / 2 - y.value) / scale.value;
+      pinching.set(true);
+      startScale.set(scale.get());
+      anchorX.set((e.focalX - width / 2 - x.get()) / scale.get());
+      anchorY.set((e.focalY - height / 2 - y.get()) / scale.get());
     })
     .onUpdate((e) => {
-      scale.value = Math.max(1, Math.min(5, startScale.value * e.scale));
-      x.value = boundPhotoOffset(e.focalX - width / 2 - anchorX.value * scale.value, fitted.width, width, scale.value);
-      y.value = boundPhotoOffset(
-        e.focalY - height / 2 - anchorY.value * scale.value,
-        fitted.height,
-        height,
-        scale.value,
-      );
+      scale.set(Math.max(1, Math.min(5, startScale.get() * e.scale)));
+      x.set(boundPhotoOffset(e.focalX - width / 2 - anchorX.get() * scale.get(), fitted.width, width, scale.get()));
+      y.set(boundPhotoOffset(e.focalY - height / 2 - anchorY.get() * scale.get(), fitted.height, height, scale.get()));
     })
     .onFinalize(() => {
-      pinching.value = false;
+      pinching.set(false);
     });
 
   const pan = Gesture.Pan()
     .maxPointers(1)
     .onChange((e) => {
-      if (pinching.value) return;
-      x.value = boundPhotoOffset(x.value + e.changeX, fitted.width, width, scale.value);
-      y.value = boundPhotoOffset(y.value + e.changeY, fitted.height, height, scale.value);
+      if (pinching.get()) return;
+      x.set(boundPhotoOffset(x.get() + e.changeX, fitted.width, width, scale.get()));
+      y.set(boundPhotoOffset(y.get() + e.changeY, fitted.height, height, scale.get()));
     });
 
   const animated = useAnimatedStyle(() => ({
-    transform: [{ translateX: x.value }, { translateY: y.value }, { scale: scale.value }],
+    transform: [{ translateX: x.get() }, { translateY: y.get() }, { scale: scale.get() }],
   }));
 
   return (
@@ -369,9 +381,9 @@ function FlatCardPhoto({ card }: { card: Card }) {
         style={s.viewport}
         onLayout={(e) => {
           setSize(e.nativeEvent.layout);
-          scale.value = 1;
-          x.value = 0;
-          y.value = 0;
+          scale.set(1);
+          x.set(0);
+          y.set(0);
         }}
       >
         {width > 0 && height > 0 && (

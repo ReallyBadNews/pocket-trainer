@@ -2,7 +2,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import * as Device from 'expo-device';
 import { File } from 'expo-file-system';
 import * as Haptics from 'expo-haptics';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button, C, Icon, IconButton, pressFx, S, Segmented, Txt, tick } from '@/components/pokedex-ui';
@@ -97,11 +97,17 @@ export function LiveCamera({
       alive.current = false;
     };
   }, []);
+
   // Simulators have no camera, so only real devices are asked for access.
-  useEffect(() => {
+  const askForCamera = useEffectEvent(() => {
     if (Device.isDevice && permission && !permission.granted && permission.canAskAgain) void requestPermission();
+  });
+
+  useEffect(() => {
+    askForCamera();
   }, [permission?.granted]);
 
+  const captured = useEffectEvent(onCapture);
   const auto = mode === 'card' && canRecognize && ready && !failed && !found && !shooting;
   useEffect(() => {
     if (!auto) return;
@@ -129,7 +135,7 @@ export function LiveCamera({
           uri = undefined;
           setFound(true);
           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-          onCapture(
+          captured(
             { uri: frame.uri, width: frame.width, height: frame.height },
             { scan, matches, language: cardLanguage },
           );

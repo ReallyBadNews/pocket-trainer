@@ -15,7 +15,7 @@ export function DiscoveryDevice({ id, onReveal }: { id: number; onReveal: () => 
   const reveal = useCallback(() => {
     if (complete.current) return;
     complete.current = true;
-    light.value = reduced ? 1 : withTiming(1, { duration: 240 });
+    light.set(reduced ? 1 : withTiming(1, { duration: 240 }));
     setRevealed(true);
     onReveal();
   }, [light, onReveal, reduced]);
@@ -31,7 +31,7 @@ export function DiscoveryDevice({ id, onReveal }: { id: number; onReveal: () => 
 
     return () => clearTimeout(timer);
   }, [reduced, reveal]);
-  const screen = useAnimatedStyle(() => ({ opacity: light.value }));
+  const screen = useAnimatedStyle(() => ({ opacity: light.get() }));
 
   const illustration = (
     <>

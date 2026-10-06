@@ -1,5 +1,5 @@
 import { Image } from 'expo-image';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import {
   AccessibilityInfo,
   FlatList,
@@ -57,8 +57,14 @@ export function BinderPages({ entries, onEntry }: { entries: Entry[]; onEntry: (
     last = Math.min(pages.length, first + perSpread - 1);
 
   const label = first === last ? `Page ${first} of ${pages.length}` : `Pages ${first}–${last} of ${pages.length}`;
-  useEffect(() => {
+
+  // Keep the open spread in view when the layout changes, not on every page turn.
+  const keepSpreadInView = useEffectEvent(() => {
     if (width) list.current?.scrollToOffset({ offset: current * width, animated: false });
+  });
+
+  useEffect(() => {
+    keepSpreadInView();
   }, [width, perSpread]);
 
   function go(next: number) {

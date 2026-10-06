@@ -1,7 +1,7 @@
 import { CardInspection } from '@/components/card-inspection';
 import { DiscoveryDevice } from '@/components/discovery-device';
 import { Image } from 'expo-image';
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { Fragment, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   AccessibilityInfo,
   ActivityIndicator,
@@ -165,7 +165,7 @@ export function CardModal({
   const [card, setCard] = useState<Card | null>(entry?.card ?? draft ?? null);
   const [error, setError] = useState<string | null>(null);
   const [retry, setRetry] = useState(0);
-  const [loading, setLoading] = useState(!entry);
+  const [loading, setLoading] = useState(!entry && !draft);
   const [busy, setBusy] = useState(false);
   const guard = useRef(false);
   const [quantity, setQuantity] = useState(1);
@@ -189,20 +189,16 @@ export function CardModal({
     'unsure',
   ];
 
+  // Read once per load: adding this card to the collection mustn't reload the open sheet.
+  const savedCard = useEffectEvent(
+    () => trainer.entries.find((e) => e.card.id === brief.id && e.card.language === brief.language)?.card,
+  );
+
+  // The sheet is keyed by card, so this runs when it opens and on "Try again".
   useEffect(() => {
+    if (entry || draft) return;
     let active = true;
-
-    if (entry) return;
-
-    if (draft) {
-      setLoading(false);
-
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    const saved = trainer.entries.find((e) => e.card.id === brief.id && e.card.language === brief.language)?.card;
+    const saved = savedCard();
     (saved ? Promise.resolve(saved) : fetchCard(brief))
       .then((c) => {
         if (!active) return;
@@ -215,7 +211,7 @@ export function CardModal({
     return () => {
       active = false;
     };
-  }, [brief.id, brief.language, retry]);
+  }, [brief, entry, draft, retry]);
 
   async function run(action: () => Promise<void>) {
     if (guard.current) return;
@@ -337,7 +333,17 @@ export function CardModal({
           </View>
         )}
         <ErrorNotice text={error} />
-        {!loading && !card && <Button title="Try again" onPress={() => setRetry((n) => n + 1)} secondary />}
+        {!loading && !card && (
+          <Button
+            title="Try again"
+            onPress={() => {
+              setLoading(true);
+              setError(null);
+              setRetry((n) => n + 1);
+            }}
+            secondary
+          />
+        )}
         {card && (
           <>
             <View style={m.cardHero}>

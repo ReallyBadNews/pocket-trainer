@@ -2,9 +2,17 @@ import { requireOptionalNativeModule } from 'expo';
 import type { ExpoWebGLRenderingContext, GLView as GLViewType } from 'expo-gl';
 import { Component, useEffect, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, AppState, Modal, Platform, ScrollView, StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import {
+  Gesture,
+  GestureDetector,
+  GestureHandlerRootView,
+  type GestureUpdateEvent,
+  type PanGestureHandlerEventPayload,
+  type PinchGestureHandlerEventPayload,
+} from 'react-native-gesture-handler';
 import { useReducedMotion } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useEventHandler } from '@/hooks/use-event-handler';
 import type { Badge } from '@/lib/badges';
 import {
   clampBadgePose,
@@ -112,29 +120,37 @@ function BadgeInspector({ badge, onClose }: { badge: Badge; onClose: () => void 
     });
   }
 
+  const startDrag = useEventHandler(() => {
+    dragStart.current = beginGesture();
+  });
+
+  const drag = useEventHandler((event: GestureUpdateEvent<PanGestureHandlerEventPayload>) =>
+    setPose({
+      ...pose.current,
+      yaw: dragStart.current.yaw + event.translationX * 0.012,
+      pitch: dragStart.current.pitch + event.translationY * 0.007,
+    }),
+  );
+
+  const endGesture = useEventHandler(announcePose);
+
+  const startPinch = useEventHandler(() => {
+    pinchStart.current = beginGesture().zoom;
+  });
+
+  const pinchTo = useEventHandler((event: GestureUpdateEvent<PinchGestureHandlerEventPayload>) =>
+    setPose({ ...pose.current, zoom: pinchStart.current * event.scale }),
+  );
+
   const pan = Gesture.Pan()
     .maxPointers(1)
     .minDistance(1)
     .runOnJS(true)
-    .onStart(() => {
-      dragStart.current = beginGesture();
-    })
-    .onUpdate((event) =>
-      setPose({
-        ...pose.current,
-        yaw: dragStart.current.yaw + event.translationX * 0.012,
-        pitch: dragStart.current.pitch + event.translationY * 0.007,
-      }),
-    )
-    .onFinalize(announcePose);
+    .onStart(startDrag)
+    .onUpdate(drag)
+    .onFinalize(endGesture);
 
-  const pinch = Gesture.Pinch()
-    .runOnJS(true)
-    .onStart(() => {
-      pinchStart.current = beginGesture().zoom;
-    })
-    .onUpdate((event) => setPose({ ...pose.current, zoom: pinchStart.current * event.scale }))
-    .onFinalize(announcePose);
+  const pinch = Gesture.Pinch().runOnJS(true).onStart(startPinch).onUpdate(pinchTo).onFinalize(endGesture);
 
   return (
     <GestureHandlerRootView
