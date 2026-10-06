@@ -67,8 +67,8 @@ export type BinderFilterCounts = {
  */
 export function binderFilterCounts(entries: readonly Entry[], filters: BinderFilters, query = ''): BinderFilterCounts {
   const counts: BinderFilterCounts = {
-    show: Object.fromEntries(BINDER_SHOWS.map((show) => [show, 0])) as Record<BinderShow, number>,
-    kind: Object.fromEntries(CARD_FILTERS.map(({ id }) => [id, 0])) as Record<CardFilter, number>,
+    show: { 'All cards': 0, Favorites: 0, Doubles: 0, Japanese: 0, Korean: 0, Chinese: 0 },
+    kind: { all: 0, pokemon: 0, trainer: 0, item: 0, energy: 0, tagteam: 0, stadium: 0 },
     printing: { all: 0, needs: 0 },
     total: 0,
   };

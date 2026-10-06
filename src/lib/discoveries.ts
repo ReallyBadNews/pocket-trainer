@@ -41,11 +41,11 @@ export function discoveredOn(at: string, now = new Date()): string {
 
   if (days === 1) return 'Yesterday';
 
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    ...(date.getFullYear() !== now.getFullYear() ? { year: 'numeric' } : {}),
-  });
+  const format: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric' };
+
+  if (date.getFullYear() !== now.getFullYear()) format.year = 'numeric';
+
+  return date.toLocaleDateString('en-US', format);
 }
 
 export type RegionProgress = Region & { discovered: number; total: number; complete: boolean; active: boolean };

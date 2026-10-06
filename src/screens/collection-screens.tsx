@@ -170,7 +170,7 @@ export function DexScreen() {
               <Txt muted variant="caption" style={s.resultsText}>
                 {visible.length} Pokémon shown
               </Txt>
-              <LinkButton title="Clear filters" onPress={() => setBrowse(() => DEFAULT_DEX_BROWSE)} />
+              <LinkButton title="Clear filters" onPress={() => setBrowse(DEFAULT_DEX_BROWSE)} />
             </View>
           )}
         </View>

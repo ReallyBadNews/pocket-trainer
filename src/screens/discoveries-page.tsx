@@ -17,10 +17,10 @@ import {
   tick,
   ui,
 } from '@/components/pokedex-ui';
-import { DEFAULT_BINDER_BROWSE, DEFAULT_DEX_BROWSE, useBinderBrowse, useDexBrowse } from '@/lib/browse-state';
+import { DEFAULT_DEX_BROWSE, useBinderBrowse, useDexBrowse } from '@/lib/browse-state';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
-import { REGIONS, type BinderShow } from '@/lib/collection-filters';
+import { DEFAULT_BINDER_FILTERS, REGIONS, type BinderShow } from '@/lib/collection-filters';
 import {
   discoveredOn,
   recentDiscoveries,
@@ -62,9 +62,9 @@ export function DiscoveriesPage() {
   const regionsComplete = regions.filter((r) => r.complete).length;
   const activeRegion = regions.find((r) => r.active);
 
-  // Binder rows open the whole binder (or just its doubles) rather than whatever it was last filtered to.
+  // Binder rows open the whole binder (or just its doubles) rather than whatever it was last filtered to, keeping its sort.
   const openBinder = (show: BinderShow) => {
-    updateBinder((current) => ({ ...DEFAULT_BINDER_BROWSE, sort: current.sort, show }));
+    updateBinder({ ...DEFAULT_BINDER_FILTERS, query: '', show });
     nav.goToTab('binder');
   };
 
@@ -155,7 +155,7 @@ export function DiscoveriesPage() {
                 <LinkButton
                   title={`See all ${found}`}
                   onPress={() => {
-                    updateBrowse(() => ({ ...DEFAULT_DEX_BROWSE, show: 'discovered' }));
+                    updateBrowse({ ...DEFAULT_DEX_BROWSE, show: 'discovered' });
                     goBack();
                   }}
                 />
