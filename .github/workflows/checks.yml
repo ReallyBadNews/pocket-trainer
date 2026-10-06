@@ -1,0 +1,53 @@
+name: Checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to a PR cancels its older run. Pushes to main always run to completion.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: Lint, format, typecheck and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      # Same versions as `defaults.tools` in .eas/workflows/testflight.yml.
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11.18.0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24.14.0
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Extra flags are passed here rather than in the lint script because package.json scripts are part of the native fingerprint.
+      - name: Lint
+        run: pnpm lint --format github
+
+      - name: Format check
+        run: pnpm format:check
+
+      # Generate expo-router's typed routes (.expo/types is gitignored) so typecheck also checks every href.
+      - name: Generate typed routes
+        run: |
+          pnpm exec expo customize tsconfig.json
+          git diff --exit-code -- tsconfig.json
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
