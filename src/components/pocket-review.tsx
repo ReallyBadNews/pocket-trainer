@@ -1,7 +1,7 @@
 import Animated, { FadeIn } from 'react-native-reanimated';
 import { useMemo, useRef, useState, type ReactNode } from 'react';
 import { ActivityIndicator, Keyboard, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { Button, ButtonRow, C, CardArt, CardCaption, Icon, IconButton, pressFx, R, S, SearchBox, Txt, tick } from '@/components/pokedex-ui';
+import { Button, ButtonRow, C, LinkButton, CardArt, CardCaption, Icon, IconButton, pressFx, R, S, SearchBox, Txt, tick } from '@/components/pokedex-ui';
 import { ZoomablePhoto } from '@/components/zoomable-photo';
 import { setForCard } from '@/lib/catalog';
 import { searchAnyLanguage } from '@/lib/language-detect';
@@ -65,6 +65,8 @@ export function PocketReview({ pockets, index, onIndex, slice, aspect, onChoose,
   const columns = Math.max(2, Math.floor((inner + S.sm) / (104 * Math.min(fontScale, 1.4) + S.sm)));
   const tile = Math.floor((inner - S.sm * (columns - 1)) / columns);
   const status = STATUS[state];
+  const skipLabel = pocket.skipped ? 'Put it back' : 'Skip it';
+  const primary = state === 'check' ? <Button title="Yes, that's it!" icon="check" onPress={confirm} /> : !toCheck && !reading ? <Button title="Done" icon="check" onPress={onClose} /> : null;
 
   return <>
     <ScrollView ref={scroller} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={[s.scroll, { height: screenHeight }]} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
@@ -87,11 +89,8 @@ export function PocketReview({ pockets, index, onIndex, slice, aspect, onChoose,
         <StatusMark state={state} />
         <View style={{ flex: 1, minWidth: 0 }}><Txt variant="label" style={state === 'ready' && { color: READY }}>{status.title}</Txt>{status.detail && <Txt muted variant="caption">{status.detail}</Txt>}</View>
       </View>
-      {state !== 'reading' && <ButtonRow>
-        {state === 'check' && <Button title="Yes, that's it!" icon="check" onPress={confirm} />}
-        {!toCheck && !reading && <Button title="Done" icon="check" onPress={onClose} />}
-        <Button title={pocket.skipped ? 'Put it back' : 'Skip it'} secondary onPress={skip} />
-      </ButtonRow>}
+      {/* A lone secondary button would float centered across the sheet, so without a primary action Skip is a plain link. */}
+      {state !== 'reading' && (primary ? <ButtonRow>{primary}<Button title={skipLabel} secondary onPress={skip} /></ButtonRow> : <LinkButton title={skipLabel} onPress={skip} />)}
       {state !== 'reading' && <View style={s.find}>
         <Txt accessibilityRole="header" variant="subtitle">{pocket.choice && !pocket.skipped ? 'Not quite? Find your card' : 'Find your card'}</Txt>
         <SearchBox value={query} onChange={setQuery} placeholder="Type the Pokémon's name" />
