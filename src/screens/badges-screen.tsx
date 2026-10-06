@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated from 'react-native-reanimated';
@@ -12,6 +11,7 @@ import { catalogSet } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
 import { discoveredIds } from '@/lib/model';
 import { setProgress } from '@/lib/set-progress';
+import { openPage } from '@/components/page';
 
 type BadgeFilter = 'all' | 'todo' | 'earned';
 const FILTERS = [{ id: 'all', label: 'All' }, { id: 'todo', label: 'Not yet' }, { id: 'earned', label: 'Earned' }] as const;
@@ -49,7 +49,7 @@ export function BadgesScreen() {
 /** The whole row opens the badge's page: what it needs, which Pokémon are left, and the 3D view once earned. */
 function AchievementRow({ badge, status }: { badge: Badge; status: BadgeStatus }) {
   const meter = badgeMeter(badge, status);
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${badge.name}, ${status.earned ? 'earned' : meter.label}. ${badge.description}`} accessibilityHint={status.earned ? 'Opens the badge, where you can view it in 3D' : 'Shows what you still need for this badge'} onPress={() => { tick(); router.push({ pathname: '/badges/[id]', params: { id: badge.id } }); }} style={state => [s.row, pressFx(state)]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${badge.name}, ${status.earned ? 'earned' : meter.label}. ${badge.description}`} accessibilityHint={status.earned ? 'Opens the badge, where you can view it in 3D' : 'Shows what you still need for this badge'} onPress={() => { tick(); openPage({ pathname: '/badges/[id]', params: { id: badge.id } }); }} style={state => [s.row, pressFx(state)]}>
     <BadgeArtwork emblem={badge.emblem} earned={status.earned} />
     <View style={s.copy}>
       <Txt variant="cardTitle">{badge.name}</Txt><Txt muted variant="caption">{badge.description}</Txt>

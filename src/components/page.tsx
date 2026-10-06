@@ -1,5 +1,5 @@
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { router } from 'expo-router';
+import { router, type Href } from 'expo-router';
 import { useContext, useState, type ReactNode } from 'react';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 import { ScrollChromeContext, useChromeScroll } from './scroll-chrome';
@@ -8,14 +8,27 @@ import { C, IconButton, S, Txt } from './pokedex-ui';
 /** Every tab is a stack with these options; pages draw their own header inside the Pokédex screen. */
 export const pageStackOptions = {
   headerShown: false,
+  // Covered pages and lists wait instead of re-rendering on every save or price update.
+  freezeOnBlur: true,
   contentStyle: { backgroundColor: C.screen },
   fullScreenGestureEnabled: true,
 } as const;
 
-/** A page opened by a deep link has nothing under it, so Back goes to the Pokédex. */
+let lastOpened = 0;
+/** Opens a page in the current tab. A second tap while the first page slides in is ignored, so a double tap doesn't stack two copies. */
+export function openPage(href: Href) {
+  const now = Date.now();
+  if (now - lastOpened < 500) return;
+  lastOpened = now;
+  router.push(href);
+}
+
+/**
+ * Pops the current page. Every tab stack keeps its first page underneath (even after a deep link), so there is always
+ * somewhere to go; a repeated tap after the pop finds nothing to dismiss instead of jumping to another tab.
+ */
 export function goBack() {
-  if (router.canGoBack()) router.back();
-  else router.replace('/');
+  if (router.canDismiss()) router.dismiss();
 }
 
 export type PageScroll = ReturnType<typeof useChromeScroll>;

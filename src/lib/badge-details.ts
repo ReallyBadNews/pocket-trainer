@@ -49,8 +49,11 @@ export function goalCounts(goals: readonly SpeciesGoal[]): Record<SpeciesFilter,
 export const languageCards = (trainer: Trainer): { language: Language; cards: number }[] =>
   LANGUAGES.map(language => ({ language, cards: trainer.entries.reduce((n, entry) => entry.card.language === language ? n + entry.quantity : n, 0) }));
 
-/** Like the Pokédex grid, but a little denser: three sprites fit a phone at normal text size, two at larger sizes. */
+/**
+ * Like the Pokédex grid, but a little denser. Each column keeps about 115pt of text-scaled width so names as long as
+ * Meowscarada or Charmander stay on one line instead of breaking mid-word at larger text sizes.
+ */
 export function speciesColumns(contentWidth: number, fontScale: number) {
   const width = contentWidth / Math.min(fontScale, 1.4);
-  return width >= 640 ? 5 : width >= 500 ? 4 : width >= 290 ? 3 : 2;
+  return width >= 620 ? 5 : width >= 480 ? 4 : width >= 350 ? 3 : 2;
 }

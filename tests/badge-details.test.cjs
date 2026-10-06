@@ -66,8 +66,11 @@ test('languageCards counts copies per language and lists languages not collected
   assert.equal(status(trainer, 'world').earned, true);
 });
 
-test('species grid fits three on a phone and two at large text sizes', () => {
-  assert.equal(speciesColumns(310, 1), 3);
+test('species grid keeps names whole: two columns on a phone, more on wider screens', () => {
+  // An iPhone 17's Pokédex screen leaves 330pt of content; at extra-large text three 105pt tiles broke "Charmande-r".
+  assert.equal(speciesColumns(330, 1.118), 2);
+  assert.equal(speciesColumns(330, 1), 2);
+  assert.equal(speciesColumns(380, 1), 3);
   assert.equal(speciesColumns(310, 1.2), 2);
   assert.equal(speciesColumns(310, 3), 2);
   assert.equal(speciesColumns(700, 1), 5);

@@ -1,6 +1,6 @@
 import Animated, { cancelAnimation, useAnimatedStyle } from 'react-native-reanimated';
 import { ScrollChromeContext, useScrollChromeController } from '@/components/scroll-chrome';
-import { useEffect, useLayoutEffect, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
@@ -52,8 +52,14 @@ export function PokedexShell() {
     chrome.paused.value = modalOpen;
     if (modalOpen) cancelAnimation(progress);
   }, [modalOpen, chrome.paused, progress]);
-  // Another trainer starts with a fresh scan rather than the last trainer's photo.
-  useEffect(() => { setScanQuery(''); setScanSession(session => session + 1); }, [trainer.id]);
+  // Another trainer starts from the first page of the current tab, with a fresh scan rather than the last trainer's photo.
+  const shownTrainer = useRef(trainer.id);
+  useEffect(() => {
+    if (shownTrainer.current === trainer.id) return;
+    shownTrainer.current = trainer.id;
+    setScanQuery(''); setScanSession(session => session + 1);
+    if (router.canDismiss()) router.dismissAll();
+  }, [trainer.id]);
   const topStyle = useAnimatedStyle(() => ({ transform: [{ translateY: -headerHeight * progress.value }] }));
   /** Another tab opens on its first page; the current tab pops back to it. */
   function goToTab(name: TabName) {
@@ -128,11 +134,14 @@ export function PokedexShell() {
   </View></View>;
 }
 
-/** Tapping the current tab again pops its stack back to the first page (expo-router's stack handles `tabPress`). */
+/**
+ * Tapping the current tab again pops its stack back to the first page (expo-router's stack handles `tabPress`).
+ * No long-press handler: Pressable would then skip `onPress`, and with it the haptic and the fresh scan.
+ */
 function NavButton({ item, onFocus, onSwitch }: { item: typeof TABS[number]; onFocus: () => void; onSwitch: () => void }) {
   const { triggerProps } = useTabTrigger({ name: item.name });
   const selected = triggerProps.isFocused;
-  return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={item.label} onFocus={onFocus} onLongPress={triggerProps.onLongPress} onPress={event => { if (!selected) { tick(); onSwitch(); } triggerProps.onPress?.(event); }} style={s.navItem}>
+  return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} accessibilityLabel={item.label} onFocus={onFocus} onPress={event => { if (!selected) { tick(); onSwitch(); } triggerProps.onPress?.(event); }} style={s.navItem}>
     <View style={[s.navIcon, selected && s.navSelected]}><Icon name={item.icon} size={23} color={selected ? 'white' : '#F9B7BC'} /></View>
     <Txt numberOfLines={1} maxFontSizeMultiplier={1.15} style={{ color: selected ? 'white' : '#F9B7BC', fontSize: 12, fontWeight: selected ? '700' : '600', lineHeight: 18 }}>{item.label}</Txt>
   </Pressable>;

@@ -168,10 +168,17 @@ test('value groups add up to the collection total and put the most valuable grou
   assert.deepEqual(valueByGroup([], data, fx, e => e.card.language, now), []);
 });
 
-test('the newest price date comes from the latest provider update among priced cards', () => {
-  const at = updatedAt => ({ quote: { updatedAt } });
-  assert.equal(newestPriceDate([at('2026-09-01T22:54:00.000Z'), at('2026-10-02T22:54:00.000Z'), at('2026-09-30T00:00:00Z')]), '2026-10-02T22:54:00.000Z');
-  assert.equal(newestPriceDate([]), undefined);
+test('the newest price date is the latest provider update among saved cards, not a range\'s oldest source', () => {
+  const e = id => ({ key: id, card: { id, language: 'en' }, finish: 'unsure', quantity: 1 });
+  const price = (finish, updatedAt) => ({ finish, amount: 1, currency: 'USD', source: 'TCGplayer', updatedAt });
+  const snapshots = {
+    'en:a': { key: 'en:a', checkedAt: 0, finishes: [], prices: [price('normal', '2026-10-03T22:54:00.000Z'), price('reverse', '2026-10-04T22:54:00.000Z')] },
+    'en:b': { key: 'en:b', checkedAt: 0, finishes: [], prices: [price('normal', '2026-09-30T00:00:00Z')] },
+  };
+  // quotePrice would date the "Not sure yet" range for a by its older source (Oct 3).
+  assert.equal(quotePrice(snapshots['en:a'], 'unsure').updatedAt, '2026-10-03T22:54:00.000Z');
+  assert.equal(newestPriceDate([e('a'), e('b'), e('missing')], snapshots), '2026-10-04T22:54:00.000Z');
+  assert.equal(newestPriceDate([], snapshots), undefined);
 });
 
 test('missing prices explain themselves: loading, failed, exchange rate, wrong printing or not listed', () => {

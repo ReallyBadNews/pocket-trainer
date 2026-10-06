@@ -1,9 +1,8 @@
 import Animated from 'react-native-reanimated';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
-import { PageFrame } from '@/components/page';
+import { PageFrame, openPage } from '@/components/page';
 import { Button, C, ChoiceMenu, Icon, Progress, S, SearchBox, Segmented, Txt, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { catalogSet } from '@/lib/catalog';
 import { useCollection } from '@/lib/collection-context';
@@ -57,7 +56,7 @@ export function SetsPage() {
 
 function SetRow({ set }: { set: SetProgress }) {
   const note = [set.complete ? 'Set complete!' : `${set.official - set.owned} to find`, set.bonus > 0 && `+${set.bonus} bonus`].filter(Boolean).join(' · ');
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${set.name}, ${LANGUAGE_LABELS[set.language]}: ${set.owned} of ${set.official} cards, ${note}`} accessibilityHint="Opens the set checklist" onPress={() => { tick(); router.push({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }); }} style={state => [s.row, pressFx(state)]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${set.name}, ${LANGUAGE_LABELS[set.language]}: ${set.owned} of ${set.official} cards, ${note}`} accessibilityHint="Opens the set checklist" onPress={() => { tick(); openPage({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }); }} style={state => [s.row, pressFx(state)]}>
     <View style={[ui.between, { alignItems: 'flex-start', gap: S.md }]}><Txt variant="cardTitle" style={s.name}>{set.name}<Txt variant="caption" muted> · {LANGUAGE_CODES[set.language]}</Txt></Txt><Txt variant="readout" style={{ fontWeight: '600' }}>{set.owned} / {set.official}</Txt></View>
     <Progress value={set.owned} total={set.official} color={set.complete ? '#A98428' : '#679255'} />
     <View style={ui.row}>{set.complete && <Icon name="check" size={13} color="#80611F" />}<Txt variant="caption" style={{ flexShrink: 1, fontWeight: '600', color: set.complete ? '#80611F' : C.muted }}>{note}</Txt></View>

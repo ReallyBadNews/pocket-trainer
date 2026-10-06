@@ -1,8 +1,7 @@
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useMemo, type ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type TextStyle } from 'react-native';
-import { Page } from '@/components/page';
+import { Page, openPage } from '@/components/page';
 import { CollectionValueHero, dateLabel, useCollectionValue } from '@/components/card-values';
 import { ActionRow, Button, C, CardArt, Icon, Progress, R, S, ToolbarAction, Txt, pressFx, tick } from '@/components/pokedex-ui';
 import { needsPrinting } from '@/lib/binder-order';
@@ -32,7 +31,7 @@ export function CollectionValuePage() {
   const { client, value, checking, refresh } = pricing;
   const progress = useMemo(() => new Map(setProgress(trainer, catalogSet).map(set => [set.key, set])), [trainer]);
   const ranked = rankByValue(entries, client.snapshots, client.fx);
-  const newest = newestPriceDate(ranked);
+  const newest = newestPriceDate(entries, client.snapshots);
   // Sets use set progress's key, so a row can open the same checklist the Sets page does.
   const sets = valueByGroup(entries, client.snapshots, client.fx, e => setKey(e.card.language, catalogSet(e.card.language, e.card.set.id)?.id ?? e.card.set.id));
   const shownSets = sets.length > TOP_SETS + 1 ? sets.slice(0, TOP_SETS) : sets, otherSets = sets.slice(shownSets.length);
@@ -70,7 +69,7 @@ export function CollectionValuePage() {
           const first = group.entries[0].card, set = progress.get(group.key);
           const name = set?.name ?? catalogSet(first.language, first.set.id)?.name ?? first.set.name;
           return <GroupRow key={group.key} title={name} detail={[LANGUAGE_CODES[first.language], copiesLabel(group.copies), group.missing > 0 && `${group.missing} not priced`].filter(Boolean).join(' · ')} low={group.low} total={value.low}
-            onPress={set && (() => router.push({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }))} />;
+            onPress={set && (() => openPage({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }))} />;
         })}
         {otherSets.length > 0 && <GroupRow title={`${otherSets.length} more sets`} detail={copiesLabel(otherSets.reduce((n, g) => n + g.copies, 0))} low={otherSets.reduce((n, g) => n + g.low, 0)} total={value.low} />}
       </View>

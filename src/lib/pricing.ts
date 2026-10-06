@@ -144,10 +144,15 @@ export function valueByGroup<K extends string>(entries: Entry[], snapshots: Read
   }).sort((a, b) => b.low - a.low || b.copies - a.copies);
 }
 
-/** The provider's latest publish date among priced cards, for "Prices from …". */
-export function newestPriceDate(ranked: readonly RankedEntry[]): string | undefined {
+/**
+ * The provider's latest publish date among the saved cards' prices, for "Prices from …". Read from the snapshots: a
+ * quote's `updatedAt` is its oldest source, so a "Not sure yet" range would understate how fresh the prices are.
+ */
+export function newestPriceDate(entries: readonly Entry[], snapshots: Readonly<Record<string, PriceSnapshot>>): string | undefined {
   let newest: string | undefined;
-  for (const { quote } of ranked) if (!newest || Date.parse(quote.updatedAt) > Date.parse(newest)) newest = quote.updatedAt;
+  for (const entry of entries) for (const price of snapshots[priceKey(entry.card)]?.prices ?? []) {
+    if (!newest || Date.parse(price.updatedAt) > Date.parse(newest)) newest = price.updatedAt;
+  }
   return newest;
 }
 

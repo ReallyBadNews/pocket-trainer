@@ -1,7 +1,6 @@
 import Animated from 'react-native-reanimated';
 import { useChromeScroll } from '@/components/scroll-chrome';
 import { Image } from 'expo-image';
-import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { C, CardArt, CardCaption, ChoiceMenu, Icon, IconButton, S, SearchBox, ToolbarAction, Txt, Button, mono, ui } from '@/components/pokedex-ui';
@@ -22,6 +21,7 @@ import { wishesOf } from '@/lib/wishlist';
 import { DEFAULT_BINDER_BROWSE, DEFAULT_DEX_BROWSE, useBinderBrowse, useBinderView, useDexBrowse, type DexShow } from '@/lib/browse-state';
 import { activeBinderFilters, matchesBinderFilters, matchesBinderQuery, REGIONS } from '@/lib/collection-filters';
 import { usePokedexNav } from '@/lib/pokedex-nav';
+import { openPage } from '@/components/page';
 
 const DEX_SHOWS: { id: DexShow; label: string }[] = [{ id: 'all', label: 'All Pokémon' }, { id: 'discovered', label: 'Discovered' }, ...REGIONS.map(region => ({ id: region.id, label: region.name }))];
 
@@ -44,8 +44,8 @@ export function DexScreen() {
   const visible = useMemo(() => species.filter(s => (show !== 'discovered' || discovered.has(s.id)) && (!region || (s.id >= region.first && s.id <= region.last)) && (!activeType || speciesTypes(s.id).includes(activeType)) && (!query || normalize(`${LANGUAGES.map(lang => s[lang] ?? '').join('')}${s.id}`).includes(normalize(query)))), [query, show, region, discovered, activeType]);
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} key={columns} data={visible} numColumns={columns} keyExtractor={s => String(s.id)} showsVerticalScrollIndicator={false} contentContainerStyle={[s.list, scroll.contentContainerStyle]} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive" columnWrapperStyle={{ gap: S.md }} initialNumToRender={15} maxToRenderPerBatch={20}
     ListHeaderComponent={<View style={s.header}>
-      <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} discovered</Txt><QuizInvite onPlay={nav.openQuiz} /><ToolbarAction title="Overview" onPress={() => router.push('/discoveries')} /></View></View>
-      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => router.push('/collection-value')} />}
+      <View><Txt accessibilityRole="header" variant="title">Your Pokédex</Txt><View style={s.summaryRow}><Txt muted variant="caption" style={s.summaryCopy}>{discovered.size} discovered</Txt><QuizInvite onPlay={nav.openQuiz} /><ToolbarAction title="Overview" onPress={() => openPage('/discoveries')} /></View></View>
+      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => openPage('/collection-value')} />}
       <SearchBox value={query} onChange={value => setBrowse({ query: value })} placeholder="Find a Pokémon by name or number" />
       <View style={s.toolbar}>
         <ChoiceMenu<DexShow> compact label="Show Pokémon" options={DEX_SHOWS} value={show} onChange={value => setBrowse({ show: value })} style={s.menu} />
@@ -93,13 +93,13 @@ export function BinderScreen() {
   return <Animated.FlatList {...scroll} onLayout={event => setListWidth(event.nativeEvent.layout.width)} data={pages ? [] : entries} key={columns} numColumns={columns} keyExtractor={e => e.key} columnWrapperStyle={{ gap: S.md }} contentContainerStyle={[s.list, scroll.contentContainerStyle]} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive"
     ListHeaderComponent={<View style={s.header}>
       <View><View style={s.collectionTitle}><Txt accessibilityRole="header" variant="title" style={{ flex: 1 }}>Binder</Txt><IconButton icon="plus" label="Add card" color={C.redDark} onPress={() => nav.openScan()} /><IconButton icon="star" label={`Wishlist (${wishCount})`} onPress={nav.openWishlist} /></View><Txt muted variant="caption">{totalCards(trainer)} {totalCards(trainer) === 1 ? 'card' : 'cards'}{duplicateCards(trainer) ? ` · ${duplicateCards(trainer)} ${duplicateCards(trainer) === 1 ? 'double' : 'doubles'}` : ''}</Txt></View>
-      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => router.push('/collection-value')} />}
+      {trainer.entries.length > 0 && <CollectionValue entries={trainer.entries} onPress={() => openPage('/collection-value')} />}
       <SearchBox value={query} onChange={value => setBrowse({ query: value })} placeholder="Search your cards" />
       <View style={s.toolbar}>
         <ChoiceMenu compact triggerTitle="View" label="Binder view" options={BINDER_VIEWS} value={view} onChange={setView} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
         <ChoiceMenu compact triggerTitle="Sort" label="Sort cards" options={BINDER_SORTS} value={sort} onChange={value => setBrowse({ sort: value })} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />
-        <ToolbarAction title={activeFilters ? `Filter (${activeFilters})` : 'Filter'} onPress={() => router.push('/binder-filters')} style={[s.tool, { flexBasis: (activeFilters ? 96 : 74) * Math.min(fontScale, 1.4) }]} />
-        {hasSets && <ToolbarAction title="Sets" onPress={() => router.push('/sets')} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />}
+        <ToolbarAction title={activeFilters ? `Filter (${activeFilters})` : 'Filter'} onPress={() => openPage('/binder-filters')} style={[s.tool, { flexBasis: (activeFilters ? 96 : 74) * Math.min(fontScale, 1.4) }]} />
+        {hasSets && <ToolbarAction title="Sets" onPress={() => openPage('/sets')} style={[s.tool, { flexBasis: 74 * Math.min(fontScale, 1.4) }]} />}
       </View>
       {priceSort && <Txt muted variant="caption">Uses the lower estimate in each range. Unpriced cards appear last.</Txt>}
       {(activeFilters > 0 || query) && <View style={s.sectionHeading}><Txt muted variant="caption" style={{ flexShrink: 1 }}>{entries.length} {entries.length === 1 ? 'card' : 'cards'}{browse.needsPrinting ? ' to confirm' : ' shown'}</Txt><ToolbarAction title="Clear filters" onPress={clearFilters} /></View>}

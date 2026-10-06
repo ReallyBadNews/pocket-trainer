@@ -67,7 +67,7 @@ export function PocketReview({ pockets, index, onIndex, slice, aspect, onChoose,
   const status = STATUS[state];
 
   return <>
-    <ScrollView ref={scroller} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={{ flexBasis: screenHeight }} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
+    <ScrollView ref={scroller} onLayout={e => setWidth(e.nativeEvent.layout.width)} style={[s.scroll, { height: screenHeight }]} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">
       {moved && <View accessibilityLiveRegion="polite" style={s.moved}><Icon name="check" size={18} color={READY} /><Txt variant="caption" style={{ flex: 1, minWidth: 0 }}>{moved} Here's the next one to check.</Txt></View>}
       {width > 0 && <Animated.View key={index} entering={FadeIn.duration(180)} style={[s.compare, { gap: S.md }]}>
         <View style={[s.side, { width: column }]}>
@@ -121,6 +121,8 @@ function StatusMark({ state }: { state: PocketReviewState }) {
 }
 
 const s = StyleSheet.create({
+  // A full window height that shrinks to fit the sheet, so paging and searching don't resize it.
+  scroll: { flexGrow: 0, flexShrink: 1 },
   content: { padding: S.xl, gap: S.lg },
   moved: { flexDirection: 'row', alignItems: 'center', gap: S.sm, padding: S.md, backgroundColor: '#DEE8D1', borderRadius: R.md },
   compare: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-start' },

@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import Animated from 'react-native-reanimated';
 import { BadgeArtwork } from '@/components/badge-artwork';
 import { BadgeInspection } from '@/components/badge-inspection';
-import { Page, PageFrame } from '@/components/page';
+import { Page, PageFrame, openPage } from '@/components/page';
 import { ActionRow, Button, C, Icon, Progress, S, Segmented, Txt, mono, pressFx, tick, ui } from '@/components/pokedex-ui';
 import { badgeMeter, badgeStatus, filterGoals, findBadge, goalCounts, languageCards, speciesColumns, speciesGoals, type BadgeStatus, type SpeciesFilter, type SpeciesGoal } from '@/lib/badge-details';
 import { BADGES, type Badge } from '@/lib/badges';
@@ -141,13 +141,13 @@ function SetsSection({ sets, earned }: { sets: readonly SetProgress[]; earned: b
   return <View style={s.section}>
     <View style={s.stack}><Txt accessibilityRole="header" variant="subtitle">{earned ? 'Your best sets' : 'Closest to finishing'}</Txt><Txt muted variant="caption">Tap a set to see which cards are still missing.</Txt></View>
     <View>{sets.slice(0, 3).map(set => <SetRow key={set.key} set={set} />)}</View>
-    <ActionRow title="See all your sets" value={plural(sets.length, 'set')} icon="binder" onPress={() => router.push('/sets')} />
+    <ActionRow title="See all your sets" value={plural(sets.length, 'set')} icon="binder" onPress={() => openPage('/sets')} />
   </View>;
 }
 
 function SetRow({ set }: { set: SetProgress }) {
   const left = set.official - set.owned;
-  return <Pressable accessibilityRole="button" accessibilityLabel={`${set.name}, ${LANGUAGE_LABELS[set.language]}, ${set.complete ? 'finished' : `${set.owned} of ${set.official} cards`}`} accessibilityHint="Opens the set checklist" onPress={() => { tick(); router.push({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }); }} style={state => [s.setRow, pressFx(state)]}>
+  return <Pressable accessibilityRole="button" accessibilityLabel={`${set.name}, ${LANGUAGE_LABELS[set.language]}, ${set.complete ? 'finished' : `${set.owned} of ${set.official} cards`}`} accessibilityHint="Opens the set checklist" onPress={() => { tick(); openPage({ pathname: '/sets/[language]/[id]', params: { language: set.language, id: set.setId } }); }} style={state => [s.setRow, pressFx(state)]}>
     <View style={s.copy}>
       <Txt variant="cardTitle">{set.name}</Txt>
       <Txt muted variant="caption">{LANGUAGE_LABELS[set.language]}</Txt>
