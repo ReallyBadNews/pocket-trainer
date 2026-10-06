@@ -484,7 +484,8 @@ export async function fetchCard(brief: CardBrief): Promise<Card> {
     finishes: [...available, 'unsure'],
   };
 
-  const { localImage, ...metadata } = card;
+  // The photo path belongs to this device's scan, so it isn't cached with the shared card details.
+  const { localImage: _localImage, ...metadata } = card;
   detailCache.set(key, { card: metadata, at: Date.now() });
 
   return card;

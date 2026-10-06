@@ -39,7 +39,7 @@ export function awardTrainerAccessories(trainer: Trainer): Trainer {
 
   if (unlocked.length || hadValidLedger) next = { ...trainer, unlockedAccessories: unlocked };
   else if (saved !== undefined) {
-    const { unlockedAccessories: discarded, ...rest } = trainer;
+    const { unlockedAccessories: _discarded, ...rest } = trainer;
     next = rest;
   }
 

@@ -20,7 +20,7 @@ import {
   type TextProps,
   type TextStyle,
 } from 'react-native';
-import Svg, { Circle, Path, Rect } from 'react-native-svg';
+import Svg, { Path } from 'react-native-svg';
 import { cardImage } from '@/lib/catalog';
 import { TYPE_COLORS, typeLabel, typeTextColor, type PokemonType } from '@/lib/species-details';
 import type { Card, CardBrief } from '@/lib/model';

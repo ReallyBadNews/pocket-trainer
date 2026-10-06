@@ -284,7 +284,7 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const str = (v: unknown, max = 300): v is string => typeof v === 'string' && v.length > 0 && v.length <= max;
 
 const safeImage = (v: unknown): v is string =>
-  typeof v === 'string' && /^https:\/\/assets\.tcgdex\.net\//.test(v) && v.length < 500;
+  typeof v === 'string' && v.startsWith('https://assets.tcgdex.net/') && v.length < 500;
 
 /** Wishes are a nice-to-have: a bad one is dropped instead of rejecting the whole binder. */
 function parseWishlist(value: unknown): Wish[] {
@@ -444,7 +444,7 @@ export function parseCollection(raw: string): Collection {
         ...(safeImage(c.image) ? { image: c.image } : {}),
         ...(typeof c.hp === 'number' && Number.isFinite(c.hp) ? { hp: c.hp } : {}),
         ...(typeof c.description === 'string' && c.description.length < 3000 ? { description: c.description } : {}),
-        ...(typeof c.localImage === 'string' && /^file:\/\//.test(c.localImage) ? { localImage: c.localImage } : {}),
+        ...(typeof c.localImage === 'string' && c.localImage.startsWith('file://') ? { localImage: c.localImage } : {}),
       };
 
       const finish = e.finish as Finish;
