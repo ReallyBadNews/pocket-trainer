@@ -241,15 +241,29 @@ export function Button({
   );
 }
 
-/** Buttons side by side when they fit, stacked full width when they don't. */
-export function ButtonRow({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
+/**
+ * Buttons side by side when they fit, stacked full width when they don't. The choice comes from the window and text
+ * size alone, so the row never measures and shifts after it appears. `columnWidth` is what each control needs at
+ * default text size: raise it for longer labels, such as a sort menu's longest choice, so they stack instead of wrapping.
+ */
+export function ButtonRow({
+  children,
+  columnWidth = 144,
+  style,
+}: {
+  children: ReactNode;
+  columnWidth?: number;
+  style?: StyleProp<ViewStyle>;
+}) {
   const { fontScale } = useWindowDimensions();
 
   return (
     <ButtonRowContext.Provider value>
       <View style={[ui.buttonRow, style]}>
         {Children.map(children, (child) =>
-          child ? <View style={[ui.buttonSlot, { flexBasis: 144 * Math.min(fontScale, 1.4) }]}>{child}</View> : null,
+          child ? (
+            <View style={[ui.buttonSlot, { flexBasis: columnWidth * Math.min(fontScale, 1.4) }]}>{child}</View>
+          ) : null,
         )}
       </View>
     </ButtonRowContext.Provider>

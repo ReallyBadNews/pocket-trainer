@@ -90,7 +90,7 @@ export function PageScan({
       alive.current = false;
     };
   }, []);
-  // "Scan the next page" from the celebration opens the camera straight away.
+  // "Next page" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
   const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {

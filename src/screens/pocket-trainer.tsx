@@ -303,7 +303,7 @@ export function PokedexShell() {
             {discovery && (
               <DiscoveryModal
                 {...discovery}
-                nextLabel={discovery.source === 'page' ? 'Scan the next page' : 'Scan another card'}
+                nextLabel={discovery.source === 'page' ? 'Next page' : 'Scan'}
                 onNext={() => {
                   setDiscovery(null);
                   setWishlistOpen(false);

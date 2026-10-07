@@ -362,7 +362,7 @@ function ScanSession({
     setNote(MATCH_NOTE);
   }
 
-  // "Scan another card" from the celebration opens the camera straight away.
+  // "Scan" from the celebration opens the camera straight away.
   const handledCapture = useRef(captureRequest);
   const captureRequested = useEffectEvent(() => void takePhoto());
   useEffect(() => {
