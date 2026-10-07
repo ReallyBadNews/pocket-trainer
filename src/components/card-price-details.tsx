@@ -1,8 +1,8 @@
 import { Pressable, ScrollView, StyleSheet, View, type TextStyle } from 'react-native';
 import { C, CardArt, Icon, LinkButton, R, S, Txt, pressFx, tick } from './pokedex-ui';
-import { PriceAmount, dateLabel } from './card-values';
+import { EstimateAmount, dateLabel } from './card-values';
 import { usePricing } from '@/lib/use-pricing';
-import { priceKey, quoteLabel, quotePrice, usd } from '@/lib/pricing';
+import { priceKey, quotePrice, spokenQuote, usd } from '@/lib/pricing';
 import { eur, printingPrices, sourceDates, type PrintingPrice } from '@/lib/printing-prices';
 import { collectorNumber, FINISH_LABELS, type Card, type Finish } from '@/lib/model';
 
@@ -38,7 +38,7 @@ export function CardPriceDetails({
   const failed = client.errors.has(key) || (!quote && client.errors.has('fx'));
   const refreshFailed = client.errors.has(key) || (euros && client.errors.has('fx'));
   const printing = FINISH_LABELS[finish];
-  const copies = quote && quantity > 1 ? `${quantity} copies: ${quoteLabel(quote, quantity)}` : undefined;
+  const copies = quote && quantity > 1 ? `. ${quantity} copies: ${spokenQuote(quote, quantity)}` : '';
 
   const provenance =
     quote &&
@@ -60,22 +60,17 @@ export function CardPriceDetails({
       <View
         accessible
         accessibilityRole="text"
-        accessibilityLabel={`Estimated value for ${printing}, ${quote ? `about ${quoteLabel(quote)}${copies ? `. ${copies}` : ''}. ${provenance}` : waiting ? 'looking up price' : 'unavailable'}`}
+        accessibilityLabel={`Estimated value for ${printing}, ${quote ? `about ${spokenQuote(quote)}${copies}. ${provenance}` : waiting ? 'looking up price' : 'unavailable'}`}
         style={s.readout}
       >
         <Txt variant="caption" style={s.readoutLabel}>
           Estimated value · {printing}
         </Txt>
         {quote ? (
-          <PriceAmount value={quote} size="readout" />
+          <EstimateAmount quote={quote} quantity={quantity} />
         ) : (
           <Txt muted style={s.emptyAmount}>
             {waiting ? 'Looking up price…' : failed ? 'Price unavailable' : 'No price yet'}
-          </Txt>
-        )}
-        {copies && (
-          <Txt variant="label" style={s.tabular}>
-            {copies}
           </Txt>
         )}
         {provenance && (

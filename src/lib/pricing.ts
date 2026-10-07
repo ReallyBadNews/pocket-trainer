@@ -193,6 +193,12 @@ export const usd = (cents: number) =>
 export const quoteLabel = (quote: Pick<PriceQuote, 'low' | 'high'>, quantity = 1) =>
   quote.low === quote.high ? usd(quote.low * quantity) : `${usd(quote.low * quantity)}–${usd(quote.high * quantity)}`;
 
+/** How the value readouts say a quote: a range reads as its low end, up to its high end, the way they show it. */
+export const spokenQuote = (quote: Pick<PriceQuote, 'low' | 'high'>, quantity = 1) =>
+  quote.low === quote.high
+    ? usd(quote.low * quantity)
+    : `${usd(quote.low * quantity)}, up to ${usd(quote.high * quantity)}`;
+
 export function collectionValue(
   entries: Entry[],
   snapshots: Readonly<Record<string, PriceSnapshot>>,
