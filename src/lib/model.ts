@@ -1,10 +1,11 @@
 import * as v from 'valibot';
 import { pokemonIds } from './card-kind';
 import { LanguageSchema, type Language } from './languages';
-import type { Badge } from './badges';
+import { BADGES, type Badge } from './badges';
 import { QUIZ_LENGTH } from './quiz';
 import { DateText, DexId, lenient, TcgdexImage, Text, withoutUndefined } from './schema';
 import { completedSetCount } from './set-progress';
+import { awardSidekicks, SIDEKICK_IDS, type SidekickId, type SidekickSelection } from './sidekicks';
 import {
   awardTrainerAccessories,
   TRAINER_ACCESSORIES,
@@ -72,6 +73,7 @@ export type TrainerAppearance = {
   outfit: (typeof TRAINER_OUTFITS)[number];
   headwear: (typeof TRAINER_HEADWEAR)[number];
   accessory?: TrainerAccessorySelection;
+  sidekick?: SidekickSelection;
 };
 
 export const TRAINER_OUTFIT_COLORS: Record<TrainerAppearance['outfit'], string> = {
@@ -108,6 +110,7 @@ export type Trainer = {
   quizBest?: number;
   wishlist?: Wish[];
   unlockedAccessories?: TrainerAccessoryId[];
+  unlockedSidekicks?: SidekickId[];
 };
 
 /** grownUpLock guards deleting cards and backups. It belongs to this device: backups never carry it. */
@@ -190,7 +193,7 @@ export function addCard(trainer: Trainer, card: Card, finish: Finish, quantity: 
   // Wish granted: any printing of a wished card takes it off the wishlist.
   if (trainer.wishlist) next.wishlist = trainer.wishlist.filter((w) => w.key !== wishKey(card));
 
-  return awardTrainerAccessories(next);
+  return awardTrainerRewards(next);
 }
 
 /** With exactly one known printing, pick it; otherwise leave it for the collector to confirm. */
@@ -278,6 +281,17 @@ export function badgeProgress(
 
   return Math.min(count, badge.target);
 }
+
+/** Badges earned from saved cards alone. For sets, screens use the bundled catalog, which agrees on saved cards. */
+export function earnedBadgeIds(trainer: Trainer): string[] {
+  const discovered = discoveredIds(trainer);
+
+  return BADGES.filter((badge) => badgeProgress(trainer, badge, discovered) >= badge.target).map((badge) => badge.id);
+}
+
+/** Accessories and sidekicks, once earned, are kept in the trainer's permanent ledgers. */
+export const awardTrainerRewards = (trainer: Trainer): Trainer =>
+  awardSidekicks(awardTrainerAccessories(trainer), earnedBadgeIds(trainer));
 
 const QuizScore = v.pipe(v.number(), v.integer(), v.minValue(0), v.maxValue(QUIZ_LENGTH));
 
@@ -380,6 +394,7 @@ const AppearanceSchema = v.object({
   accessory: v.optional(
     v.fallback(v.picklist(['none', ...TRAINER_ACCESSORIES.map((accessory) => accessory.id)]), 'none'),
   ),
+  sidekick: v.optional(v.fallback(v.picklist(['none', ...SIDEKICK_IDS]), 'none')),
 });
 
 const SavedTrainer = v.pipe(
@@ -404,6 +419,12 @@ const SavedTrainer = v.pipe(
         ),
       ),
     ),
+    unlockedSidekicks: lenient(
+      v.pipe(
+        v.array(v.unknown()),
+        v.transform((saved) => SIDEKICK_IDS.filter((id) => saved.includes(id))),
+      ),
+    ),
   }),
   v.transform(withoutUndefined),
 );
@@ -421,7 +442,7 @@ const SavedCollection = v.pipe(
     activeId,
     grownUpLock,
     trainers: trainers.map(({ appearance, ...trainer }, index) =>
-      awardTrainerAccessories({ ...trainer, appearance: appearance ?? trainerAppearanceFor(index) }),
+      awardTrainerRewards({ ...trainer, appearance: appearance ?? trainerAppearanceFor(index) }),
     ),
   })),
   v.check(
