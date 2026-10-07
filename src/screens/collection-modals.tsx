@@ -88,6 +88,7 @@ import { printingFinishes } from '@/lib/printing-prices';
 import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/species-details';
 import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
+import type { AppUpdates } from '@/lib/use-app-updates';
 import { TrainerAccessoryPicker } from './trainer-accessories';
 import { TrainerSidekickPicker } from './trainer-sidekicks';
 import { TRAINER_ACCESSORIES, awardTrainerAccessories, canEquipTrainerAccessory } from '@/lib/trainer-accessories';
@@ -879,16 +880,20 @@ type Feedback = { at: string; note?: string; error?: string };
 type ProfilePage = 'settings' | 'rename' | 'add' | 'appearance' | 'accessories' | 'sidekicks' | 'about';
 
 export function ProfilesModal({
+  startPage = 'settings',
+  update,
   onClose,
   onBusyChange,
 }: {
+  startPage?: 'settings' | 'about';
+  update?: AppUpdates;
   onClose: () => void;
   onBusyChange: (busy: boolean) => void;
 }) {
   const { collection, trainer, transact, updateTrainer } = useCollection();
   const [name, setName] = useState(trainer.name);
   const [newName, setNewName] = useState('');
-  const [page, setPage] = useState<ProfilePage>('settings');
+  const [page, setPage] = useState<ProfilePage>(startPage);
   const [draft, setDraft] = useState<TrainerAppearance>(trainer.appearance);
   // Which action is saving: only its row reports progress, the rest wait.
   const [busyKey, setBusyKey] = useState<string | null>(null);
@@ -1000,7 +1005,7 @@ export function ProfilesModal({
   if (page === 'about')
     return (
       <Sheet title="About" onClose={onClose} onBack={returnToSettings}>
-        <AboutScreen>
+        <AboutScreen appUpdates={update}>
           <View style={m.aboutDetails}>
             <Txt variant="caption" muted>
               Saved on this device. Live family syncing is planned for a later version. Card text is read on your
@@ -1348,7 +1353,12 @@ export function ProfilesModal({
           {feedbackAt('backup')}
         </View>
         <View style={m.section}>
-          <ActionRow title="About this app" disabled={busy} onPress={() => setPage('about')} />
+          <ActionRow
+            title="About this app"
+            value={update?.ready ? 'Update ready' : undefined}
+            disabled={busy}
+            onPress={() => setPage('about')}
+          />
           <Txt variant="caption" muted>
             Cards are saved on this device.
           </Txt>

@@ -1,4 +1,11 @@
-import Animated, { cancelAnimation, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, {
+  cancelAnimation,
+  useAnimatedStyle,
+  useReducedMotion,
+  useSharedValue,
+  withRepeat,
+  withTiming,
+} from 'react-native-reanimated';
 import { ScrollChromeContext, useScrollChromeController } from '@/components/scroll-chrome';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Modal, Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
@@ -35,6 +42,7 @@ export function PokedexShell() {
   const tab: TabName = TABS.find((item) => getTrigger(item.name)?.isFocused)?.name ?? 'dex';
   const [modalBusy, setModalBusy] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [profilePage, setProfilePage] = useState<'settings' | 'about'>('settings');
   const [selection, setSelection] = useState<{ brief: CardBrief; draft?: Card; entry?: Entry } | null>(null);
   const [speciesId, setSpeciesId] = useState<number | null>(null);
 
@@ -110,7 +118,7 @@ export function PokedexShell() {
   // The undo offer appears once the celebration closes and fades after a few seconds.
   const showUndo = !!undo && !modalOpen && undo.trainerId === trainer.id;
   // New app updates wait until nothing is open: no card, game, scan or undo offer.
-  const appUpdate = useAppUpdates(!modalOpen && tab !== 'scan' && !showUndo);
+  const appUpdates = useAppUpdates(!modalOpen && tab !== 'scan' && !showUndo);
   useEffect(() => {
     if (!showUndo) return;
     const timer = setTimeout(() => setUndo(null), 8000);
@@ -167,24 +175,23 @@ export function PokedexShell() {
           <Animated.View style={[s.topChrome, topStyle]}>
             <View onLayout={(event) => setHeaderHeight(event.nativeEvent.layout.height)}>
               <View style={s.header}>
-                <View style={ui.row}>
-                  <View style={s.lensRim}>
-                    <View style={s.lens}>
-                      <View style={s.glint} />
-                    </View>
-                  </View>
-                  <View style={{ flexDirection: 'row', gap: 6, alignSelf: 'flex-start', paddingTop: 5 }}>
-                    {['#F66C70', '#F2CD62', '#82C580'].map((color) => (
-                      <View key={color} style={[s.indicator, { backgroundColor: color }]} />
-                    ))}
-                  </View>
-                </View>
+                <DeviceLights
+                  updateReady={appUpdates.ready}
+                  onPress={() => {
+                    if (ready) {
+                      tick();
+                      setProfilePage('about');
+                      setProfileOpen(true);
+                    }
+                  }}
+                />
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel="Settings, trainer profiles, builder, and backups"
                   onPress={() => {
                     if (ready) {
                       tick();
+                      setProfilePage('settings');
                       setProfileOpen(true);
                     }
                   }}
@@ -279,7 +286,14 @@ export function PokedexShell() {
                 />
               </View>
             )}
-            {profileOpen && <ProfilesModal onBusyChange={setModalBusy} onClose={() => setProfileOpen(false)} />}
+            {profileOpen && (
+              <ProfilesModal
+                startPage={profilePage}
+                update={appUpdates}
+                onBusyChange={setModalBusy}
+                onClose={() => setProfileOpen(false)}
+              />
+            )}
             {selection && (
               <CardModal
                 onBusyChange={setModalBusy}
@@ -356,7 +370,7 @@ export function PokedexShell() {
             </View>
           </View>
         </View>
-        {appUpdate !== 'none' && (
+        {appUpdates.step !== 'none' && (
           <View accessibilityViewIsModal accessibilityLiveRegion="polite" style={s.updating}>
             <Image
               source={require('../../assets/crafted/pokeball.png')}
@@ -371,6 +385,67 @@ export function PokedexShell() {
         )}
       </View>
     </View>
+  );
+}
+
+/**
+ * The lens and indicator lights. When a newer update is waiting they become a button to Settings › About, where it
+ * can be installed: the green light blinks and "Update" appears in the space under the lights, so nothing shifts.
+ */
+function DeviceLights({ updateReady, onPress }: { updateReady: boolean; onPress: () => void }) {
+  const reduced = useReducedMotion();
+  const blink = useSharedValue(1);
+  useEffect(() => {
+    if (!updateReady || reduced) {
+      blink.set(1);
+
+      return;
+    }
+
+    blink.set(withRepeat(withTiming(0.25, { duration: 700 }), -1, true));
+
+    return () => cancelAnimation(blink);
+  }, [updateReady, reduced, blink]);
+  const blinkStyle = useAnimatedStyle(() => ({ opacity: blink.get() }));
+
+  const lights = (
+    <>
+      <View style={s.lensRim}>
+        <View style={[s.lens, updateReady && s.lensLit]}>
+          <View style={s.glint} />
+        </View>
+      </View>
+      <View style={s.indicatorColumn}>
+        <View style={s.indicators}>
+          <View style={[s.indicator, { backgroundColor: '#F66C70' }]} />
+          <View style={[s.indicator, { backgroundColor: '#F2CD62' }]} />
+          <Animated.View style={[s.indicator, { backgroundColor: updateReady ? '#B8F5A8' : '#82C580' }, blinkStyle]} />
+        </View>
+        {updateReady && (
+          <View style={s.updateTag}>
+            <Icon name="download" size={12} color="white" />
+            <Txt maxFontSizeMultiplier={1.2} style={s.updateText}>
+              Update
+            </Txt>
+          </View>
+        )}
+      </View>
+    </>
+  );
+
+  if (!updateReady) return <View style={ui.row}>{lights}</View>;
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="New Pokédex update ready"
+      accessibilityHint="Opens About, where you can update now"
+      onPress={onPress}
+      hitSlop={8}
+      style={({ pressed }) => [ui.row, pressed && { opacity: 0.7 }]}
+    >
+      {lights}
+    </Pressable>
   );
 }
 
@@ -498,7 +573,12 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   glint: { position: 'absolute', width: 17, height: 11, borderRadius: 10, top: 4, left: 5, backgroundColor: '#C2F6FE' },
+  lensLit: { backgroundColor: '#7FDDF5', borderColor: '#B8F5A8' },
+  indicatorColumn: { alignSelf: 'stretch', gap: 6, paddingTop: 5 },
+  indicators: { flexDirection: 'row', gap: 6 },
   indicator: { width: 9, height: 9, borderRadius: 8, borderWidth: 1, borderColor: '#80252A' },
+  updateTag: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  updateText: { color: 'white', fontSize: 12, lineHeight: 15, fontWeight: '700' },
   trainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, minHeight: 44 },
   hinge: { height: 15, flexDirection: 'row', marginBottom: 8 },
   hingeLine: {

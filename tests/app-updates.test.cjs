@@ -2,7 +2,7 @@ const { test } = require('node:test');
 
 const assert = require('node:assert/strict');
 
-const { updateStep, isNewSession, AWAY_FOR_NEW_SESSION } = require('../.test-build/lib/app-updates');
+const { updateStep, updateOffer, isNewSession, AWAY_FOR_NEW_SESSION } = require('../.test-build/lib/app-updates');
 
 const ready = { idle: true, sessionOpen: true, restartedFor: null };
 
@@ -42,6 +42,18 @@ test('a restart into an update that failed to launch is never repeated', () => {
     updateStep({ running: 'a', downloading: false, pending: 'c' }, { ...ready, restartedFor: undefined }),
     'none',
   );
+});
+
+test('an update that arrives mid-session can be installed from Settings', () => {
+  // Downloaded, or still on the server, it's offered even while a session is underway.
+  assert.equal(updateOffer({ running: 'a', downloading: false, pending: 'b' }, null), 'b');
+  assert.equal(updateOffer({ running: 'a', available: 'b', downloading: false }, null), 'b');
+  assert.equal(updateOffer({ running: 'b', available: 'b', downloading: false, pending: 'b' }, null), undefined);
+  assert.equal(updateOffer({ running: 'a', downloading: false }, null), undefined);
+  // Never one that already failed to launch, and nothing until the saved record loads.
+  assert.equal(updateOffer({ running: 'a', downloading: false, pending: 'b' }, 'b'), undefined);
+  assert.equal(updateOffer({ running: 'a', available: 'c', downloading: false, pending: 'b' }, 'b'), 'c');
+  assert.equal(updateOffer({ running: 'a', downloading: false, pending: 'b' }, undefined), undefined);
 });
 
 test('only coming back after a while starts a new session', () => {
