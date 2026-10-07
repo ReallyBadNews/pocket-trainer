@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { StyleSheet, View } from 'react-native';
 import { TRAINER_OUTFIT_COLORS, type TrainerAppearance } from '@/lib/model';
 import type { TrainerAccessoryId } from '@/lib/trainer-accessories';
+import { SidekickArt } from './sidekick-art';
 
 export const TRAINER_SKIN_COLORS: Record<TrainerAppearance['skinTone'], string> = {
   porcelain: '#F6D5C2',
@@ -161,62 +162,88 @@ export const TRAINER_ACCESSORY_IMAGES = {
   expeditionSatchel: require('../../assets/crafted/trainers/trainer-accessory-expedition-satchel.webp'),
 } as const satisfies Record<TrainerAccessoryId, number>;
 
+/** The sidekick rides in a bubble on the portrait's lower corner, slightly past its edge, without changing its layout size. */
 export function TrainerAvatar({ appearance, size = 48 }: { appearance: TrainerAppearance; size?: number }) {
   const faceKey = `${appearance.skinTone}-${appearance.hairStyle}-${appearance.hairColor}` as const;
 
   const headwearKey = appearance.headwear === 'none' ? null : (`${appearance.headwear}-${appearance.outfit}` as const);
 
   const accessory = appearance.accessory ?? 'none';
+  const sidekick = appearance.sidekick ?? 'none';
   const layerStyle = [StyleSheet.absoluteFill, { width: size, height: size }];
+  const border = Math.max(2, size * 0.025);
+  const bubble = Math.round(size * 0.52);
 
   return (
     <View
       accessible={false}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
-      style={[
-        s.avatar,
-        {
-          width: size,
-          height: size,
-          borderRadius: size / 2,
-          borderWidth: Math.max(2, size * 0.025),
-          borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
-        },
-      ]}
+      style={{ width: size, height: size }}
     >
-      <Image
-        accessible={false}
-        source={OUTFIT_IMAGES[appearance.outfit]}
-        style={layerStyle}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-      />
-      <Image
-        accessible={false}
-        source={FACE_IMAGES[faceKey]}
-        style={layerStyle}
-        contentFit="contain"
-        cachePolicy="memory-disk"
-      />
-      {accessory !== 'none' && (
+      <View
+        style={[
+          s.avatar,
+          {
+            width: size,
+            height: size,
+            borderRadius: size / 2,
+            borderWidth: border,
+            borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
+          },
+        ]}
+      >
         <Image
           accessible={false}
-          source={TRAINER_ACCESSORY_IMAGES[accessory]}
-          recyclingKey={accessory}
+          source={OUTFIT_IMAGES[appearance.outfit]}
           style={layerStyle}
           contentFit="contain"
           cachePolicy="memory-disk"
         />
-      )}
-      {headwearKey && (
         <Image
           accessible={false}
-          source={HEADWEAR_IMAGES[headwearKey]}
+          source={FACE_IMAGES[faceKey]}
           style={layerStyle}
           contentFit="contain"
           cachePolicy="memory-disk"
         />
+        {accessory !== 'none' && (
+          <Image
+            accessible={false}
+            source={TRAINER_ACCESSORY_IMAGES[accessory]}
+            recyclingKey={accessory}
+            style={layerStyle}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+          />
+        )}
+        {headwearKey && (
+          <Image
+            accessible={false}
+            source={HEADWEAR_IMAGES[headwearKey]}
+            style={layerStyle}
+            contentFit="contain"
+            cachePolicy="memory-disk"
+          />
+        )}
+      </View>
+      {sidekick !== 'none' && (
+        <View
+          style={[
+            s.sidekick,
+            {
+              width: bubble,
+              height: bubble,
+              borderRadius: bubble / 2,
+              borderWidth: Math.max(1.5, border * 0.8),
+              borderColor: TRAINER_OUTFIT_COLORS[appearance.outfit],
+              right: -size * 0.1,
+              bottom: -size * 0.04,
+            },
+          ]}
+        >
+          <SidekickArt id={sidekick} size={bubble * 0.78} />
+        </View>
       )}
     </View>
   );
@@ -227,5 +254,11 @@ const s = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
     backgroundColor: '#DCE8D2',
+  },
+  sidekick: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FAFCF7',
   },
 });

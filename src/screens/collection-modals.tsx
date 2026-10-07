@@ -41,7 +41,7 @@ import {
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { cardKindLabel, pokemonIds } from '@/lib/card-kind';
 import { useCollection } from '@/lib/collection-context';
-import { fetchCard, setForCard, speciesById, speciesImage } from '@/lib/catalog';
+import { catalogSet, fetchCard, setForCard, speciesById, speciesImage } from '@/lib/catalog';
 import {
   collectorNumber,
   changePrinting,
@@ -89,7 +89,12 @@ import { evolutionFamily, pokedexEntry, speciesTypes, typeLabel } from '@/lib/sp
 import { useGrownUpCheck } from '@/components/grown-up-gate';
 import { AboutScreen } from './about-screen';
 import { TrainerAccessoryPicker } from './trainer-accessories';
+import { TrainerSidekickPicker } from './trainer-sidekicks';
 import { TRAINER_ACCESSORIES, awardTrainerAccessories, canEquipTrainerAccessory } from '@/lib/trainer-accessories';
+import { awardSidekicks, canChooseSidekick, findSidekick, type SidekickId } from '@/lib/sidekicks';
+import { SidekickArt } from '@/components/sidekick-art';
+import { earnedBadges } from '@/lib/badge-details';
+import { setProgress } from '@/lib/set-progress';
 import { animatedSprite } from '@/lib/pokedex-voice';
 import { usePokedexVoice } from '@/lib/use-pokedex-voice';
 import { Confetti, HoloShine } from '@/components/celebration';
@@ -871,7 +876,7 @@ function TrainerChoiceRow<T extends string>({
 
 type Feedback = { at: string; note?: string; error?: string };
 
-type ProfilePage = 'settings' | 'rename' | 'add' | 'appearance' | 'accessories' | 'about';
+type ProfilePage = 'settings' | 'rename' | 'add' | 'appearance' | 'accessories' | 'sidekicks' | 'about';
 
 export function ProfilesModal({
   onClose,
@@ -975,8 +980,17 @@ export function ProfilesModal({
       await updateTrainer((t) => {
         if (!canEquipTrainerAccessory(t, draft.accessory ?? 'none'))
           throw new Error('This accessory has not been earned by this trainer yet.');
+        // Judged like the Badges tab, so a sidekick shown as unlocked there can always be saved.
+        const earned = earnedBadges(t, discoveredIds(t), setProgress(t, catalogSet));
 
-        return { ...awardTrainerAccessories(t), appearance: draft, color: TRAINER_OUTFIT_COLORS[draft.outfit] };
+        if (!canChooseSidekick(t, draft.sidekick ?? 'none', earned))
+          throw new Error('This sidekick has not been unlocked by this trainer yet.');
+
+        return {
+          ...awardSidekicks(awardTrainerAccessories(t), earned),
+          appearance: draft,
+          color: TRAINER_OUTFIT_COLORS[draft.outfit],
+        };
       });
       setPage('settings');
       note('New look saved!');
@@ -1010,6 +1024,21 @@ export function ProfilesModal({
           busy={busy}
           onChoose={(selection) => {
             choose('accessory', selection);
+            setPage('appearance');
+          }}
+        />
+      </Sheet>
+    );
+
+  if (page === 'sidekicks')
+    return (
+      <Sheet title="Sidekick" onClose={onClose} onBack={() => setPage('appearance')} busy={busy} dismissible={false}>
+        <TrainerSidekickPicker
+          trainer={trainer}
+          appearance={draft}
+          busy={busy}
+          onChoose={(selection) => {
+            choose('sidekick', selection);
             setPage('appearance');
           }}
         />
@@ -1130,6 +1159,12 @@ export function ProfilesModal({
             value={TRAINER_ACCESSORIES.find((accessory) => accessory.id === draft.accessory)?.name ?? 'None'}
             disabled={busy}
             onPress={() => setPage('accessories')}
+          />
+          <ActionRow
+            title="Sidekick"
+            value={findSidekick(draft.sidekick)?.name ?? 'None'}
+            disabled={busy}
+            onPress={() => setPage('sidekicks')}
           />
           {feedbackAt('look')}
         </ScrollView>
@@ -1530,6 +1565,7 @@ export function DiscoveryModal({
   newIds,
   quantity,
   granted = 0,
+  sidekicks = [],
   nextLabel,
   onNext,
   onClose,
@@ -1538,6 +1574,7 @@ export function DiscoveryModal({
   newIds: number[];
   quantity: number;
   granted?: number;
+  sidekicks?: SidekickId[];
   nextLabel: string;
   onNext: () => void;
   onClose: () => void;
@@ -1646,6 +1683,7 @@ export function DiscoveryModal({
             </Txt>
           </View>
         )}
+        {ready && sidekicks.length > 0 && <NewSidekicks ids={sidekicks} />}
       </ScrollView>
       {ready && (
         <View style={m.footer}>
@@ -1656,6 +1694,34 @@ export function DiscoveryModal({
         </View>
       )}
     </Sheet>
+  );
+}
+
+/** A badge earned by this add unlocked these sidekicks. They wait in the picker until the trainer chooses one. */
+function NewSidekicks({ ids }: { ids: SidekickId[] }) {
+  const names = ids.map((id) => findSidekick(id)?.name ?? id);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names.at(-1)}` : names[0];
+
+  return (
+    <View
+      accessible
+      accessibilityLabel={`New ${ids.length > 1 ? 'sidekicks' : 'sidekick'}: ${list}. Choose in Settings, Appearance.`}
+      style={m.sidekickNews}
+    >
+      <View style={m.sidekickArt}>
+        {ids.slice(0, 3).map((id) => (
+          <SidekickArt key={id} id={id} size={48} />
+        ))}
+      </View>
+      <View style={m.sidekickCopy}>
+        <Txt variant="cardTitle" style={m.sidekickTitle}>
+          {ids.length > 1 ? `New sidekicks: ${list}!` : `${list} can be your sidekick!`}
+        </Txt>
+        <Txt variant="caption" muted>
+          Choose in Settings › Appearance.
+        </Txt>
+      </View>
+    </View>
   );
 }
 
@@ -1769,6 +1835,10 @@ const m = StyleSheet.create({
   countText: { color: 'white', fontFamily: mono, fontSize: 14, fontWeight: '700' },
   wishBadge: { maxWidth: '100%', flexDirection: 'row', alignItems: 'center', gap: 7, paddingVertical: S.sm },
   wishBadgeText: { color: WISH.ink, fontWeight: '600', flexShrink: 1 },
+  sidekickNews: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: S.md, paddingVertical: S.sm },
+  sidekickArt: { flexDirection: 'row' },
+  sidekickCopy: { flex: 1, minWidth: 0, gap: 2 },
+  sidekickTitle: { color: '#80611F' },
   wishList: { padding: 20, paddingBottom: 26 },
   undo: { minHeight: 44, minWidth: 56, alignItems: 'center', justifyContent: 'center' },
   wishRemove: {

@@ -22,6 +22,10 @@ export function badgeStatus(
   return { progress, earned, closest: badge.kind === 'sets' && !earned ? sets[0] : undefined };
 }
 
+/** Ids of the badges earned right now, judged exactly as the Badges tab judges them. */
+export const earnedBadges = (trainer: Trainer, discovered: Set<number>, sets: readonly SetProgress[]): string[] =>
+  BADGES.filter((badge) => badgeStatus(trainer, badge, discovered, sets).earned).map((badge) => badge.id);
+
 const plural = (n: number, one: string) => (n === 1 ? one : `${one}s`);
 
 export type BadgeMeter = { value: number; total: number; label: string; left?: string };

@@ -40,6 +40,8 @@ import { LANGUAGE_LABELS } from '@/lib/languages';
 import { discoveredIds, totalCards } from '@/lib/model';
 import { usePokedexNav } from '@/lib/pokedex-nav';
 import { setProgress, type SetProgress } from '@/lib/set-progress';
+import { sidekickForBadge } from '@/lib/sidekicks';
+import { SidekickArt } from '@/components/sidekick-art';
 
 const GOLD = '#80611F',
   GREEN = '#679255';
@@ -144,6 +146,40 @@ function Hero({ badge, status, onInspect }: { badge: Badge; status: BadgeStatus;
           )}
         </View>
       )}
+      <SidekickReward badge={badge} earned={status.earned} />
+    </View>
+  );
+}
+
+/** Every badge unlocks a sidekick. Once unlocked it stays, even if the badge's cards later leave the collection. */
+function SidekickReward({ badge, earned }: { badge: Badge; earned: boolean }) {
+  const { trainer } = useCollection();
+  const sidekick = sidekickForBadge(badge.id);
+
+  if (!sidekick) return null;
+  const unlocked = earned || !!trainer.unlockedSidekicks?.includes(sidekick.id);
+  const chosen = trainer.appearance.sidekick === sidekick.id;
+
+  const [title, detail] = chosen
+    ? [`${sidekick.name} is your sidekick!`, 'It goes everywhere with your trainer.']
+    : unlocked
+      ? [`${sidekick.name} can be your sidekick!`, 'Choose it in Settings › Appearance.']
+      : [`Unlock ${sidekick.name}`, `Earn this badge and ${sidekick.name} can join your trainer.`];
+
+  return (
+    <View accessible accessibilityLabel={`Sidekick reward. ${title} ${detail}`} style={s.reward}>
+      <SidekickArt id={sidekick.id} size={64} locked={!unlocked} />
+      <View style={s.copy}>
+        <Txt muted variant="label">
+          Sidekick reward
+        </Txt>
+        <Txt variant="cardTitle" style={unlocked && s.earnedText}>
+          {title}
+        </Txt>
+        <Txt muted variant="caption">
+          {detail}
+        </Txt>
+      </View>
     </View>
   );
 }
@@ -442,6 +478,15 @@ const s = StyleSheet.create({
   copy: { flex: 1, minWidth: 0, gap: S.xs },
   earned: { flexDirection: 'row', alignItems: 'center', gap: S.sm, marginBottom: S.sm },
   earnedText: { color: GOLD, flexShrink: 1 },
+  reward: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.md,
+    paddingVertical: S.md,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderColor: C.line,
+  },
   section: { gap: S.md },
   list: { paddingHorizontal: S.xl },
   listHeader: { gap: S.xl, marginBottom: S.lg },

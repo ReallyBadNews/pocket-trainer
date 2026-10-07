@@ -12,6 +12,7 @@ import { useCollection } from '@/lib/collection-context';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal, WishlistModal } from './collection-modals';
 import { undoAdditions, type Card, type CardBrief, type Entry } from '@/lib/model';
 import type { AddedCards } from '@/lib/use-add-cards';
+import type { SidekickId } from '@/lib/sidekicks';
 import { QuizModal } from './quiz-screen';
 import { useAppUpdates } from '@/lib/use-app-updates';
 import { showOnlyNeedsPrinting } from '@/lib/browse-state';
@@ -42,6 +43,7 @@ export function PokedexShell() {
     newIds: number[];
     quantity: number;
     granted: number;
+    sidekicks: SidekickId[];
     source: 'card' | 'page';
   } | null>(null);
 
@@ -100,6 +102,7 @@ export function PokedexShell() {
       newIds: added.newIds,
       quantity: added.quantity,
       granted: added.granted,
+      sidekicks: added.sidekicks,
       source,
     });
   }
