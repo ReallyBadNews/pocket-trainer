@@ -2,30 +2,52 @@ import type { ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, View, type TextStyle } from 'react-native';
 import { C, Icon, R, S, Txt, pressFx, tick } from './pokedex-ui';
 import { usePricing } from '@/lib/use-pricing';
-import { collectionValue, priceKey, quoteLabel, quotePrice, usd } from '@/lib/pricing';
+import { collectionValue, priceKey, quoteLabel, quotePrice, spokenQuote, usd } from '@/lib/pricing';
 import type { CardBrief, Entry, Finish } from '@/lib/model';
 
 export const dateLabel = (value: string) =>
   new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
-/** Ranges wrap between whole amounts, never inside one. */
-export function PriceAmount({ value, size }: { value: { low: number; high: number }; size: 'tag' | 'readout' }) {
-  const amount = size === 'tag' ? s.tagAmount : s.amount;
-
+/** A tile's price. Ranges wrap between whole amounts, never inside one. */
+function PriceAmount({ value }: { value: { low: number; high: number } }) {
   return (
     <View style={s.amountRow}>
-      <Txt variant="readout" style={amount}>
+      <Txt variant="readout" style={s.tagAmount}>
         {usd(value.low)}
       </Txt>
       {value.high !== value.low && (
         <View style={s.rangeEnd}>
-          <Txt style={[s.rangeDash, size === 'tag' && s.tagDash]}>–</Txt>
-          <Txt variant="readout" style={amount}>
+          <Txt style={s.tagDash}>–</Txt>
+          <Txt variant="readout" style={s.tagAmount}>
             {usd(value.high)}
           </Txt>
         </View>
       )}
     </View>
+  );
+}
+
+/**
+ * A card's estimate inside a readout window. Like the collection total, a range (printing not chosen yet) leads with
+ * its low end and puts the high end on its own line, so the headline is always one whole amount.
+ */
+export function EstimateAmount({ quote, quantity }: { quote: { low: number; high: number }; quantity: number }) {
+  return (
+    <>
+      <Txt variant="readout" style={s.amount}>
+        {usd(quote.low)}
+      </Txt>
+      {quote.high !== quote.low && (
+        <Txt variant="label" style={s.tabular}>
+          Up to {usd(quote.high)}
+        </Txt>
+      )}
+      {quantity > 1 && (
+        <Txt variant="label" style={s.tabular}>
+          {quantity} copies: {quoteLabel(quote, quantity)}
+        </Txt>
+      )}
+    </>
   );
 }
 
@@ -98,7 +120,7 @@ export function CardPriceTag({
           accessibilityRole="text"
           accessibilityLabel={`Worth about ${quoteLabel(quote)}${quote.converted ? ', converted from euros' : ''}${quote.stale ? ', saved price' : ''}`}
         >
-          <PriceAmount value={quote} size="tag" />
+          <PriceAmount value={quote} />
         </View>
       ) : (
         <Txt muted variant="caption">
@@ -139,25 +161,20 @@ export function CardValuePanel({
   const quote = quotePrice(snapshot, finish, client.fx);
   const waiting = !client.ready || client.pending.has(key) || (!client.fx && client.pending.has('fx'));
   const failed = client.errors.has(key) || (!quote && client.errors.has('fx'));
-  const copies = quote && quantity > 1 ? `${quantity} copies: ${quoteLabel(quote, quantity)}` : undefined;
+  const copies = quote && quantity > 1 ? `. ${quantity} copies: ${spokenQuote(quote, quantity)}` : '';
 
   return (
     <ValueReadout
       label="Estimated value"
       onPress={onPress}
       accessibilityHint="Opens price details for every printing"
-      accessibilityLabel={`Estimated value, ${quote ? `about ${quoteLabel(quote)}${copies ? `. ${copies}` : ''}` : waiting ? 'looking up price' : 'unavailable'}`}
+      accessibilityLabel={`Estimated value, ${quote ? `about ${spokenQuote(quote)}${copies}` : waiting ? 'looking up price' : 'unavailable'}`}
     >
       {quote ? (
-        <PriceAmount value={quote} size="readout" />
+        <EstimateAmount quote={quote} quantity={quantity} />
       ) : (
         <Txt muted style={s.emptyAmount}>
           {waiting ? 'Looking up price…' : failed ? 'Price unavailable' : 'No price yet'}
-        </Txt>
-      )}
-      {copies && (
-        <Txt variant="label" style={s.tabular}>
-          {copies}
         </Txt>
       )}
       {quote?.unconfirmed && (
@@ -302,15 +319,7 @@ const s = StyleSheet.create({
   readoutLabel: { color: C.muted, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   amountRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 4, rowGap: 0 },
   rangeEnd: { flexDirection: 'row', alignItems: 'baseline', gap: 4, maxWidth: '100%' },
-  amount: {
-    color: C.ink,
-    fontSize: 28,
-    lineHeight: 34,
-    fontWeight: '700',
-    letterSpacing: -0.5,
-    ...tabular,
-    flexShrink: 1,
-  },
+  amount: { color: C.ink, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.5, ...tabular },
   total: { color: C.ink, fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -0.6, ...tabular },
   tagAmount: {
     color: C.ink,
@@ -321,8 +330,7 @@ const s = StyleSheet.create({
     ...tabular,
     flexShrink: 1,
   },
-  rangeDash: { color: '#7A8C73', fontSize: 24, lineHeight: 34, fontWeight: '400' },
-  tagDash: { fontSize: 16, lineHeight: 22 },
+  tagDash: { color: '#7A8C73', fontSize: 16, lineHeight: 22, fontWeight: '400' },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
   hero: { flexDirection: 'column', alignItems: 'stretch', gap: 2, paddingVertical: S.lg },
   heroTotal: { color: C.ink, fontSize: 42, lineHeight: 50, fontWeight: '800', letterSpacing: -1, ...tabular },

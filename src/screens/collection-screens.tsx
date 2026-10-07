@@ -307,8 +307,8 @@ export function BinderScreen() {
           )}
           <SearchBox value={query} onChange={(value) => setBrowse({ query: value })} placeholder="Search your cards" />
           <Segmented label="Binder view" options={BINDER_VIEWS} value={view} onChange={setView} />
-          {/* Equal columns that stack at the largest text sizes, so neither control ever sits alone on a wrapped line. */}
-          <ButtonRow>
+          {/* Wide enough for "Needs printing first" on one line: stacked on phones, side by side on wider screens. */}
+          <ButtonRow columnWidth={220}>
             <ChoiceMenu
               compact
               icon="sort"

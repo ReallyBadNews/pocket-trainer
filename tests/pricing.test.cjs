@@ -10,6 +10,7 @@ const {
   parseExchangeRate,
   quotePrice,
   quoteLabel,
+  spokenQuote,
   collectionValue,
   mostValuable,
   rankByValue,
@@ -106,6 +107,9 @@ test('unknown printing shows a range; special and first-edition finishes never b
   const s = snapshot('sm9-156');
   const q = quotePrice(s, 'unsure', fx, now);
   assert.equal(quoteLabel(q), '$0.34–$0.63');
+  assert.equal(spokenQuote(q), '$0.34, up to $0.63');
+  assert.equal(spokenQuote(q, 3), '$1.02, up to $1.89');
+  assert.equal(spokenQuote({ low: 888, high: 888 }, 2), '$17.76');
   assert.equal(q.unconfirmed, true);
 
   for (const finish of ['firstEdition', 'firstEditionHolo', 'firstEditionReverse', 'wPromo'])
