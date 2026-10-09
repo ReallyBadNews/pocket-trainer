@@ -1,5 +1,6 @@
 import Animated, {
   cancelAnimation,
+  Easing,
   useAnimatedStyle,
   useReducedMotion,
   useSharedValue,
@@ -13,7 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { router, usePathname } from 'expo-router';
 import { TabSlot, useTabTrigger } from 'expo-router/ui';
-import { C, Icon, Txt, ui, Button, tick } from '@/components/pokedex-ui';
+import { C, Icon, Txt, Button, tick } from '@/components/pokedex-ui';
 import { TrainerAvatar } from '@/components/trainer-avatar';
 import { useCollection } from '@/lib/collection-context';
 import { CardModal, DiscoveryModal, ProfilesModal, SpeciesModal, WishlistModal } from './collection-modals';
@@ -389,51 +390,54 @@ export function PokedexShell() {
 }
 
 /**
- * The lens and indicator lights. When a newer update is waiting they become a button to Settings › About, where it
- * can be installed: the green light blinks and "Update" appears in the space under the lights, so nothing shifts.
+ * The lens and indicator lights, rendered in Blender (scripts/blender-header-lens.py). When a newer update is waiting
+ * they become a button to Settings › About, where it can be installed: the lens lights up blue with a scanner sweep
+ * circling inside it, the green light comes on, and "Update" appears in the space under the lights, so nothing shifts.
  */
 function DeviceLights({ updateReady, onPress }: { updateReady: boolean; onPress: () => void }) {
   const reduced = useReducedMotion();
-  const blink = useSharedValue(1);
+  const sweeping = updateReady && !reduced;
+  const turn = useSharedValue(0);
   useEffect(() => {
-    if (!updateReady || reduced) {
-      blink.set(1);
+    if (!sweeping) return;
 
-      return;
-    }
+    turn.set(0);
+    turn.set(withRepeat(withTiming(1, { duration: 2000, easing: Easing.linear }), -1, false));
 
-    blink.set(withRepeat(withTiming(0.25, { duration: 700 }), -1, true));
+    return () => cancelAnimation(turn);
+  }, [sweeping, turn]);
+  const sweepStyle = useAnimatedStyle(() => ({ transform: [{ rotate: `${turn.get() * 360}deg` }] }));
 
-    return () => cancelAnimation(blink);
-  }, [updateReady, reduced, blink]);
-  const blinkStyle = useAnimatedStyle(() => ({ opacity: blink.get() }));
-
+  // Every layer stays mounted, so lighting up only changes opacity and never waits on an image decode.
   const lights = (
-    <>
-      <View style={s.lensRim}>
-        <View style={[s.lens, updateReady && s.lensLit]}>
-          <View style={s.glint} />
+    <View style={s.lights}>
+      <Image
+        source={require('../../assets/crafted/header-lens/lens-lit-glow.webp')}
+        style={[s.lensArt, !updateReady && s.unlit]}
+      />
+      <Image
+        source={require('../../assets/crafted/header-lens/lens-off.webp')}
+        style={[s.lensArt, updateReady && s.unlit]}
+      />
+      <Image
+        source={require('../../assets/crafted/header-lens/lens-lit.webp')}
+        style={[s.lensArt, !updateReady && s.unlit]}
+      />
+      <Animated.View style={[s.sweep, !sweeping && s.unlit, sweepStyle]}>
+        <Image source={require('../../assets/crafted/header-lens/lens-sweep.webp')} style={s.sweepArt} />
+      </Animated.View>
+      {updateReady && (
+        <View style={s.updateTag}>
+          <Icon name="download" size={12} color="white" />
+          <Txt maxFontSizeMultiplier={1.2} style={s.updateText}>
+            Update
+          </Txt>
         </View>
-      </View>
-      <View style={s.indicatorColumn}>
-        <View style={s.indicators}>
-          <View style={[s.indicator, { backgroundColor: '#F66C70' }]} />
-          <View style={[s.indicator, { backgroundColor: '#F2CD62' }]} />
-          <Animated.View style={[s.indicator, { backgroundColor: updateReady ? '#B8F5A8' : '#82C580' }, blinkStyle]} />
-        </View>
-        {updateReady && (
-          <View style={s.updateTag}>
-            <Icon name="download" size={12} color="white" />
-            <Txt maxFontSizeMultiplier={1.2} style={s.updateText}>
-              Update
-            </Txt>
-          </View>
-        )}
-      </View>
-    </>
+      )}
+    </View>
   );
 
-  if (!updateReady) return <View style={ui.row}>{lights}</View>;
+  if (!updateReady) return lights;
 
   return (
     <Pressable
@@ -442,7 +446,7 @@ function DeviceLights({ updateReady, onPress }: { updateReady: boolean; onPress:
       accessibilityHint="Opens About, where you can update now"
       onPress={onPress}
       hitSlop={8}
-      style={({ pressed }) => [ui.row, pressed && { opacity: 0.7 }]}
+      style={({ pressed }) => pressed && { opacity: 0.7 }}
     >
       {lights}
     </Pressable>
@@ -555,29 +559,14 @@ const s = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  lensRim: {
-    width: 44,
-    height: 44,
-    borderRadius: 30,
-    padding: 5,
-    backgroundColor: '#E8EADB',
-    borderBottomWidth: 3,
-    borderBottomColor: '#9FADA7',
-  },
-  lens: {
-    flex: 1,
-    borderRadius: 25,
-    backgroundColor: C.blue,
-    borderWidth: 3,
-    borderColor: '#2C91B1',
-    overflow: 'hidden',
-  },
-  glint: { position: 'absolute', width: 17, height: 11, borderRadius: 10, top: 4, left: 5, backgroundColor: '#C2F6FE' },
-  lensLit: { backgroundColor: '#7FDDF5', borderColor: '#B8F5A8' },
-  indicatorColumn: { alignSelf: 'stretch', gap: 6, paddingTop: 5 },
-  indicators: { flexDirection: 'row', gap: 6 },
-  indicator: { width: 9, height: 9, borderRadius: 8, borderWidth: 1, borderColor: '#80252A' },
-  updateTag: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  // The header's 93 × 44 pt footprint: the 44 pt lens, a 10 pt gap, then the three lights. The art carries a 16 pt
+  // margin on every side for its shadow and glow, which spills past the footprint without moving anything.
+  lights: { width: 93, height: 44 },
+  lensArt: { position: 'absolute', left: -16, top: -16, width: 125, height: 76 },
+  sweep: { position: 'absolute', left: -16, top: -16, width: 76, height: 76 },
+  sweepArt: { width: 76, height: 76 },
+  unlit: { opacity: 0 },
+  updateTag: { position: 'absolute', left: 54, top: 20, flexDirection: 'row', alignItems: 'center', gap: 3 },
   updateText: { color: 'white', fontSize: 12, lineHeight: 15, fontWeight: '700' },
   trainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, minHeight: 44 },
   hinge: { height: 15, flexDirection: 'row', marginBottom: 8 },
