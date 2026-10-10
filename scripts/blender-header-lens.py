@@ -72,6 +72,12 @@ def material(name, rgb, *, metal=0.0, rough=0.3, coat=0.0, transmission=0.0, ior
     return mat
 
 
+# How much of their own shadow the three lights cast on the case, from none to the full render. At full strength each
+# light sat in a dark smudge.
+LED_SHADOW = 0.4
+# A deep red from the case's own family, so each light reads as set into the case rather than in a black hole.
+SOCKET = (0.30, 0.07, 0.08)
+
 GREEN = (0.15, 1.0, 0.25)
 BLUE_GLASS = (0.30, 0.75, 1.0)
 BLUE_GLOW = (0.30, 0.72, 1.0)
@@ -229,7 +235,7 @@ def build():
         "iris": iris_material(),
         "inner": material("Inner lens element", (0.85, 0.95, 1.0), rough=0.02, coat=1.0, transmission=1.0, ior=1.45),
         "glass": material("Scanner glass", BLUE_GLASS, rough=0.04, coat=1.0, transmission=0.85, ior=1.1),
-        "socket": material("LED socket", (0.10, 0.02, 0.03), rough=0.45),
+        "socket": material("LED socket", SOCKET, rough=0.45),
         "red": material("Red LED", (0.80, 0.08, 0.10), rough=0.08, coat=1, transmission=0.5, emission=(1, 0.08, 0.08), strength=1.2),
         "amber": material("Amber LED", (0.95, 0.62, 0.10), rough=0.08, coat=1, transmission=0.5, emission=(1, 0.55, 0.05), strength=1.0),
         "green": material("Green LED", (0.14, 0.42, 0.18), rough=0.08, coat=1, transmission=0.5),
@@ -289,11 +295,11 @@ def build():
     # The tail fades out instead of showing a dark unlit arc.
     links.new(fade.outputs[0], nodes["Principled BSDF"].inputs["Alpha"])
 
-    lights = []
+    leds = []
     for (x, y), key in zip(LIGHTS, ("red", "amber", "green")):
         c = at(x, y)
-        disc("LED socket", c, 0.62, 0.22, m["socket"], bevel=0.06, front=0.22)
-        lights.append(dome(f"{key} LED", c, 0.45, 0.22, m[key], front=0.42))
+        leds.append(disc("LED socket", c, 0.62, 0.22, m["socket"], bevel=0.06, front=0.22))
+        leds.append(dome(f"{key} LED", c, 0.45, 0.22, m[key], front=0.42))
 
     # Light inside the lens, so the bezel and glass pick up the glow the way a real lamp would light them.
     bpy.ops.object.light_add(type="POINT", location=lens + Vector((0, -0.75, 0)))
@@ -309,9 +315,7 @@ def build():
     led_lamp.data.shadow_soft_size = 0.3
     led_lamp.data.energy = 0
     led_lamp.data.color = (0.35, 1.0, 0.45)
-    return m, arc, lamp, led_lamp
-
-
+    return m, arc, lamp, led_lamp, leds
 
 
 def apply_state(m, arc, lamp, led_lamp, *, lit, sweep=False):
@@ -333,6 +337,25 @@ def apply_state(m, arc, lamp, led_lamp, *, lit, sweep=False):
 def render(scene, path):
     scene.render.filepath = str(path)
     bpy.ops.render.render(write_still=True)
+
+
+def render_lit_case(scene, leds, path):
+    """Renders the frame twice, with and without the lights casting shadows, and keeps `LED_SHADOW` of their shadow.
+    Everything else in the two renders is identical, so the mix only changes the case around the lights."""
+    render(scene, path)
+    full = pixels(path)
+    for obj in leds:
+        obj.visible_shadow = False
+    render(scene, path)
+    bare = pixels(path)
+    for obj in leds:
+        obj.visible_shadow = True
+    # Mix premultiplied, so a shadow fades out instead of turning grey.
+    full[..., :3] *= full[..., 3:]
+    bare[..., :3] *= bare[..., 3:]
+    out = bare + (full - bare) * LED_SHADOW
+    out[..., :3] = np.where(out[..., 3:] > 1e-4, out[..., :3] / np.maximum(out[..., 3:], 1e-4), 0)
+    return out
 
 
 def render_glow(scene, path, scale):
@@ -443,12 +466,13 @@ def main():
     args = arguments()
     args.output.mkdir(parents=True, exist_ok=True)
     scene = scene_setup(args.scale)
-    m, arc, lamp, led_lamp = build()
+    m, arc, lamp, led_lamp, leds = build()
     with tempfile.TemporaryDirectory() as tmp:
         tmp = Path(tmp)
+        cases = {}
         for name, lit in (("off", False), ("lit", True)):
             apply_state(m, arc, lamp, led_lamp, lit=lit)
-            render(scene, tmp / f"{name}.png")
+            cases[name] = render_lit_case(scene, leds, tmp / f"{name}.png")
         render_glow(scene, tmp / "lit-glow.png", args.scale)
         # The arc alone, so the app can spin it over the lit lens without dragging the fixed reflections round too.
         apply_state(m, arc, lamp, led_lamp, lit=True, sweep=True)
@@ -463,8 +487,8 @@ def main():
             check=True,
         )
 
-        save_webp(feathered(pixels(tmp / "off.png"), args.scale), args.output / "lens-off.webp")
-        save_webp(feathered(pixels(tmp / "lit.png"), args.scale), args.output / "lens-lit.webp")
+        save_webp(feathered(cases["off"], args.scale), args.output / "lens-off.webp")
+        save_webp(feathered(cases["lit"], args.scale), args.output / "lens-lit.webp")
         save_webp(light_layer(pixels(tmp / "lit-glow.png")), args.output / "lens-lit-glow.webp")
         # A square centred on the lens, so it turns about its own centre.
         save_webp(pixels(tmp / "sweep.png")[:, : (PAD * 2 + 44) * args.scale], args.output / "lens-sweep.webp")
