@@ -392,7 +392,7 @@ export function PokedexShell() {
 /**
  * The lens and indicator lights, rendered in Blender (scripts/blender-header-lens.py). When a newer update is waiting
  * they become a button to Settings › About, where it can be installed: the lens lights up blue with a scanner sweep
- * circling inside it, the green light comes on, and "Update" appears in the space under the lights, so nothing shifts.
+ * circling inside it and the green light comes on. The art keeps its footprint, so nothing shifts.
  */
 function DeviceLights({ updateReady, onPress }: { updateReady: boolean; onPress: () => void }) {
   const reduced = useReducedMotion();
@@ -426,14 +426,6 @@ function DeviceLights({ updateReady, onPress }: { updateReady: boolean; onPress:
       <Animated.View style={[s.sweep, !sweeping && s.unlit, sweepStyle]}>
         <Image source={require('../../assets/crafted/header-lens/lens-sweep.webp')} style={s.sweepArt} />
       </Animated.View>
-      {updateReady && (
-        <View style={s.updateTag}>
-          <Icon name="download" size={12} color="white" />
-          <Txt maxFontSizeMultiplier={1.2} style={s.updateText}>
-            Update
-          </Txt>
-        </View>
-      )}
     </View>
   );
 
@@ -566,8 +558,6 @@ const s = StyleSheet.create({
   sweep: { position: 'absolute', left: -16, top: -16, width: 76, height: 76 },
   sweepArt: { width: 76, height: 76 },
   unlit: { opacity: 0 },
-  updateTag: { position: 'absolute', left: 54, top: 20, flexDirection: 'row', alignItems: 'center', gap: 3 },
-  updateText: { color: 'white', fontSize: 12, lineHeight: 15, fontWeight: '700' },
   trainer: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, minHeight: 44 },
   hinge: { height: 15, flexDirection: 'row', marginBottom: 8 },
   hingeLine: {
