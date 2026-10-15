@@ -59,6 +59,16 @@ test('scanned promo codes are exact-printing evidence', () => {
   const [taiwan] = scanCandidates(scan('皮卡丘 HP60', '001/SV-P'), 'zh-tw');
   assert.equal(taiwan.card.id, 'SV-P-001');
 
+  // OCR reads a header's HP 70 as MP 70, a Mega promo's code; only the footer counts.
+  const eevee = scanCandidates(scan('イーブイ\nMP 70', '133/165'), 'ja');
+  assert.equal(eevee[0].card.id, 'SV2a-133');
+  assert.ok(eevee.every((c) => c.card.id !== 'M-P-070'));
+
+  // A promo code without a name to back it is a lead, not an exact printing.
+  const [unnamed] = scanCandidates(scan('', 'SVP EN 050'), 'en');
+  assert.equal(unnamed.card.id, 'svp-050');
+  assert.equal(unnamed.exactPrinting, false);
+
   // A regular card's footer never reads as a promo.
   const regular = scanCandidates(scan('Pikachu HP60', '58/102'), 'en');
   assert.equal(regular[0].card.id, 'base1-58');

@@ -665,3 +665,13 @@ test('a burst of settled prices repaints listeners once with a fresh state, and 
   await new Promise((resolve) => setTimeout(resolve, 80));
   assert.equal(repaints, 2);
 });
+
+test('an unpriced regular printing never borrows the stamp as its low end or wrong-printing hint', () => {
+  const alakazam = snapshot('mep-009');
+  const stampOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'pokemonCenter') };
+  assert.equal(quotePrice(stampOnly, 'unsure', fx, now), null);
+  assert.equal(missingPriceReason(stampOnly, 'holo', fx, { pending: false, failed: false }), 'unlisted');
+  // A stamped copy with no price while the regular holo has one is still worth a second look.
+  const holoOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'holo') };
+  assert.equal(missingPriceReason(holoOnly, 'pokemonCenter', fx, { pending: false, failed: false }), 'printing');
+});

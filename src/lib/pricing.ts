@@ -211,7 +211,8 @@ export function quotePrice(
     if (price) selected.push(price);
   }
 
-  if (!selected.length) return null;
+  // A stamp is a premium: "Not sure yet" only reaches up to it when a regular printing has a price too.
+  if (!selected.length || (finish === 'unsure' && selected.every((p) => p.finish === 'pokemonCenter'))) return null;
   const amounts = selected.map((p) => Math.round(p.amount * (p.currency === 'EUR' ? fx!.rate : 1) * 100));
   const converted = selected.some((p) => p.currency === 'EUR');
 
@@ -372,8 +373,10 @@ export function missingPriceReason(
 
   if (!fx && snapshot.prices.some((p) => wanted(p) && p.currency === 'EUR')) return 'exchange';
 
-  // A chosen printing with no price while its siblings have one is often the wrong printing.
-  if (finish !== 'unsure' && snapshot.prices.some((p) => p.finish !== finish)) return 'printing';
+  // A chosen printing with no price while its siblings have one is often the wrong printing. A priced stamp isn't
+  // a hint that an unstamped copy is mislabeled.
+  if (finish !== 'unsure' && snapshot.prices.some((p) => p.finish !== finish && p.finish !== 'pokemonCenter'))
+    return 'printing';
 
   return 'unlisted';
 }

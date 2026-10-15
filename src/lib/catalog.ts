@@ -330,17 +330,14 @@ export function scanCandidates(
     }
   }
 
-  // Promos print a code where other cards print a set size: SVP EN 085, SWSH050, and 001/SV-P in Asia.
+  // Promos print a code where other cards print a set size: SVP EN 085, SWSH050, and 001/SV-P in Asia. Only the
+  // footer counts: OCR reads a header's HP 70 as MP 70, which is a Mega promo's code.
   const promos = new Set<string>();
 
-  for (const m of `${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(
-    /(?:^|[^A-Za-z0-9])([A-Z]{2,4}) ?(?:EN)? ?([0-9OIlSBZ]{2,3})(?![A-Za-z0-9])/g,
-  ))
+  for (const m of bottom.matchAll(/(?:^|[^A-Za-z0-9])([A-Z]{2,4}) ?(?:EN)? ?([0-9OIlSBZ]{2,3})(?![A-Za-z0-9])/g))
     if (/\d/.test(m[2])) promos.add(`${m[1].toLowerCase()}${numberFromOCR(m[2])}`);
 
-  for (const m of `${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(
-    /([0-9OIlSBZ]{1,3})\s*[/／]\s*([A-Z]{1,3})\s*[-‐ー−]?\s*P(?![A-Za-z0-9])/g,
-  ))
+  for (const m of bottom.matchAll(/([0-9OIlSBZ]{1,3})\s*[/／]\s*([A-Z]{1,3})\s*[-‐ー−]?\s*P(?![A-Za-z0-9])/g))
     if (/\d/.test(m[1])) promos.add(`${m[2].toLowerCase()}p${numberFromOCR(m[1])}`);
 
   const nameScores = new Map<string, number>();
@@ -382,7 +379,8 @@ export function scanCandidates(
         // English cards print an uppercase abbreviation, often joined to EN: 30C EN, MEGEN.
         (!!set?.abbreviation && printedCode(set.abbreviation.split(':')[0], '', '(?:EN)?').test(bottom));
 
-      const exactPrinting = promoMatch || (codeMatch && numberMatch);
+      // A promo code is short, so it pins the printing only beside a name that agrees.
+      const exactPrinting = (promoMatch && nameScore >= 60) || (codeMatch && matchingNumbers.length > 0);
       const categoryBonus = hint !== 'all' ? (matchesCardFilter(c.card, hint) ? 45 : -70) : 0;
       let score = categoryBonus + nameScore + (numberMatch ? (totalMatch ? 150 : 65) : 0) + (exactPrinting ? 160 : 0);
 
