@@ -9,7 +9,8 @@ const FULL_FOIL =
 export function cardSurface(card: Pick<Card, 'rarity'>, finish: Finish): CardSurface {
   if (finish === 'reverse' || finish === 'firstEditionReverse') return 'reverse-foil';
 
-  if (finish !== 'holo' && finish !== 'firstEditionHolo') return 'paper';
+  // Every Pokémon Center stamped promo is a holo.
+  if (finish !== 'holo' && finish !== 'firstEditionHolo' && finish !== 'pokemonCenter') return 'paper';
 
   return FULL_FOIL.test(card.rarity.trim()) ? 'full-foil' : 'art-foil';
 }

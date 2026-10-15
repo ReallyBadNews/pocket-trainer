@@ -40,6 +40,7 @@ const finishes = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
+  'pokemonCenter',
 ] as const satisfies Finish[];
 
 const variantMap = new Map<string, Finish>([
@@ -114,6 +115,47 @@ export function parseCardPricing(card: CardBrief, data: CardData, now = Date.now
 
     if (!usdPrimary.length || usdPrimary.some((p) => p.finish === finish))
       prices.push({ finish, amount: cm.trend, currency: 'EUR', source: 'Cardmarket', updatedAt: cm.updated });
+  }
+
+  // The top-level prices are the unstamped printing's. A standard-size Pokémon Center stamped printing (and no other
+  // stamp) is priced only from its own entry, so it never borrows the base price or lends it its own.
+  const stamped = (data.variants_detailed ?? []).filter(
+    (variant) =>
+      variant.stamp?.length === 1 &&
+      variant.stamp[0] === 'pokemon-center' &&
+      (variant.size === undefined || variant.size === 'standard'),
+  );
+
+  if (stamped.length) available.add('pokemonCenter');
+
+  for (const variant of stamped) {
+    const stampTcg = variant.pricing?.tcgplayer;
+    const listed = Object.entries(stampTcg?.variants ?? {}).filter(([, value]) => value !== undefined);
+    const base = marketFinish(variant.type);
+
+    // The entry for this printing's foil, or the only usable one.
+    const usd =
+      listed.find(([name]) => marketFinish(name) === base)?.[1] ?? (listed.length === 1 ? listed[0][1] : undefined);
+
+    if (stampTcg && usd && !prices.some((p) => p.finish === 'pokemonCenter' && p.currency === 'USD'))
+      prices.push({
+        finish: 'pokemonCenter',
+        amount: usd.marketPrice,
+        currency: 'USD',
+        source: 'TCGplayer',
+        updatedAt: stampTcg.updated,
+      });
+
+    const stampCm = variant.pricing?.cardmarket;
+
+    if (stampCm && !prices.some((p) => p.finish === 'pokemonCenter' && p.currency === 'EUR'))
+      prices.push({
+        finish: 'pokemonCenter',
+        amount: stampCm.trend,
+        currency: 'EUR',
+        source: 'Cardmarket',
+        updatedAt: stampCm.updated,
+      });
   }
 
   return { key: priceKey(card), checkedAt: now, prices, finishes: [...available] };

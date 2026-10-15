@@ -25,6 +25,7 @@ export const FINISHES = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
+  'pokemonCenter',
   'unsure',
 ] as const;
 
@@ -124,6 +125,7 @@ export const FINISH_LABELS: Record<Finish, string> = {
   firstEditionHolo: '1st edition holo',
   firstEditionReverse: '1st edition reverse',
   wPromo: 'W promo',
+  pokemonCenter: 'Pokémon Center',
   unsure: 'Not sure yet',
 };
 

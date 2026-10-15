@@ -1,6 +1,7 @@
 import type { Finish } from './model';
 
-const SHINY_FINISHES: Finish[] = ['holo', 'reverse', 'firstEditionHolo', 'firstEditionReverse'];
+// Every Pokémon Center stamped promo is a holo.
+const SHINY_FINISHES: Finish[] = ['holo', 'reverse', 'firstEditionHolo', 'firstEditionReverse', 'pokemonCenter'];
 
 // English TCGdex rarities, plus the letter codes printed on Japanese, Korean and Chinese cards.
 const SHINY_RARITY =

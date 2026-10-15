@@ -28,5 +28,6 @@ test('foil printings and special rarities shimmer; plain cards do not', () => {
     assert.equal(isShiny({ rarity }), false, String(rarity));
   assert.ok(isShiny({ rarity: 'Common' }, 'reverse'));
   assert.ok(isShiny({ rarity: 'Uncommon' }, 'firstEditionHolo'));
+  assert.ok(isShiny({ rarity: 'None' }, 'pokemonCenter'), 'every Pokémon Center stamped promo is holo');
   assert.equal(isShiny({ rarity: 'Common' }, 'normal'), false);
 });
