@@ -67,7 +67,8 @@
         {
           "motionPermission": "Allow Pocket Pokédex to make shiny cards sparkle as you tilt your device."
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "experiments": {
       "typedRoutes": true,
