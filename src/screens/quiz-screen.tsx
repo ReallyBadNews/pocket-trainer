@@ -26,7 +26,7 @@ import { useCollection } from '@/lib/collection-context';
 import { species, speciesById, speciesImage } from '@/lib/catalog';
 import { discoveredIds, recordQuizScore } from '@/lib/model';
 import { QUIZ_LENGTH, buildRound, quizStars, type QuizRound } from '@/lib/quiz';
-import { Sheet } from './collection-modals';
+import { Sheet } from '@/components/sheet';
 
 const UNIVERSE = species.map((s) => s.id);
 

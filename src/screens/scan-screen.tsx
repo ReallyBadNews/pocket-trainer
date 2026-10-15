@@ -47,7 +47,7 @@ import { CARD_FILTERS, cardKindLabel, scanTypeHint, type CardFilter } from '@/li
 import { identifyProgressively, type ScanStage } from '@/lib/scan-pipeline';
 import { CardPriceTag } from '@/components/card-values';
 import { PageScan } from './page-scan';
-import { Sheet } from './collection-modals';
+import { Sheet } from '@/components/sheet';
 import { LiveCamera, SCAN_MODES, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 
 const MATCH_NOTE = 'Do the picture and bottom number match? Tap your card.';

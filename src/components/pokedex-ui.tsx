@@ -35,6 +35,8 @@ export const C = {
   line: '#D2DDC8',
   blue: '#57C7E8',
   gold: '#EAC55A',
+  wishStar: '#B98310',
+  wishInk: '#664C0E',
 };
 
 export const mono = Platform.select({ ios: 'Menlo', default: 'monospace' });
