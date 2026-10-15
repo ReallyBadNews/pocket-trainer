@@ -15,7 +15,7 @@ import { defaultFinish, discoveredIds, withScanPhoto, type Card, type CardBrief 
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { LiveCamera, type LiveMatch, type LivePhoto } from '@/components/live-camera';
 import { PocketReview } from '@/components/pocket-review';
-import { Sheet } from './collection-modals';
+import { Sheet } from '@/components/sheet';
 import type { Crop } from '@/lib/scan-types';
 import {
   PAGE_LAYOUTS,
