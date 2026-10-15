@@ -22,7 +22,7 @@ const artOverrides = new Map(
 
 const artOverride = (card: CardBrief) => artOverrides.get(`${card.language}:${card.id}`);
 
-import { collectorTotal, type Card, type CardBrief, type Finish, type Language } from './model';
+import { collectorTotal, promoNumber, type Card, type CardBrief, type Finish, type Language } from './model';
 import { fetchCardData, supplementalCards } from './card-api';
 import type { SetCatalog } from './set-progress';
 import { DAY, parseCardPricing } from './pricing';
@@ -123,14 +123,28 @@ export const normalize = (value: string) =>
     .toLowerCase()
     .replace(/[\s\p{P}\p{S}]/gu, '');
 
-const searchable = allCards.map((card) => ({
-  card,
-  name: normalize(card.name),
-  id: normalize(card.id),
-  number: normalize(card.localId),
-  collector: normalize(`${card.localId}/${collectorTotal(card.localId, setForCard(card)?.cardCount.official ?? 0)}`),
-  set: normalize(setForCard(card)?.name ?? ''),
-}));
+/** A promo's code and number without punctuation or leading zeros, so SVP 085 and 085/SV-P are svp85. */
+const promoKey = (printed: string) => {
+  const code = printed.replace(/[^A-Za-z]/g, '').toLowerCase(),
+    digits = printed.match(/\d+/)?.[0];
+
+  return code && digits ? `${code}${Number(digits)}` : undefined;
+};
+
+const searchable = allCards.map((card) => {
+  const set = setForCard(card);
+  const promo = set && promoNumber(card.language, set, card.localId);
+
+  return {
+    card,
+    name: normalize(card.name),
+    id: normalize(card.id),
+    number: normalize(card.localId),
+    collector: normalize(promo ?? `${card.localId}/${collectorTotal(card.localId, set?.cardCount.official ?? 0)}`),
+    promo: promo && promoKey(promo),
+    set: normalize(set?.name ?? ''),
+  };
+});
 
 export function searchCards(query: string, language: Language, limit = 80, filter: CardFilter = 'all'): CardBrief[] {
   const term = normalize(query);
@@ -149,6 +163,9 @@ export function searchCards(query: string, language: Language, limit = 80, filte
       .filter((s) => LANGUAGES.some((lang) => normalize(s[lang] ?? '').includes(token)))
       .map((s) => normalize(s[language] ?? '')),
   );
+
+  // SVP 85 finds SVP 085 first, not SVP 185.
+  const printedPromo = promoKey(query);
 
   return searchable
     .filter(
@@ -169,6 +186,7 @@ export function searchCards(query: string, language: Language, limit = 80, filte
       (a, b) =>
         Number(b.name === term) - Number(a.name === term) ||
         Number(b.number === term) - Number(a.number === term) ||
+        Number(!!printedPromo && b.promo === printedPromo) - Number(!!printedPromo && a.promo === printedPromo) ||
         Number(!!b.card.image) - Number(!!a.card.image),
     )
     .slice(0, limit)
@@ -312,6 +330,19 @@ export function scanCandidates(
     }
   }
 
+  // Promos print a code where other cards print a set size: SVP EN 085, SWSH050, and 001/SV-P in Asia.
+  const promos = new Set<string>();
+
+  for (const m of `${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(
+    /(?:^|[^A-Za-z0-9])([A-Z]{2,4}) ?(?:EN)? ?([0-9OIlSBZ]{2,3})(?![A-Za-z0-9])/g,
+  ))
+    if (/\d/.test(m[2])) promos.add(`${m[1].toLowerCase()}${numberFromOCR(m[2])}`);
+
+  for (const m of `${bottom}\n${scan.text.normalize('NFKC')}`.matchAll(
+    /([0-9OIlSBZ]{1,3})\s*[/／]\s*([A-Z]{1,3})\s*[-‐ー−]?\s*P(?![A-Za-z0-9])/g,
+  ))
+    if (/\d/.test(m[1])) promos.add(`${m[2].toLowerCase()}p${numberFromOCR(m[1])}`);
+
   const nameScores = new Map<string, number>();
 
   for (const name of recognitionWords(language)) {
@@ -341,15 +372,17 @@ export function scanCandidates(
       const nameScore = nameScores.get(c.name) ?? 0;
       const set = setForCard(c.card);
       const matchingNumbers = fractions.filter((f) => f[0] === canonicalNumber(c.card.localId));
-      const numberMatch = matchingNumbers.length > 0;
-      const totalMatch = matchingNumbers.some((f) => Number(f[1]) === set?.cardCount.official);
+      // A printed promo code names the set and number together, like a set code beside a fraction.
+      const promoMatch = !!c.promo && promos.has(c.promo);
+      const numberMatch = matchingNumbers.length > 0 || promoMatch;
+      const totalMatch = promoMatch || matchingNumbers.some((f) => Number(f[1]) === set?.cardCount.official);
 
       const codeMatch =
         printedCode(c.card.id.slice(0, c.card.id.lastIndexOf('-')), 'i').test(bottom) ||
         // English cards print an uppercase abbreviation, often joined to EN: 30C EN, MEGEN.
         (!!set?.abbreviation && printedCode(set.abbreviation.split(':')[0], '', '(?:EN)?').test(bottom));
 
-      const exactPrinting = codeMatch && numberMatch;
+      const exactPrinting = promoMatch || (codeMatch && numberMatch);
       const categoryBonus = hint !== 'all' ? (matchesCardFilter(c.card, hint) ? 45 : -70) : 0;
       let score = categoryBonus + nameScore + (numberMatch ? (totalMatch ? 150 : 65) : 0) + (exactPrinting ? 160 : 0);
 
