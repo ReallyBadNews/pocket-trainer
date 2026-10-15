@@ -316,7 +316,10 @@ export function CardModal({
               {!entry && (
                 <Txt variant="caption" muted>
                   Compare the artwork and card number with yours. Holo shines on the picture; reverse holo shines around
-                  it. “Not sure yet” is okay.
+                  it.
+                  {printingChoices.includes('pokemonCenter') &&
+                    ' A Pokémon Center copy has the Pokémon Center logo stamped on the picture.'}{' '}
+                  “Not sure yet” is okay.
                 </Txt>
               )}
             </View>

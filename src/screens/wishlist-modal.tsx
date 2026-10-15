@@ -16,7 +16,7 @@ import {
 } from '@/components/pokedex-ui';
 import { LANGUAGE_CODES, LANGUAGE_LABELS } from '@/lib/languages';
 import { useCollection } from '@/lib/collection-context';
-import { setForCard } from '@/lib/catalog';
+import { printedNumber, setForCard } from '@/lib/catalog';
 import { type CardBrief, type Trainer } from '@/lib/model';
 import { removeWish, restoreWish, wishesOf, wishlistShareText, type Wish } from '@/lib/wishlist';
 import { CardPriceTag } from '@/components/card-values';
@@ -52,7 +52,7 @@ function WishTile({
         <CardCaption
           name={card.name}
           setName={set ?? card.id}
-          detail={`${LANGUAGE_CODES[card.language]} · #${card.localId}`}
+          detail={`${LANGUAGE_CODES[card.language]} · #${printedNumber(card)}`}
         />
       </Pressable>
       <CardPriceTag card={card} printingHint={false} />

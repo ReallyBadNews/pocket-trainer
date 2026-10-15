@@ -30,6 +30,7 @@ import {
   scanCandidates,
   searchCards,
   setForCard,
+  printedNumber,
   ENERGY_SEARCHES,
   type ScanCandidate,
 } from '@/lib/catalog';
@@ -734,7 +735,7 @@ function ScanSession({
                 <CardCaption
                   name={item.name}
                   setName={setForCard(item)?.name ?? item.id}
-                  detail={`#${item.localId} · ${LANGUAGE_CODES[item.language]}`}
+                  detail={`#${printedNumber(item)} · ${LANGUAGE_CODES[item.language]}`}
                 />
                 <Txt muted variant="caption">
                   {cardKindLabel(item)}

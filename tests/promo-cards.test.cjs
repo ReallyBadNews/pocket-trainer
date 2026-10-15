@@ -2,7 +2,7 @@ const { test } = require('node:test');
 
 const assert = require('node:assert/strict');
 
-const { allCards, cardImage, searchCards, scanCandidates } = require('../.test-build/lib/catalog');
+const { allCards, cardImage, printedNumber, searchCards, scanCandidates } = require('../.test-build/lib/catalog');
 
 const { collectorNumber, promoNumber } = require('../.test-build/lib/model');
 
@@ -11,8 +11,8 @@ const scan = (topText, bottomText) => ({ text: `${topText}\n${bottomText}`, topT
 const promo = (language, id, name, localId) => ({ language, set: { id, name, total: 0 }, localId });
 
 test('promos show their printed code instead of a set size', () => {
-  assert.equal(collectorNumber(promo('en', 'mep', 'MEP Black Star Promos', '009')), 'MEP 009');
-  assert.equal(collectorNumber(promo('en', 'svp', 'SVP Black Star Promos', '085')), 'SVP 085');
+  assert.equal(collectorNumber(promo('en', 'mep', 'MEP Black Star Promos', '009')), 'MEP\u00A0009');
+  assert.equal(collectorNumber(promo('en', 'svp', 'SVP Black Star Promos', '085')), 'SVP\u00A0085');
   assert.equal(collectorNumber(promo('en', 'swshp', 'SWSH Black Star Promos', 'SWSH050')), 'SWSH050');
   assert.equal(collectorNumber(promo('en', 'smp', 'SM Black Star Promos', 'SM01')), 'SM01');
   // Wizards and Nintendo promos print a bare number in the star.
@@ -20,6 +20,12 @@ test('promos show their printed code instead of a set size', () => {
   assert.equal(collectorNumber(promo('en', 'miscp', 'Miscellaneous Promos', '001')), '001');
   assert.equal(collectorNumber(promo('ja', 'SV-P', 'スカーレット&バイオレット プロモカード', '001')), '001/SV-P');
   assert.equal(collectorNumber(promo('zh-tw', 'SV-P', '特典卡 朱&紫', '001')), '001/SV-P');
+
+  // Search results and binder-page pockets show the same code from the catalog.
+  const brief = (id) => allCards.find((c) => c.language === 'en' && c.id === id);
+  assert.equal(printedNumber(brief('svp-085')), 'SVP\u00A0085');
+  assert.equal(printedNumber(brief('swshp-SWSH050')), 'SWSH050');
+  assert.equal(printedNumber(brief('base1-58')), '58');
 
   // Regular sets keep their fraction.
   assert.equal(promoNumber('en', { id: 'base1', name: 'Base Set' }, '58'), undefined);

@@ -68,6 +68,13 @@ const setMaps = {
 
 export const setForCard = (card: CardBrief) => setMaps[card.language].get(card.id.slice(0, card.id.lastIndexOf('-')));
 
+/** The number printed on a catalog card: its promo code (SVP 085), otherwise the collector number. */
+export const printedNumber = (card: CardBrief) => {
+  const set = setForCard(card);
+
+  return (set && promoNumber(card.language, set, card.localId)) ?? card.localId;
+};
+
 let setIndex: { cards: Map<string, CardBrief[]>; ids: Map<string, string> } | undefined;
 
 function catalogSetIndex() {

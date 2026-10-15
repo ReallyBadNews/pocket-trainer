@@ -164,7 +164,10 @@ export function promoNumber(language: Language, set: { id: string; name: string 
 
   if (language !== 'en') return `${localId}/${set.id}`;
 
-  return set.name.toUpperCase().startsWith(`${set.id.toUpperCase()} `) ? `${set.id.toUpperCase()} ${localId}` : localId;
+  // A no-break space keeps the printed code on one line.
+  return set.name.toUpperCase().startsWith(`${set.id.toUpperCase()} `)
+    ? `${set.id.toUpperCase()}\u00A0${localId}`
+    : localId;
 }
 
 export const collectorNumber = (card: Card) =>
