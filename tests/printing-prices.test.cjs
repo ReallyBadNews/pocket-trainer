@@ -72,6 +72,15 @@ test('euro-only printings convert once an exchange rate is known', () => {
   assert.equal(printingPrices(['normal']).length, 1);
 });
 
+test('a Pokémon Center stamped promo lists after the base printings with its own trend', () => {
+  const alakazam = snapshot('mep-009');
+  assert.deepEqual(printingFinishes(['pokemonCenter', 'holo', 'unsure'], alakazam), ['holo', 'pokemonCenter']);
+  const [holo, stamped] = printingPrices(['holo', 'pokemonCenter', 'unsure'], alakazam, fx);
+  assert.equal(holo.cardmarket.euros, 12.13);
+  assert.equal(stamped.cardmarket.euros, 90.23);
+  assert.equal(stamped.estimate, quotePrice(alakazam, 'pokemonCenter', fx, now).low);
+});
+
 test('source dates report the newest price from each provider', () => {
   const prices = [
     { finish: 'normal', amount: 1, currency: 'USD', source: 'TCGplayer', updatedAt: '2026-09-01T00:00:00Z' },

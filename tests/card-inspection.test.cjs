@@ -24,6 +24,9 @@ test('regular and unconfirmed printings never inherit foil from a shiny rarity',
 test('holo and reverse holo use distinct masks; full-art rarities retain a full surface', () => {
   assert.equal(cardSurface({ rarity: 'Rare' }, 'holo'), 'art-foil');
   assert.equal(cardSurface({ rarity: 'Rare' }, 'firstEditionHolo'), 'art-foil');
+  // Every Pokémon Center stamped promo is a holo.
+  assert.equal(cardSurface({ rarity: 'None' }, 'pokemonCenter'), 'art-foil');
+  assert.equal(cardSurface({ rarity: 'Double rare' }, 'pokemonCenter'), 'full-foil');
   assert.equal(cardSurface({ rarity: 'Double rare' }, 'holo'), 'full-foil');
   assert.equal(cardSurface({ rarity: 'SAR' }, 'holo'), 'full-foil');
   assert.equal(cardSurface({ rarity: 'Double rare' }, 'reverse'), 'reverse-foil');

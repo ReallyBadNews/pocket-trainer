@@ -43,6 +43,12 @@ English cards print a set abbreviation beside the regulation mark (`30C EN`, `ME
 
 The 30th Celebration (`30th`, 128 + 30 secret) and 30th Classic Collection (`30th-c`) sets share the `30C` code. The supplied Illumise 004/128 and Nidoran♀ 087/128 photos read `30C EN` / `30CEN` and rank as exact printings. The sleeved Pikachu 044/128 photo lost its code to glare but still ranks first by name and number; its Pikachu badge fraction (`22/30`) does not surface a Classic Collection card. The production OCR output for all three is kept in `tests/fixtures/scan-30th-text.json`.
 
+## Promo cards
+
+Black Star promos print a code where other cards print a fraction: the set code and number (`SVP EN 085`, `MEP EN 009`), a prefixed number (`SWSH050`, `SM01`), or `001/SV-P` on Japanese and Traditional Chinese promos. Ranking reads each form, including OCR's joined `MEPEN009` and letter-shaped digits (`SWSHO5O`), and treats a match as exact-printing evidence. Binder and card details show the same code instead of a set size, and search accepts it (`SVP 85`, `MEP 009`). Wizards and Nintendo promos print only a number in the star, so they rank by name and number like other cards.
+
+TCGdex's card list omits artwork for many recent promos even though its asset server has the images. `src/data/image-overrides.json` fills in the ones that exist (40 MEP and 19 SVP as of October 2026); the rest show the scan photo until TCGdex publishes them.
+
 Collector totals are shown and searched zero-padded to the number's width (`001/066`), as printed.
 
 ## Images

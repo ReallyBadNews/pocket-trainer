@@ -64,7 +64,8 @@ export function CardPriceDetails({
         style={s.readout}
       >
         <Txt variant="caption" style={s.readoutLabel}>
-          Estimated value · {printing}
+          {/* The printing wraps whole, never leaving "Center" alone on a line. */}
+          Estimated value{'\u00A0'}· {printing.replaceAll(' ', '\u00A0')}
         </Txt>
         {quote ? (
           <EstimateAmount quote={quote} quantity={quantity} />

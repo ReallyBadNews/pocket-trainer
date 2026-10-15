@@ -26,7 +26,7 @@ import {
   tick,
 } from '@/components/pokedex-ui';
 import { ZoomablePhoto } from '@/components/zoomable-photo';
-import { setForCard } from '@/lib/catalog';
+import { printedNumber, setForCard } from '@/lib/catalog';
 import { searchAnyLanguage } from '@/lib/language-detect';
 import {
   nextToCheck,
@@ -196,7 +196,7 @@ export function PocketReview({
           <CardCaption
             name={pocket.choice.name}
             setName={setForCard(pocket.choice)?.name ?? pocket.choice.id}
-            detail={`#${pocket.choice.localId}`}
+            detail={`#${printedNumber(pocket.choice)}`}
           />
         )}
         <View accessibilityLiveRegion="polite" style={s.status}>
@@ -259,7 +259,7 @@ export function PocketReview({
                       <CardCaption
                         name={card.name}
                         setName={setForCard(card)?.name ?? card.id}
-                        detail={`#${card.localId}`}
+                        detail={`#${printedNumber(card)}`}
                       />
                     </Pressable>
                   );

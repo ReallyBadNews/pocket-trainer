@@ -10,6 +10,7 @@ const ORDER: readonly Finish[] = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
+  'pokemonCenter',
 ];
 
 export type PrintingPrice = {

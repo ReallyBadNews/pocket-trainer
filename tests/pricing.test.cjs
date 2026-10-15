@@ -127,6 +127,107 @@ test('unknown printing shows a range; special and first-edition finishes never b
   assert.equal(quotePrice(edition, 'holo', fx, now), null);
 });
 
+test('a Pokémon Center stamped promo is its own printing with its own price', () => {
+  const alakazam = snapshot('mep-009');
+  assert.deepEqual(alakazam.finishes, ['holo', 'pokemonCenter']);
+  // The live response has only Cardmarket trends: €12.13 for the plain holo, €90.23 stamped.
+  assert.equal(quotePrice(alakazam, 'holo', fx, now).low, Math.round(12.13 * 1.1622 * 100));
+  assert.equal(quotePrice(alakazam, 'pokemonCenter', fx, now).low, Math.round(90.23 * 1.1622 * 100));
+  assert.equal(quotePrice(alakazam, 'pokemonCenter', undefined, now), null);
+  const unsure = quotePrice(alakazam, 'unsure', fx, now);
+  assert.equal(unsure.low, Math.round(12.13 * 1.1622 * 100));
+  assert.equal(unsure.high, Math.round(90.23 * 1.1622 * 100));
+  const cache = parsePriceCache(JSON.stringify({ version: 1, snapshots: [alakazam] }), now);
+  assert.deepEqual(cache.snapshots[alakazam.key], alakazam, 'the stamped printing survives the price cache');
+
+  // Cards without the stamp never offer it.
+  for (const id of ['base1-58', 'sm9-156', 'sm12-221']) {
+    assert.equal(snapshot(id).finishes.includes('pokemonCenter'), false);
+    assert.equal(quotePrice(snapshot(id), 'pokemonCenter', fx, now), null);
+  }
+
+  const updated = new Date(now).toISOString();
+  const usd = (extra) => ({ unit: 'USD', updated, ...extra });
+
+  const data = {
+    id: 'svp-159',
+    variants: { holo: true },
+    pricing: { tcgplayer: usd({ holofoil: { marketPrice: 10.31 } }) },
+    variants_detailed: [
+      {
+        type: 'holo',
+        size: 'standard',
+        stamp: null,
+        pricing: { tcgplayer: usd({ holofoil: { marketPrice: 10.31 } }) },
+      },
+      {
+        type: 'holo',
+        size: 'standard',
+        stamp: ['pokemon-center'],
+        pricing: {
+          tcgplayer: usd({ normal: { marketPrice: 1 }, holofoil: { marketPrice: 120.5 } }),
+          cardmarket: { unit: 'EUR', updated, trend: 99.5 },
+        },
+      },
+      // Other stamps and sizes are different printings.
+      {
+        type: 'holo',
+        stamp: ['pokemon-center', 'staff'],
+        pricing: { tcgplayer: usd({ holofoil: { marketPrice: 900 } }) },
+      },
+      {
+        type: 'holo',
+        size: 'jumbo',
+        stamp: ['pokemon-center'],
+        pricing: { tcgplayer: usd({ holofoil: { marketPrice: 800 } }) },
+      },
+    ],
+  };
+
+  const stamped = parseCardPricing(brief('svp-159'), cardData(data), now);
+  assert.deepEqual(stamped.finishes, ['holo', 'pokemonCenter']);
+  assert.equal(quotePrice(stamped, 'holo', fx, now).low, 1031, 'the stamped price never leaks into the base printing');
+  assert.equal(quotePrice(stamped, 'pokemonCenter', fx, now).low, 12050, 'TCGplayer leads, from the holofoil entry');
+  assert.deepEqual(
+    stamped.prices.filter((p) => p.finish === 'pokemonCenter').map((p) => [p.source, p.amount]),
+    [
+      ['TCGplayer', 120.5],
+      ['Cardmarket', 99.5],
+    ],
+  );
+
+  // A stamped printing with no price of its own never borrows the base price.
+  data.variants_detailed[1].pricing = null;
+  const unpriced = parseCardPricing(brief('svp-159'), cardData(data), now);
+  assert.ok(unpriced.finishes.includes('pokemonCenter'));
+  assert.equal(quotePrice(unpriced, 'pokemonCenter', fx, now), null);
+  assert.equal(quotePrice(unpriced, 'unsure', fx, now).high, 1031);
+});
+
+test('malformed detailed variants are dropped without losing the card or its base prices', () => {
+  const base = raw('mep-009');
+
+  for (const variants_detailed of [
+    null,
+    'holo',
+    {},
+    [null, 7, { stamp: ['pokemon-center'] }],
+    [{ type: 'holo', stamp: 'pokemon-center' }],
+  ]) {
+    const s = parseCardPricing(brief('mep-009'), cardData({ ...base, variants_detailed }), now);
+    assert.deepEqual(s.finishes, ['holo']);
+    assert.equal(quotePrice(s, 'holo', fx, now).low, Math.round(12.13 * 1.1622 * 100));
+  }
+
+  // One broken entry doesn't hide the good ones, and a broken price stays unavailable.
+  const mixed = structuredClone(base.variants_detailed);
+  mixed.unshift({ type: 42 });
+  mixed[2].pricing.cardmarket.trend = 0;
+  const s = parseCardPricing(brief('mep-009'), cardData({ ...base, variants_detailed: mixed }), now);
+  assert.deepEqual(s.finishes, ['holo', 'pokemonCenter']);
+  assert.equal(quotePrice(s, 'pokemonCenter', fx, now), null);
+});
+
 test('missing, zero, malformed and wrong-currency prices remain unavailable', () => {
   for (const marketPrice of [null, undefined, 0, -1, NaN, Infinity, '500', 1e20]) {
     const s = parseCardPricing(
@@ -563,4 +664,14 @@ test('a burst of settled prices repaints listeners once with a fresh state, and 
   assert.equal(client.getState().wakes, 1);
   await new Promise((resolve) => setTimeout(resolve, 80));
   assert.equal(repaints, 2);
+});
+
+test('an unpriced regular printing never borrows the stamp as its low end or wrong-printing hint', () => {
+  const alakazam = snapshot('mep-009');
+  const stampOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'pokemonCenter') };
+  assert.equal(quotePrice(stampOnly, 'unsure', fx, now), null);
+  assert.equal(missingPriceReason(stampOnly, 'holo', fx, { pending: false, failed: false }), 'unlisted');
+  // A stamped copy with no price while the regular holo has one is still worth a second look.
+  const holoOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'holo') };
+  assert.equal(missingPriceReason(holoOnly, 'pokemonCenter', fx, { pending: false, failed: false }), 'printing');
 });

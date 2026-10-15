@@ -12,6 +12,16 @@ const TcgplayerPricing = v.pipe(
 
 const CardmarketPricing = v.object({ unit: v.literal('EUR'), updated: DateText, trend: PositivePrice });
 
+const Pricing = v.object({ tcgplayer: lenient(TcgplayerPricing), cardmarket: lenient(CardmarketPricing) });
+
+/** One physical printing, e.g. a holo with a Pokémon Center stamp, with its own prices. */
+const DetailedVariant = v.object({
+  type: Text(50),
+  size: lenient(Text(50)),
+  stamp: lenient(v.array(Text(50))),
+  pricing: lenient(Pricing),
+});
+
 /**
  * The parts of a TCGdex card response the app reads. Only the id is required: prices need nothing else, and
  * `fetchCard` checks the details a saved card needs. Anything else that doesn't fit is dropped, not fatal.
@@ -47,7 +57,13 @@ export const CardResponse = v.object({
     v.fallback(v.record(v.string(), v.fallback(v.boolean(), false)), () => ({})),
     () => ({}),
   ),
-  pricing: lenient(v.object({ tcgplayer: lenient(TcgplayerPricing), cardmarket: lenient(CardmarketPricing) })),
+  pricing: lenient(Pricing),
+  variants_detailed: lenient(
+    v.pipe(
+      v.array(lenient(DetailedVariant)),
+      v.transform((variants) => variants.filter((variant) => variant !== undefined)),
+    ),
+  ),
 });
 
 export type CardData = v.InferOutput<typeof CardResponse>;

@@ -25,6 +25,7 @@ export const FINISHES = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
+  'pokemonCenter',
   'unsure',
 ] as const;
 
@@ -124,6 +125,7 @@ export const FINISH_LABELS: Record<Finish, string> = {
   firstEditionHolo: '1st edition holo',
   firstEditionReverse: '1st edition reverse',
   wPromo: 'W promo',
+  pokemonCenter: 'Pokémon Center',
   unsure: 'Not sure yet',
 };
 
@@ -149,7 +151,27 @@ export const freshCollection = (): Collection => ({
 export const collectorTotal = (localId: string, total: number) =>
   String(total).padStart(/^\d+$/.test(localId.split(' ').pop()!) ? localId.split(' ').pop()!.length : 1, '0');
 
+const PROMO_SET = /promo|プロモ|特典/i;
+
+/**
+ * Black Star promos print a code instead of a fraction: the set code then the number (SVP 085, MEP 009), a prefixed
+ * number (SWSH050, SM01), or 001/SV-P in Asia. The oldest promos print a bare number.
+ */
+export function promoNumber(language: Language, set: { id: string; name: string }, localId: string) {
+  if (!PROMO_SET.test(set.name)) return undefined;
+
+  if (!/^\d+$/.test(localId)) return localId;
+
+  if (language !== 'en') return `${localId}/${set.id}`;
+
+  // A no-break space keeps the printed code on one line.
+  return set.name.toUpperCase().startsWith(`${set.id.toUpperCase()} `)
+    ? `${set.id.toUpperCase()}\u00A0${localId}`
+    : localId;
+}
+
 export const collectorNumber = (card: Card) =>
+  promoNumber(card.language, card.set, card.localId) ??
   `${card.localId}/${card.set.total ? collectorTotal(card.localId, card.set.total) : '?'}`;
 
 export const entryKey = (card: CardBrief, finish: Finish) => `${card.language}:${card.id}:${finish}`;

@@ -40,6 +40,7 @@ const finishes = [
   'firstEditionHolo',
   'firstEditionReverse',
   'wPromo',
+  'pokemonCenter',
 ] as const satisfies Finish[];
 
 const variantMap = new Map<string, Finish>([
@@ -116,6 +117,47 @@ export function parseCardPricing(card: CardBrief, data: CardData, now = Date.now
       prices.push({ finish, amount: cm.trend, currency: 'EUR', source: 'Cardmarket', updatedAt: cm.updated });
   }
 
+  // The top-level prices are the unstamped printing's. A standard-size Pokémon Center stamped printing (and no other
+  // stamp) is priced only from its own entry, so it never borrows the base price or lends it its own.
+  const stamped = (data.variants_detailed ?? []).filter(
+    (variant) =>
+      variant.stamp?.length === 1 &&
+      variant.stamp[0] === 'pokemon-center' &&
+      (variant.size === undefined || variant.size === 'standard'),
+  );
+
+  if (stamped.length) available.add('pokemonCenter');
+
+  for (const variant of stamped) {
+    const stampTcg = variant.pricing?.tcgplayer;
+    const listed = Object.entries(stampTcg?.variants ?? {}).filter(([, value]) => value !== undefined);
+    const base = marketFinish(variant.type);
+
+    // The entry for this printing's foil, or the only usable one.
+    const usd =
+      listed.find(([name]) => marketFinish(name) === base)?.[1] ?? (listed.length === 1 ? listed[0][1] : undefined);
+
+    if (stampTcg && usd && !prices.some((p) => p.finish === 'pokemonCenter' && p.currency === 'USD'))
+      prices.push({
+        finish: 'pokemonCenter',
+        amount: usd.marketPrice,
+        currency: 'USD',
+        source: 'TCGplayer',
+        updatedAt: stampTcg.updated,
+      });
+
+    const stampCm = variant.pricing?.cardmarket;
+
+    if (stampCm && !prices.some((p) => p.finish === 'pokemonCenter' && p.currency === 'EUR'))
+      prices.push({
+        finish: 'pokemonCenter',
+        amount: stampCm.trend,
+        currency: 'EUR',
+        source: 'Cardmarket',
+        updatedAt: stampCm.updated,
+      });
+  }
+
   return { key: priceKey(card), checkedAt: now, prices, finishes: [...available] };
 }
 
@@ -169,7 +211,8 @@ export function quotePrice(
     if (price) selected.push(price);
   }
 
-  if (!selected.length) return null;
+  // A stamp is a premium: "Not sure yet" only reaches up to it when a regular printing has a price too.
+  if (!selected.length || (finish === 'unsure' && selected.every((p) => p.finish === 'pokemonCenter'))) return null;
   const amounts = selected.map((p) => Math.round(p.amount * (p.currency === 'EUR' ? fx!.rate : 1) * 100));
   const converted = selected.some((p) => p.currency === 'EUR');
 
@@ -330,8 +373,10 @@ export function missingPriceReason(
 
   if (!fx && snapshot.prices.some((p) => wanted(p) && p.currency === 'EUR')) return 'exchange';
 
-  // A chosen printing with no price while its siblings have one is often the wrong printing.
-  if (finish !== 'unsure' && snapshot.prices.some((p) => p.finish !== finish)) return 'printing';
+  // A chosen printing with no price while its siblings have one is often the wrong printing. A priced stamp isn't
+  // a hint that an unstamped copy is mislabeled.
+  if (finish !== 'unsure' && snapshot.prices.some((p) => p.finish !== finish && p.finish !== 'pokemonCenter'))
+    return 'printing';
 
   return 'unlisted';
 }

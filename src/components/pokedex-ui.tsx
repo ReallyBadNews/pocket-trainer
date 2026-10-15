@@ -727,7 +727,8 @@ export function CardCaption({ name, setName, detail }: { name: string; setName?:
       <Txt variant="cardTitle">{name}</Txt>
       {(setName || detail) && (
         <Txt variant="caption" muted>
-          {[setName, detail].filter(Boolean).join(' · ')}
+          {/* A separator never starts a line: SVP Black Star Promos · #085 · EN can't wrap before "· EN". */}
+          {[setName, detail].filter(Boolean).join(' · ').replaceAll(' · ', '\u00A0· ')}
         </Txt>
       )}
     </View>

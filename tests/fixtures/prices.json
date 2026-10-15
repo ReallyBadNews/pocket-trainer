@@ -214,5 +214,93 @@
         "tcgplayer": null
       }
     }
+  },
+  {
+    "language": "en",
+    "url": "https://api.tcgdex.net/v2/en/cards/mep-009",
+    "data": {
+      "id": "mep-009",
+      "name": "Alakazam",
+      "pricing": {
+        "cardmarket": {
+          "updated": "2026-10-14T22:54:32.751Z",
+          "unit": "EUR",
+          "idProduct": 851055,
+          "avg": 11.97,
+          "low": 5.45,
+          "trend": 12.13,
+          "avg1": 14.35,
+          "avg7": 12.24,
+          "avg30": 11.88,
+          "avg-holo": null,
+          "low-holo": null,
+          "trend-holo": 0,
+          "avg1-holo": null,
+          "avg7-holo": null,
+          "avg30-holo": null
+        },
+        "tcgplayer": null
+      },
+      "variants": {
+        "firstEdition": false,
+        "holo": true,
+        "normal": false,
+        "reverse": false,
+        "wPromo": false
+      },
+      "variants_detailed": [
+        {
+          "type": "holo",
+          "size": "standard",
+          "variantId": "jr7oetx1mqug9",
+          "pricing": {
+            "cardmarket": {
+              "updated": "2026-10-14T22:54:32.751Z",
+              "unit": "EUR",
+              "idProduct": 851055,
+              "avg": 11.97,
+              "low": 5.45,
+              "trend": 12.13,
+              "avg1": 14.35,
+              "avg7": 12.24,
+              "avg30": 11.88,
+              "avg-holo": null,
+              "low-holo": null,
+              "trend-holo": 0,
+              "avg1-holo": null,
+              "avg7-holo": null,
+              "avg30-holo": null
+            },
+            "tcgplayer": null
+          }
+        },
+        {
+          "type": "holo",
+          "size": "standard",
+          "stamp": ["pokemon-center"],
+          "variantId": "23hmnvtwdrrnjw8wxr5005pugcpk",
+          "pricing": {
+            "cardmarket": {
+              "updated": "2026-10-14T22:54:32.751Z",
+              "unit": "EUR",
+              "idProduct": 851056,
+              "avg": 80.4,
+              "low": 40,
+              "trend": 90.23,
+              "avg1": 75,
+              "avg7": 82,
+              "avg30": 84.07,
+              "avg-holo": null,
+              "low-holo": null,
+              "trend-holo": 0,
+              "avg1-holo": null,
+              "avg7-holo": null,
+              "avg30-holo": null
+            },
+            "tcgplayer": null
+          }
+        }
+      ]
+    }
   }
 ]
