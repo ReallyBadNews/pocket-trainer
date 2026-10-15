@@ -177,7 +177,7 @@ def raised(name, points, z, thickness, material):
 
 
 def svg(points):
-    """Map the existing achievement-emblem.tsx 76×84 drawing to this face."""
+    """Map the original 76×84 badge drawing to this face."""
     return [((x - 38) * 0.026, (35 - y) * 0.026) for x, y in points]
 
 

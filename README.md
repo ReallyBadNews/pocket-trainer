@@ -49,16 +49,20 @@ With the lock on, a "Grown-ups only" panel asks a two-digit × one-digit multipl
 
 ## Run and check
 
+Use Node.js 24.21.0, matching CI and EAS. The `packageManager` field pins pnpm 12.11.2.
+
 ```sh
 pnpm install
 pnpm web
+pnpm lint
+pnpm format:check
 pnpm typecheck
 pnpm test
 pnpm export:web
 pnpm export:ios
 ```
 
-`pnpm export:ios` validates JavaScript bundling, not a native iOS build. The 38 tests cover collection identity, duplicate arithmetic, invalid quantities, backup compatibility, multilingual searching, all card categories, TAG TEAM discovery, OCR ranking, progressive scan results, printing-specific prices, currency conversion, totals, price sorting, printing-review filters and cache/network behavior.
+`pnpm export:ios` validates JavaScript bundling, not a native iOS build. The unit tests cover collections and backups, multilingual searching, OCR and scanning, pricing, wishlists, badges, trainer rewards, quizzes, app updates, and inspection geometry. Expo dependencies follow the stable SDK 57 compatibility matrix; use `pnpm exec expo install --check` to validate them after an update.
 
 The earlier signed iOS preview (1.0.0, build 5) compiled successfully on EAS under Kenneth Elshoff's individual team. All 21 Expo Doctor checks passed. The downloaded IPA passed signature verification and includes the registered iPhone in its provisioning profile, the standalone JavaScript bundle, and the updated native scanner, crop and artwork-comparison code. Build 5 adds USD card estimates, collection totals, price caching and saved-printing corrections. Build 4’s faster recognition, card-type support and previous fixes are retained. Pricing screens were verified in the browser at iPhone width; physical iPhone validation of this update remains to be done. See [iOS build and signing details](docs/ios-build.md) for the installation link, team selection and repeat-build command. Register additional iPhones/iPads and include them in a new build or re-sign before installing there.
 
