@@ -7,8 +7,8 @@ on:
 defaults:
   image: sdk-57
   tools:
-    node: '24.14.0'
-    pnpm: '11.18.0'
+    node: '24.21.0'
+    pnpm: '12.11.2'
 
 # A development client only has to be rebuilt when native code or config
 # changes. JS-only pushes reuse the last development build with the same
