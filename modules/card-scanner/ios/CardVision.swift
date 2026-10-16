@@ -41,6 +41,89 @@ struct CardVision {
       // Respect the user's crop, including borderless/full-art cards.
       return (image, bounds, false)
     }
+    let e = image.extent
+    if let card = try findCard(image) {
+      func point(_ p: CGPoint) -> CIVector { CIVector(x: p.x * e.width, y: p.y * e.height) }
+      let corrected = image.applyingFilter("CIPerspectiveCorrection", parameters: [
+        "inputTopLeft": point(card[0]), "inputTopRight": point(card[1]),
+        "inputBottomRight": point(card[2]), "inputBottomLeft": point(card[3])
+      ])
+      if corrected.extent.width > 100 && corrected.extent.height > 140 {
+        let xs = card.map(\.x), ys = card.map(\.y)
+        bounds = [Double(xs.min()!), Double(1 - ys.max()!), Double(xs.max()! - xs.min()!), Double(ys.max()! - ys.min()!)]
+        return (zeroOrigin(corrected), bounds, true)
+      }
+    }
+    return (image, bounds, false)
+  }
+
+  /// Corners in Vision's normalized, bottom-left-origin space: top left, top right, bottom right, bottom left.
+  typealias Quad = [CGPoint]
+
+  // Vision's rectangle detector mostly traces the inner edge of a card's border, and the busy art of
+  // ex, V and GX cards breaks that edge up. So look at the frame a few ways and keep the most
+  // card-shaped quad near the middle: the photo, its negative (dark binder gaps turn bright and
+  // outline the card), a lifted grayscale, and the photo and negative again inside the area document
+  // segmentation marks. Each look costs several milliseconds, so stop early when two agree.
+  static func findCard(_ photo: CIImage) throws -> Quad? {
+    // Normalized corners don't depend on scale, and the filters render faster on a smaller copy.
+    let scale = min(1, 1024 / max(photo.extent.width, photo.extent.height))
+    let image = zeroOrigin(photo.transformed(by: CGAffineTransform(scaleX: scale, y: scale)))
+    let negative = image.applyingFilter("CIColorInvert")
+    var looks = [try rectangles(image), try rectangles(negative)]
+    // The photo and its negative finding the same card settles most photos.
+    if let best = bestCard(looks, size: image.extent.size), best.agreeing > 0 { return best.quad }
+    looks.append(try rectangles(image.applyingFilter("CIColorControls", parameters: ["inputSaturation": 0])
+      .applyingFilter("CIGammaAdjust", parameters: ["inputPower": 0.5])))
+    let documents = VNDetectDocumentSegmentationRequest()
+    try VNImageRequestHandler(ciImage: image, options: [:]).perform([documents])
+    if let document = documents.results?.first, document.confidence >= 0.3 {
+      let corners = [document.topLeft, document.topRight, document.bottomRight, document.bottomLeft]
+      // A confident segmentation is a candidate itself; it is rounder than the detector's quads.
+      if document.confidence >= 0.7 { looks.append([corners]) }
+      let xs = corners.map(\.x), ys = corners.map(\.y)
+      let found = CGRect(x: xs.min()!, y: ys.min()!, width: xs.max()! - xs.min()!, height: ys.max()! - ys.min()!)
+      let window = found.insetBy(dx: -found.width * 0.12, dy: -found.height * 0.12).intersection(CGRect(x: 0, y: 0, width: 1, height: 1))
+      if window.width > 0.1 && window.height > 0.1 {
+        looks += [try rectangles(image, in: window), try rectangles(negative, in: window)]
+      }
+    }
+    return bestCard(looks, size: image.extent.size)?.quad
+  }
+
+  /// The most card-shaped quad near the middle, and how many other looks found the same corners.
+  static func bestCard(_ looks: [[Quad]], size: CGSize) -> (quad: Quad, agreeing: Int)? {
+    var best: (quad: Quad, agreeing: Int, score: Double)?
+    for (look, quads) in looks.enumerated() {
+      for quad in quads {
+        let p = quad.map { CGPoint(x: $0.x * size.width, y: $0.y * size.height) }
+        let top = hypot(p[0].x - p[1].x, p[0].y - p[1].y), right = hypot(p[1].x - p[2].x, p[1].y - p[2].y)
+        let bottom = hypot(p[2].x - p[3].x, p[2].y - p[3].y), left = hypot(p[3].x - p[0].x, p[3].y - p[0].y)
+        guard min(top, right, bottom, left) > 1 else { continue }
+        // Shape from the corners, so a tilted card still measures 63 × 88 mm and half a card or a
+        // card with its neighbour does not.
+        let aspect = Double((top + bottom) / (left + right))
+        let skew = max(top / bottom, bottom / top, left / right, right / left)
+        var area: CGFloat = 0
+        for i in 0..<4 { area += p[i].x * p[(i + 1) % 4].y - p[(i + 1) % 4].x * p[i].y }
+        let share = Double(abs(area) / 2 / (size.width * size.height))
+        guard abs(aspect - 0.716) <= 0.12, skew <= 1.35, share >= 0.08 else { continue }
+        let center = Double(hypot(quad.map(\.x).reduce(0, +) / 4 - 0.5, quad.map(\.y).reduce(0, +) / 4 - 0.5))
+        let agreeing = looks.enumerated().filter { other in
+          other.offset != look && other.element.contains { zip(quad, $0).allSatisfy { hypot($0.x - $1.x, $0.y - $1.y) < 0.03 } }
+        }.count
+        // Size matters less than shape and position: a card plus a sliver of its neighbour is bigger.
+        let score = share * 0.5 - center * 1.5 - abs(aspect - 0.716) * 4 + Double(min(agreeing, 2)) * 0.05
+        if score > -0.5 && score > best?.score ?? -.infinity { best = (quad, agreeing, score) }
+      }
+    }
+    return best.map { ($0.quad, $0.agreeing) }
+  }
+
+  /// Rectangles in `window` (normalized, bottom-left origin) of the image, in whole-image coordinates.
+  static func rectangles(_ image: CIImage, in window: CGRect = CGRect(x: 0, y: 0, width: 1, height: 1)) throws -> [Quad] {
+    let e = image.extent
+    let area = CGRect(x: e.minX + window.minX * e.width, y: e.minY + window.minY * e.height, width: window.width * e.width, height: window.height * e.height)
     let request = VNDetectRectanglesRequest()
     request.maximumObservations = 12
     request.minimumConfidence = 0.45
@@ -48,29 +131,12 @@ struct CardVision {
     request.maximumAspectRatio = 0.88
     request.minimumSize = 0.18
     request.quadratureTolerance = 30
-    try VNImageRequestHandler(ciImage: image, options: [:]).perform([request])
-    let e = image.extent
-    func score(_ rect: VNRectangleObservation) -> Double {
-      let b = rect.boundingBox
-      let ratio = b.width * e.width / (b.height * e.height)
-      guard ratio > 0.43 && ratio < 1.05 else { return -1 }
-      let centerDistance = hypot(b.midX - 0.5, b.midY - 0.5)
-      return Double(b.width * b.height) * 2 - centerDistance * 1.5 - abs(ratio - 0.716) * 0.5
-    }
-    if let rect = request.results?.max(by: { score($0) < score($1) }), score(rect) > -0.15 {
-      func point(_ p: CGPoint) -> CIVector { CIVector(x: p.x * e.width, y: p.y * e.height) }
-      let corrected = image.applyingFilter("CIPerspectiveCorrection", parameters: [
-        "inputTopLeft": point(rect.topLeft), "inputTopRight": point(rect.topRight),
-        "inputBottomLeft": point(rect.bottomLeft), "inputBottomRight": point(rect.bottomRight)
-      ])
-      if corrected.extent.width > 100 && corrected.extent.height > 140 {
-        let b = rect.boundingBox
-        bounds = [b.minX, 1 - b.maxY, b.width, b.height]
-        image = zeroOrigin(corrected)
-        return (image, bounds, true)
+    try VNImageRequestHandler(ciImage: zeroOrigin(image.cropped(to: area)), options: [:]).perform([request])
+    return (request.results ?? []).map { rect in
+      [rect.topLeft, rect.topRight, rect.bottomRight, rect.bottomLeft].map {
+        CGPoint(x: window.minX + $0.x * window.width, y: window.minY + $0.y * window.height)
       }
     }
-    return (image, bounds, false)
   }
 
   static func read(_ image: CIImage, language: String, words: [String], correction: Bool) throws -> [VNRecognizedTextObservation] {
