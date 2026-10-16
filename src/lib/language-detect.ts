@@ -116,6 +116,20 @@ export function detectCardLanguage(scan: ScanText): Language {
   if (hangul + kana + han < 3) return 'en';
   const guess = textLanguage(body);
 
+  // When the crop misses, the read can include a foreign neighbour. This card's English name with its number wins:
+  // the set code and number with the name anywhere on the card, or the number with the name in the header.
+  const [english] = scanCandidates(scan, 'en', 1);
+
+  if (
+    english &&
+    ((english.exactPrinting && english.nameScore >= 25) ||
+      (english.evidence === 'Name + card number' && english.nameScore >= 60))
+  ) {
+    const [native] = scanCandidates(scan, guess, 1);
+
+    if (!native || english.score > native.score) return 'en';
+  }
+
   if (guess !== 'zh-cn' && guess !== 'zh-tw') return guess;
 
   const [cn] = scanCandidates(scan, 'zh-cn', 1),

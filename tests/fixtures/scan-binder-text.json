@@ -1,0 +1,138 @@
+[
+  {
+    "label": "Synthetic binder photo s001-en-me01-077: Mega Lucario ex MEG 077/132, crop missed; footer read as 0770132 beside neighbours' 135/102 and 026/071 (card language read); production CardVision on macOS",
+    "id": "s001-en-me01-077",
+    "language": "en",
+    "expected": "me01-077",
+    "scan": {
+      "text": "HAS COA\nCalan\n40\nYou may discard a Stad\n20+\ndoes 120 more damage\nresistance\n× 2\nweakness\n18 1 73\n© ×2\nIllus. sakuyoo\nis K\nSho Hen ke i the is\nG\n262/182\nSYSK\n026/071 C\ndo/Creatures/GAME FREAK\n2933L\nHP 340\nSTAGET\nMega Lucario C\n10-\nThe Mega-Evolved form of\nEvolves from Riolu\nLucario\n30+\nyour Active\n130\nAura Jab\nage.\nAttach up to 3 Basic W Energy cards from your discard\n100\npile to your Benched Pokémon in any way you like.\nDID ELECTO\n270\ntakes 20 less\nMega Brave\n| Resistance).\nDuring your next turn, this Pokémon can't use Mega Brave\n13.0\n150\ned Pokémon.\nretreat\nresistance\nx2\nweakness •\nWhen your Mega Evolution\nMega Evolution eX rule\n# (Sv7 255/102 UR\n• ** *\nPokémon EX is Knocked Out, your opponent takes 3 Prize card\nSban Graphica\n077132 *+\nMEG EN\nur Pokémon-GX is\nse cards.\nChinc\nBASIC\nITEM",
+      "topText": "HAS COA\nHAS CA\nHAS Ca\nCalan\nClan\nCala\n40\n4\n0\nYou may discard a Stad\nYou may discarda Stad\nYou may discard aStad\n20+\n2+\n0+\ndoes 120 more damage\ndoes 120more damage\ndoes 20 more damage\nresistance\nresistanc\nresistane\n× 2\nx 2\nx2\nweakness\nweaknes\nwakness\n18 1 73\n1 1 73\n181 73\n© ×2\n* ×2\n©×2\nIllus. sakuyoo\nIllus. takuyoo\nillus. sakuyoo\nis K\nIs K\nisK\nSho Hen ke i the is\nSho Hen de i the is\nSho Hen ke i Whe is\nG\n262/182\n262/ 182\n262182\nSYSK\nSVSK\nSYK\n026/071 C\n026/071 €\n026/071€\ndo/Creatures/GAME FREAK\ndo/Creatures/GAMEFREAK\ndo/Creature/GAME FREAK\n2933L\n2933L\n2933L\n",
+      "bottomText": "Mega Evoluhon Bee\nSN7\n135/102 UB\nH\n* ***\n02024\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards\nIlluss, Sban Graphics\n*\nMEG EN\n0770132\nur Pokémon-GX is\n125 POi\nse cards-\nChinc\nBASIC\nFL-2-7\nĐai-F\nITEM\nMega Evolution eX rule\n# (Sv7 255/102 UR\n• ** *\nPokémon EX is Knocked Out, your opponent takes 3 Prize card\nSban Graphica\n077132 *+\nMEG EN\nur Pokémon-GX is\nse cards.\nChinc\nBASIC\nITEM\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "Calan\nCala\nClan\n40\n4\n0\nmay discard a Stad\nmay discarda Stad\nmay discard aStad\nYou\nYo\nYu\n20+\n0+\n2+\ndoes 120 more damage\ndoes 120more damage\ndoes 12 more damage\nresistance\nresistanc\nresistane\nx 2\nx2\nx2\n*\nweakness\nweaknes\nwakness\n*\n11 73\nH173\n10 73\n× 2\nx2\nx 2\nP\nIllustakuyoo\nillustakuyoo\nIllussakuyoo\nis K\nIs K\nisK\nбать.\nбить.\nдіть.\nPAR EN\nPAREN\nPAR IN\n262/182\n262182\n262/82\nHus. you\nHus, you\nHus. you\n* tie.\n* file.\n* tile.\n02023 Poken\n02023 Pokem\n02023 Pokee\nSYSK\nS·SK\nSYSK\n026/071 C\n026/071 €\n026/071C\nH\nН\n02024 Pokemon/Nintendo/Creatures/GAMEFREAK\n©2024 Pokemon/Nintendo/Creatures/GAMEFREAK\n02024 Pokémon/Nintendo/Creatures/GAMEFREAK\n2937L\n2937L\n2937L\nIP 340 #\nIP 340#*\nIP 340#\nSTAGEU\nSTAGE\nSTAGU\nMega Lucario eX\nMega Lucario EX\nMega Lucario CX\n10\n0\n1\nThe Mega-Evolved form of\nThe Mega-Evolved formof\nThe Mega-Evolvedform of\nEvolves from Riolu\nEvolves from Riou\nEvolves from Riol\nLucario\nLucaro\nLucari",
+      "bottomText": "Sx7\nMogo frolution\n135/102 U3\n-H\n* ***\n©20241\nimon @X Knocked Oul, your apponent takes 3 Prize cards\nIlllus, 5ban Graphics\nO'MEGEN\n077/132\nur Poktmon-GX is\n025 Poten\nie cards.\nChinc\nBASIC\nFL-3-7\nĐatt-F\nITEM"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s001-en-me01-077: Mega Lucario ex MEG 077/132, crop missed; Japanese neighbours in the frame (auto-detect read); production CardVision on macOS",
+    "id": "s001-en-me01-077",
+    "language": "auto",
+    "expected": "me01-077",
+    "scan": {
+      "text": "HAS COA\nワフが出ずとー\n札を\nCalan\n40\nマジカルショット\nYou may discard a Stad\n20+\ndoes 120 more damage\nresistance\n× 2\nこける\nweakness\n無抗力\n© ×2\nilus. tokuyoo\nis K\n釜のダ毛は水を輝く程気を持ち\n会話する。\nG\n水浴びしても乾いている。\n262/182\nが大好き。\nSYSK\n026/071 C\ndo/Creatures/GAME FREAK\nスタジアム\n$340\nSTAGET\nMega Lucario C\nゼロの天空洞\nも\n10-\nThe Mega-Evolved form of\nEvolves from Riolu\nLucario\n30+\n自分の場に「テラスタル\nyour Active\n130\nに出せるポケモンの数は\nAura Jab\nage.\nAttach up to 3 Basic W Energy cards from your discard\n100\n（このカードがトラッショ\npile to your Benched Pokémon in any way you like.\nのポケモンがいなくなっ\n270\ntakes 20 less\nする。おたがいにトラ\nMega Brave\n| Resistance).\nDuring your next turn, this Pokémon can't use Mega Brave\n行う。）\n150\ned Pokémon.\nretreat\nresistance\nIon. MARITa Chikazang\nx2\nweakness •\nWhen your Mega Evolution\nMega Evolution eX rule\n# (Sv7 255/102 UR\n［***\nPokémon EX is Knocked Out, your opponent takes 3 Prize card\nSban Graphica\n077132**\nMEG EN\nur Pokémon-GX is\nse cards.\nChinc\nBASIC\nトレーナーズ\nサポート\nITEM\nタケシのスカウト",
+      "topText": "HAS COA\nHAS CA\nHAS Ca\nワフが出ずとー\nワフが出ず。ー\nワフが出ず～ー\n札を\n札\nを\nCalan\nCala\nClan\n40\n4\n0\nマジカルショット\nマカルショット\nマジカルショッ\nYou may discard a Stad\nYou may discarda Stad\nYou may discard aStad\n20+\n2+\n0+\ndoes 120 more damage\ndoes 120more damage\ndoes 20 more damage\nresistance\nresistanc\nresistane\n× 2\nx 2\nx2\nこける\nにける\nにげる\nweakness\nweaknes\nwakness\n無抗力\n地抗力\n焦抗力\n© ×2\n* ×2\n9 ×2\nilus. tokuyoo\nilus. rokuyoo\nIlus. tokuyoo\nis K\nIs K\nisK\n釜のダ毛は水を輝く程気を持ち\n釜のダ毛は永を輝く程気を持ち\n釜のダ毛は水を新く程気を持ち\n会話する。\n金話する。\n蜜話する。\nG\n水浴びしても乾いている。\n水着びしても乾いている。\n永浴びしても乾いている。\n262/182\n262/ 182\n262182\nが大好き。\nが天好き。\nが大好き\nSYSK\nSVSK\nSYK\n026/071 C\n026/071 €\n026/071€\ndo/Creatures/GAME FREAK\ndo/Creatures/GAMEFREAK\ndo/Creature/GAME FREAK\nスタジアム\nタジアム\nスタアム\n",
+      "bottomText": "Mega Evoluhon Bee\nSN7\n135/102 UB\nH\n* ***\n02024\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards\nIlluss, Sban Graphics\n*\nMEG EN\n0770132\nur Pokémon-GX is\n125 POi\nse cards-\nChinc\nBASIC\nFL-2-7\nĐai-F\nITEM\nMega Evolution eX rule\n# (Sv7 255/102 UR\n［***\nPokémon EX is Knocked Out, your opponent takes 3 Prize card\nSban Graphica\n077132**\nMEG EN\nur Pokémon-GX is\nse cards.\nChinc\nBASIC\nトレーナーズ\nサポート\nITEM\nタケシのスカウト\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "札を\n札\nを\nCalan\nCalan\nClan\n40\n4\n0\nマジカルショット\nマカルショット\nマジカルショッ\nmay diseard a Stad\nmay disearda Stad\nmaydiseard a Stad\nYou\nou\nYu\n20+\n20＋\n2+\ndoes 120 more damage\ndoes 120more damage\ndoes 12 more damage\nresistance\nresistance.\nreistance\nx 2\nx2\n2\n*\n＊\nweakness\nweaknes\nweaness\n本\n水\n木\nにける\nにせる\nにげる\nx2\n2\nx\nP\nulus.tokuyoo\nalus.tokuyoo\nulustokuyoo\nisK\nasK\nIsK\n釜器の部尾は茶を舞く確類を持ち\n釜器の部尾は家を舞く確類を持ち\n釜器の容尾は茶を舞く確類を持ち\n会話する。\n会話する、\n＆話する。\nPARE\nPAREN\nPAREM\n262/182\n262/18\n262182\n水浴びしても続いている。\n永浴びしても続いている。\n水浴びしても乾いている。\nullus. you\nallus. you\nullus. yuu\nが天好き。\nが実好き。\nが天好き\n02023 Pokee\n02023 Pokee\n02023 Pokdo\nSISK\nSNSK\nSI5K\n026/071.C\n026/071C\n026/071.\nH\n02024 Pokemon/Nintendo/Creatures/GAME FREAK\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK\n02024 Pokemon/Nintendo/Creatures/GAMIE FREAK\nスタジアム\nタジアム\nスタアム\n1340（\n16340（\n1340（\nSTAGEU\nSTAGGU\nSTAGE\nゼロの天空満\nゼロの天堂満\nゼロの笑空満\nMega Lureario ex\nMega Lureario eX\nMega Leario ex\n10\n0\n1\nThe Mego-Evolvedformo？\nThe Mego-Evolvedformon\nThe Mego-avolvedformo？\nEvolves from Riolu\nEvolves fromRiolu\nEvolvesfrom Riolu\nLocario\nLucario\nLacario",
+      "bottomText": "Sx7\nMogo frolution\n135/102 U3\n-H\n* ***\n©20241\nimon @X Knocked Oul, your apponent takes 3 Prize cards\nIlllus, 5ban Graphics\nO'MEGEN\n077/132\nur Poktmon-GX is\n025 Poten\nie cards.\nChinc\nBASIC\nFL-3-7\nĐatt-F\nITEM"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s010-en-me02.5-135: Mega Scrafty ex ASC 135/217, crop missed; Japanese neighbours in the frame (auto-detect read); production CardVision on macOS",
+    "id": "s010-en-me02.5-135",
+    "language": "auto",
+    "expected": "me02.5-135",
+    "scan": {
+      "text": "Illus, Toshinao Aoki\n・く。\nH SV7 Fl 113/102/AR\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\nい。\n#330\nSTAGE1\nMega Scrafty eX\nThe Mega-Evolved formo?\nScrafty\nEvolves from Scraggy\nCounce Rotocking Crest\nAbility\nIf this Pokémon is in the Active Spot and is damaged by an\nattack from your opponent's Pokémon (even if this Pokémon\nis Knocked Out), place 5 damage counters on the Attacking\n60\nPokémon.\n160\nOutlaw Leg\nDiscard a random card from your opponent's hand. Discard\nthe top card of your opponent's deck.\nretreat\nresistance\n× 2\nweakness\nMega Evolution eX rule\nWhen your Mega Evolution\nd became a\nMus. Sban Graphics\nPokémon eX is Knocked Out, your opponent takes 3 Prize cards.\nhting spirit,\nL ASCEN)\n**\n135/217\nopponents.\nD2026 Pokémon / Nintendo / Creatures / GAME FREAK\n訓練家\n支援者",
+      "topText": "Illus, Toshinao Aoki\nIllus, Toshinae Aoki\nIllus. Toshinao Aoki\n・く。\nく。\n.く。\nH SV7 Fl 113/102/AR\nH SV7 FY 113/102/AR\nA SV7 Fl 113/102/AR\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK\nC2024 Pokémon/Nintendo/Creatures/GAME FREAK.\nい。\nい\n。\n#330\nSTAGE1\nSTAGE1\nSTAGE\nMega Scrafty eX\nMega Scrafty EX\nMega Scrafty eX?\nThe Mega-Evolved formo?\nThe Mega-Evolved formof\nThe Mega-Evolved formo\nScrafty\nScraty\ncrafty\nEvolves from Scraggy\nEvolves from craggy\nEvolve from Scraggy\n",
+      "bottomText": "the top caraor\nretreat\nresistance\nx2\nweakness €\nMega Evolution eX rule\nWhen your Mega Evolution\nd became a\nIMus. 5ban Graphics\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards.\nhting spirit,\nASC EN\n135/217\nopponents.\n©2026 Pokémon / Nintendo / Creatures/ GAME FREAK\n312\nthe top card of your opponent's deck.\nretreat\nresistance\n× 2\nweakness\nMega Evolution eX rule\nWhen your Mega Evolution\nd became a\nMus. Sban Graphics\nPokémon eX is Knocked Out, your opponent takes 3 Prize cards.\nhting spirit,\nL ASCEN)\n**\n135/217\nopponents.\nD2026 Pokémon / Nintendo / Creatures / GAME FREAK\n訓練家\n支援者\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "iles Toshinao Aok\niles Tashinao Aok\nies Toshinao Aok 〜\nく。\nく\n。\nSV7 F？\nSV7F？\nSVZF？\n213/102/AR\n213/102AR\n213/102.AR\nH\n田\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK\n©2024 Pokamon/Nintendo/Creatures/GAME FREAK.\nい。\nい\n。\n1,330\n1330\n1.330\nSTAGE1\nSTAGE］\nSTAGE］\nMega Serafty ex\nMega Scrafty ex\nMega Serafty @x\nThe Mega-Evolved formof\nThe Mega-Evolved formo\nThe Mega-Evotved formof\nEvolves from Scraggy\nEvolvesfrom Scraggy\nEvolves fromScraggy\nsarafty\nscrafty\nsaraft",
+      "bottomText": "tne top caru or you'\nretreat\nresistance\nx2\nweakness (\nMego Evolution EX rule\nWhen your Mega Evolution\ndbecam\nIIllus. Sban Craphics\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards.\nhiing\n(ASCEN)\n135/217\nisI GAME FREAK\nkémon/ Nintendo /C"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s013-en-me03-047: Mega Zygarde ex POR 047/088, crop missed; Japanese neighbours in the frame (auto-detect read); production CardVision on macOS",
+    "id": "s013-en-me03-047",
+    "language": "auto",
+    "expected": "me03-047",
+    "scan": {
+      "text": "weary put it\n♪このカーフ\ninto your hand, and then shuffle your deck.\nWing Attack\n90\nweakness\n× 2\n| resistance\n-30\nretreat\nIllus. Nisota Niso\nIt is a flying transporter that carries small Pokémon\nえない。\nG SVP EN\n022*\nin its beak. It bobs on the waves to rest its wings.\n©2023 Pokemon / Nintendo / Creatures / GAME FREAK\nERGY\nBASIS\nHP 310\nMega Zygarde eX\nThe Mega-Evolved form of\nZygarde\n200\nGaia Wave\nDuring your opponent's next turn, this Pokémon takes\n30 less damage from attacks (after applying Weakness and\nResistance).\nNullifying Zero\non, it provides\nFor each of your opponent's Pokémon, flip a coin. If heads,\nthis attack does 150 damage to that Pokémon. (Don't apply\nnon, this card\nWeakness and Resistance for Benched Pokémon.)\nnly 1 Energy at\nretreat\nresistance\n× 2\nweakness\nMega Evolution eX rule\nWhen your Mega Evolution\nIllus. takuyoa\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards.\nJ\nPOR EN 047/088**\nNintendo / Creatures / GAME FREAK\nQ2026 Pokemon,",
+      "topText": "weary put it\nwarty put it\nweary put It\n♪このカーフ\n♪このカート\n♪このカーブ\ninto your hand, and then shuffle your deck.\ninto your hand, and then shuffle your deck\ninto your hand, and the shuffle your deck.\nWing Attack\nWin Attack\nWig Attack\n90\n9\n0\nweakness\nweaknes\nweakess\n× 2\nx2\nx 2\n| resistance\n/ resistance\nresistance\n-30\n30\n-0\nretreat\nretrea\nretrat\nIllus. Nisota Niso\nIllus. Nisota Nio\nIllus. Nisot Niso\nIt is a flying transporter that carries small Pokémon\nIt is a flying transporter that carries mall Pokémon\nIt is a flying transporter that carries small Poémon\nえない。\nえない\nない。\nG SVP EN\nG SVP EN)\nG SVP eN\n022*\n022 *\n022\nin its beak. It bobs on the waves to rest its wings.\nin its beak. It bobs on the waves to rest its wings\nin its beak. It bobs on the waves to rest it wings.\n©2023 Pokemon / Nintendo / Creatures / GAME FREAK\n©2023 Pokemon / Nintendo / Creatures/ GAME FREAK\n©2023 Pokemon / Nintendo / Creatures /GAME FREAK\n",
+      "bottomText": "For each of your opponent's Pokémon, flip a coin. If heads,\nthis attack does 150 damage to that Pokémon. (Don't apply\nnon, this card\nWeakness and Resistance for Benched Pokémon.)\nnly 1 Energy at\nretreat\nresistance\nweakness\nx2\nMega Evolution eX rule\nWhen your Mega Evolution\nillus. takuyoa\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards.\nJ POR EN\n047/088*\n*\nNintendo / Creatures /GAME FREAK\nQ2026 Pokemon\nFor each of your opponent's Pokémon, flip a coin. If heads,\nthis attack does 150 damage to that Pokémon. (Don't apply\nnon, this card\nWeakness and Resistance for Benched Pokémon.)\nnly 1 Energy at\nretreat\nresistance\n× 2\nweakness\nMega Evolution eX rule\nWhen your Mega Evolution\nIllus. takuyoa\nPokémon EX is Knocked Out, your opponent takes 3 Prize cards.\nJ\nPOR EN 047/088**\nNintendo / Creatures / GAME FREAK\nQ2026 Pokemon,\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "♪このカート\n♪このカープ\nこのカート\ninto your hand, and then shuffle your deck.\ninto your hand, and then shuffle your deck\ninto your hand,and then shuffle your deck.\nWing Attack\nWingAttack\nWing Attac\n90\n9\n0\nweakness\nweakess\nweaness\nx2\n2\nx\nresistance\nresistane\nresistace\n-30\n-3\n30\nretreat\nretreat.\netreat.\nHlus. Nisota Niso\nWlus. Nisota Niso\nHlus, Nisota Niso\nえない。\nえない\nえい。\nIt is a flying transporter that carries small Pokemon\nlt is a flying transporter that carries small Pokemon\nItis a flying transporter that carries small Pokemon\nG\nin its beak. It bobs on the waves to rest its wings.\nin its beak, It bobs on the waves to rest its wings.\nin its beak. lt bobs on the waves to rest its wings.\nSVPE o22\nSVPE o22\nSVPa o22\n©2023 Pokemon/ Nintendo / Creatures/ GAME FREAK\n©2023 Pokemon/Nintendo / Creatures / GAME FREAK\n©2023 Pokemon/Nintendo / Creatures/ GAME FREAK\nIERGY\n「ERGY\nERGY\nBASIS\nBASIE\nBASI\n1310\n1,310\n1P310\nMega Zygarde ex\nMegaZygarde ex\nMega Zygarde er\nThe Mega-Evolved formor\nThe Mega-Evolved formof\nThe Mega-Evolved formop",
+      "bottomText": "For each of your opponent's Pokémon, flip a coin. If heads,\nthis attack does 150 damage to that Pokémon. (Don't apply\nnon, this card\nWeakness and Resistance for Benched Pokémon.)\nnly | Energy at\nretreat\n*\nresistance\nx2\nweakness\nMega Evolution eX rule\nWhen your Mega Evolution\nIlluso lakuyoa\nPoleimon eX is Knocked Our, your opponent cakes 3 Prize carde.\n*\nPOR EN\n*\n047/088\nvendo / Crestures /G"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s080-ja-SV4a-024: チオンジェンex SV4a 024/190, crop missed and glare on the name (card language read); production CardVision on macOS",
+    "id": "s080-ja-SV4a-024",
+    "language": "ja",
+    "expected": "SV4a-024",
+    "scan": {
+      "text": "200\nGaia Wave\n歩\nうしゅう\nDuring your opponent's next turn, this Pokemon takes\n自分の\n30 less damage from attacks （ofter applying Weakness and\nに1回使える。\n自分の\nあ、このポケモンにつける\nResistance）\nNullifying Zero\n200▶\nスパイク\nFor each of your opponent's Pokemon, flip a coin. If heads，\nthis atack does 1S0 damage to that Pokemon. （Dorit apply\n使えない\nWeakness and Resistance for Benched Pokemon.）\nretreat\nweakness O x 2 resistance\nMisou Brakution ex nul\nWen your Meen Ewolution\nsimon ex i Knoded Out, your apponent cakas 3.Pvie carde\nU PORE 047/088\nつしたとき、新車はサイドを2枚とる\nたね\nTRAINER\n4230\nチオンジェンCX\nむさぼるつた\nany of your Rokemon were\n相手のベンチポケモン1匹に、相手がすでにとったサイドの数\nsonents last/turn，\nx60ダメージ。［ベンチは朝点・旅を計算しない。）\nrom your discard ple to of\n220\ny gards until you have 6 cards\n* フォレストバーン\n6x2\nlay only I Supporter card durine\nケモンのXださせつしたとの、前身はサイドを2枚とる、\n024/190：発用\n1CHeatES/GAME FREAK\nトレーナーズ\nサポート\n1,280\nサカキのカリスマ",
+      "topText": "200\n20\n00\nGaia Wave\nGaiaWave\nGai Wave\n歩\n夢\n屮\nうしゅう\nしゅう\nうゅう\nDuring your opponent's next turn, this Pokemon takes\nDuring your opponent's next turn,this Pokemon takes\nDuring your opponent's next turn this Pokemon takes\n自分の\n部分の\n番分の\n30 less damage from attacks （ofter applying Weakness and\n30 less damage from attacks （after applying Weakness and\n30 Iess damage from attacks （ofter applying Weakness and\nに1回使える。\nに1回使える\n1回使える。\n自分の\n自分の：\n自分の、\nあ、このポケモンにつける\nめ、このポケモンにつける\nひ、このポケモンにつける\nResistance）\nResistance）。\nResistance）.\nNullifying Zero\nNulifying Zero\nNullifyingZero\n200▶\n200〜\n200）\nスパイク\nスパク\nパイク\nFor each of your opponent's Pokemon, flip a coin. If heads，\nFor each of your opponent's Pokemon, flip a coin, If heads，\nFor each of your opponent's Pokemon, flip a coin.If heads，\nthis atack does 1S0 damage to that Pokemon. （Dorit apply\nthis atack does 1S0 damage to that Pokemon. （Donit apply\nthis atack does 1S0 damage to that Pokemon. （Dorir apply\n使えない\n使えない。\n※使えない\nWeakness and Resistance for Benched Pokemon.）\nWeakness and Resistance for Benched Pokemon）\nWeakess and Resistance for Benched Pokemon.）\nretreat\nnetreat\nrtreat\nweakness O x 2 resistance\nweakness O x 2 reistance\nweakness Ox 2 resistance\nMisou Brakution ex nul\nMisou Brakution ex nuk\nMisou Braktion ex nul\nWen your Meen Ewolution\nWen your Meen Emolution\nWen your Mepn Ewolution\n",
+      "bottomText": "ASDAN\nLLUB\ncaros unti you nave o cards\nlay only 1 Supporter card during\n@X/01\nШ3-ER2Rс8.\nKDEVeXMEUPURCa\nC024/190 RR\nCeatre/ GAME FREAK\nF-3-X\nSM-F\nW 280 4\neX\n220\ny gards until you have 6 cards\n* フォレストバーン\n6x2\nlay only I Supporter card durine\nケモンのXださせつしたとの、前身はサイドを2枚とる、\n024/190：発用\n1CHeatES/GAME FREAK\nトレーナーズ\nサポート\n1,280\nサカキのカリスマ\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "200\n20\n00\nGaia Wave\nGaiaWave\nGaa Wave\n歩歩\n夢歩\n男歩\nうしゅう\nしゅう\nうゅう\nDuring your opponent's next turn, this Pokemon takes\nDuring your opponents next turn, this Pokemon takes\nDuring your opponent's next turn,this Pokemon takes\n自分の\n当分の\n目分の\n30 less damage from attacks （after applying Weakness and\n30 Iess damage from attacks （after applying Weakness and\n30 less damage from attacks （afier applying Weakness and\n⑦分の部に1回まえる\n今分の部に1回まえる\n今の前に1回まえる\nで、このポケモンにつける\nて、このポケモンにつける\nす、このポケモンにつける\nResistance）.\nResistance）\nResistance），\n99999 Nulifying Zero\n99999Nulifying Zero\n99999 Nulifying Lero\n200>\n200）\n200/\nスパイク\nパイク\nスパク\nFor each of your opponent's Pokemon, flip a coin. If heads，\nFor each of your opponent's Pokemon, flip a coin. Ifheads，\nFor each of your opponent's Pokemon, flipa coin. If heads，\nthis attack does 150 damage to that Pokemon. （Don't apply\nthis attack does 150 damage to that Pokemon.（Don't apply\nthis attack does 150 damage to that Pokemon （Don't apply\n覆えない。\n覆えないた\n覆えないに\nWeakness and Resistance for Benched Pokemon.）\nWeakness and Resistonce for Benched Pokemon.）\nWeakess and Resistance for Benched Pokemon.）\nRereat * *\nRereat **\nnereat **\nresistance\nresistanc\nresistane\nx2\nX2\n2\nweakness\nweaknes\nweakess\nMsou Brakution ex nule\nMeou Brakution ex nule\nMsou Brakution ex nul\nWen your Megs Evolution\nWhen your Megs Evolution\nWien your Megs Evolution\nyonest cakas 3.Prias card\nsonest cakas 3.Prias card\nyonest cakas 3.Priae card\nskimon @X is Knodard out,jou\nskimon @X is Knoded out， jou\nskimon @X is Knodaed out,jou\nJ PORE 047/088 ★\nU PORE 047/088 ★\nJ PORE 047/088★\nつしたとは、相手はサイドを2枚とる、\nつしたとき、相手はサイドを2枚とる、\nつしたとは、車はサイドを2枚とる、\nBCAA FIAS\nBCAA FIA\naMA FIA",
+      "bottomText": "LZU e\ncaras unt you uaveo cards\nlay only | Supporter card during\nX0-13\nDHER2RCO\nCVРUREe\n2EVeX\n024/190 RR\nH Ceatures/GAAIE FREAK\nPES/GAME R\nFL-1-X\nSi-H\nV2804\nex"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s085-ja-SV10-079: ロケット団のペルシアンex SV10 079/098, crop missed; a neighbour reads sv4a (auto-detect read); production CardVision on macOS",
+    "id": "s085-ja-SV10-079",
+    "language": "auto",
+    "expected": "SV10-079",
+    "scan": {
+      "text": "クォーツシャイン\n4\n200\nコインを1\n点\n× 2\n弱点\nにげる\n*\n抵抗力\neXルール\nIllus. Anesaki Dy\nIllus. tono\nsv8a\nG\nポケモジexがきぜつしたとき、相手はサイドを2枚とる。\nㅐ\nsv8a\n115/\n223/187 SAR\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\nたね\nU進化\nHP 260\nロケット部のペルシアンCR\nロケット団のニャースから進化\n举\n特性\n自分の番\nこうまんしれい\n相手の 乳を上から10枚オモテにする。のぞむなら、その串に\nあるポケモンが持つワザを1つ選び、このワザとして磯う。オモテ\nにしたカードは盛親にもどして切る。\n相手のバト\nして残う。\n140\nクルーエルスラッシュ\n相手のバトルポケモンをこんらんにする。\n55\n*\nにげる\n*\n抵抗力\n点\n弱\neXルール\nIllus. USGMEN\nillus. 5ban Graphics\nsv4a\nG\n347/\nポケモジをかきぜつしたとき、相手はサイドを2枚とる。\nL\nSy 10\n| 079/098 RR\n©2025 Pokémon/Nintendo/Creatures/GAME FREAK.",
+      "topText": "クォーツシャイン\nクォーツシャン\nクォーツャイン\n4\n200\n20\n00\nコインを1\nコインを\nコイン1\n点\n流\n照\n× 2\nx 2\nx2\n弱点\nにげる\nげる\nにる\n*\n抵抗力\n抵抗\n抗力\neXルール\neルール\nXルール\nIllus. Anesaki Dy\nillus. Anesaki Dy\nIllus. Anesaki Dy\nIllus. tono\nIllus tono\nIllus.tono\nsv8a\nsv8a\nsv8a\nG\nポケモジexがきぜつしたとき、相手はサイドを2枚とる。\nポケモジeXがきぜつしたとき、相手はサイドを2枚とる。\nポケモジexがきつしたとき、相手はサイドを2枚とる。\nㅐ\nsv8a\nsv8a\nsv8a\n115/\n115\n11/\n223/187 SAR\n23/187 SAR\n223/187 AR\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK.\n©2024 Pokémon/Nintendo/Creatures/GAME FREAK.\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK\n",
+      "bottomText": "Lcies\n140\nX\n*\n*\nx2\nHE 1N 73\n36 M\nexJ-Iu\nIllus. USGMEN\ntllus.\n5ban Graphics\nG Ssv4a\n347/\nD\nSV 10\n079/098 RR\n©2025 Pokémon/Nintendo/Creatures/GAME FREAK\nして残う。\n140\nクルーエルスラッシュ\n相手のバトルポケモンをこんらんにする。\n55\n*\nにげる\n*\n抵抗力\n点\n弱\neXルール\nIllus. USGMEN\nillus. 5ban Graphics\nsv4a\nG\n347/\nポケモジをかきぜつしたとき、相手はサイドを2枚とる。\nL\nSy 10\n| 079/098 RR\n©2025 Pokémon/Nintendo/Creatures/GAME FREAK.\n",
+      "autoCropped": false
+    },
+    "refine": {
+      "text": "",
+      "topText": "4\n7\nクォーツシャイン\nクォーツシャン\nクォーツシャイ\n200\n20\n00\nコインを1\nコインを\nコイン1\n点\nX\nx 2\nx2\n2\n弱点\n璐点\n弼点\n抵抗力\n抵抗\n抗力\nにげる\nげる\nにる\neXルール\nexルール\nXルール\nillus. Anesaki Dy\nullus. Anesaki Dy\nIllus. Anesaki Dy\nHllus. tono\nHlus. tono\nHllus tono\nG\nSv8a\nsv8a\nSV8a\nポケモジをXがきせつしたとき、相手はサイドを2枚とる。\nポケモジeXがきせつしたとき、相手はサイドを2枚とる。\nポケモジをxがきせつしたとき、相手はサイドを2枚とる。\nH\nSv8a\nSV8a\nsv8a\n115）\n115）\n115\n223/187 SAR\n223/87 SAR\n22/187 SAR\n©2024 Pokemon/Nintendo/Creatures/GAME FREAK\n2024 Pokemon/Nintendo/Creatures/GAME FREAK\n©2024Pokemon/Nintendo/Creatures/GAME FREAK\nたね\nだね\nね\n7進化\n1進化\n7化\n1260 *\n1260 ＊\n4260 *\nロケット前のペルシアンCR\nロケット前のペルシアンCK\nロケット前のペルシアンC\nロケット団のニャースから進化\nロケット団のニャースから進\nロケット団のニャーから進化",
+      "bottomText": "LT15.\n140\nbÍIZŞ…I\n**\nx2\nexJu-IU\nIllus. USGMEN\nIllus. Sban Graphics\nGSv4a\n347/\nкpик2acь.\nж>EveXHOYPЬRŁȚ\nsv10\n079/098 RR\n2025 Pokémon/Nintendo/Creatures/GAME FREA"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s092-en-30th-040: Pikachu 30C 040/128 under glare; footer read as W18/30 and 0/128 (card language read); production CardVision on macOS",
+    "id": "s092-en-30th-040",
+    "language": "en",
+    "expected": "30th-040",
+    "scan": {
+      "text": "BASIC\nPikachu\n180 4\n149\n10\n4\nOverwriting Bolt\nThe Defending Pokémon's Weakness is now 4 until the\nend of your next turn. (Apply Weakness as x2.)\n3\n× 2\nretreat\nresistance\nweakness\nit has small electric sacs on bothets\nv. Stini Kondo\ncherbe When in a tough spot, this\nSKET 0407128 V18/30\nPokemon discharges electocity\nPolemen/ Nintendo/Creatures/GAME FREAK",
+      "topText": "BASIC\nBASI\nBASC\nPikachu\nPikachu\nPikach\n180 4\n480 4\n-80 4\n",
+      "bottomText": "x2\nretreat\nweakness 5\nresistance\nithassmall clectni sacs on both its\nMr. Stini Kondo\ncherke When in a tough spot, this\n3KC ax\nW18/30\nPokemon discharges electncity\n0407128\n/ Ceatures/GAME FREAK\n× 2\nretreat\nresistance\nweakness\nit has small electric sacs on bothets\nv. Stini Kondo\ncherbe When in a tough spot, this\nSKET 0407128 V18/30\nPokemon discharges electocity\nPolemen/ Nintendo/Creatures/GAME FREAK\n",
+      "autoCropped": true
+    },
+    "refine": {
+      "text": "",
+      "topText": "BASIC\nBASI\nBASC\nPikachu\nPikach\nPikacu\n..80 4\n..804\n.80 4",
+      "bottomText": "retreat\nx2\n•esbnessi\nresistance\nBu. Shini Kondo\nkhen in a tough spot, this\n0 0XC\n0/128\nson discharges electhicits\nJOsetm/GAME HEAS"
+    }
+  },
+  {
+    "label": "Synthetic binder photo s100-en-sv01-039: Charcadet SVI 039/198 under glare; read as 029/198 and 039/192 (card language read); production CardVision on macOS",
+    "id": "s100-en-sv01-039",
+    "language": "en",
+    "expected": "sv01-039",
+    "scan": {
+      "text": "Charcadet\n-60\n30\nEmber\nDiscard an Energy from this Pokémon.\n4 ×2\nMr Maidens Suspen\n© SO 039/192 •\nCharcadet!",
+      "topText": "Charcadet\nCharcade\nCharadet\n-60\n60\n-6\n",
+      "bottomText": "Fetrea\n*2\nBunet chancoaf camer to fite and bet am\n( Seuichenae Danpen\nwn Puesesunyt a fhery tighdong sgert\n029/198 ฿\nChaec adet wrill baltke eren tough opponenes\n4 ×2\nMr Maidens Suspen\n© SO 039/192 •\nCharcadet!\n",
+      "autoCropped": true
+    },
+    "refine": {
+      "text": "",
+      "topText": "BASIC\nBASIG\nBASI\nCharcadet\nCharcade\nCharadet\n-60%\n-60 €\n-60€",
+      "bottomText": "тана 6 ×2\nrаtaсno\nd abocp\n(ocarтo"
+    }
+  }
+]
