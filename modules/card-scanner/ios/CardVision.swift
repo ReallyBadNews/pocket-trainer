@@ -171,6 +171,29 @@ struct CardVision {
     return (request.results ?? []).sorted { $0.boundingBox.midY > $1.boundingBox.midY }
   }
 
+  static let warming = NSLock()
+  static var warmed = Set<String>()
+
+  // Vision loads its models on first use, which costs seconds; the camera calls this as it opens so
+  // the first live frame doesn't pay. Reads a little rendered text the way `recognize` does: the
+  // card's language, then the English footer pass. Failures only mean the first read is slower.
+  @discardableResult static func warmUp(language: String) -> Bool {
+    warming.lock()
+    defer { warming.unlock() }
+    if warmed.contains(language) { return true }
+    guard let text = CIFilter(name: "CITextImageGenerator", parameters: [
+      "inputText": "Pikachu  HP 60\n025/165", "inputFontSize": 36, "inputScaleFactor": 1
+    ])?.outputImage else { return false }
+    let image = zeroOrigin(text.composited(over: CIImage(color: .white)).cropped(to: text.extent.insetBy(dx: -60, dy: -120)))
+    do {
+      if warmed.isEmpty { _ = try findCard(image) }
+      _ = try read(image, language: language, words: [], correction: true)
+      if language != "en" && !warmed.contains("en") { _ = try read(image, language: "en", words: [], correction: false) }
+    } catch { return false }
+    warmed.formUnion([language, "en"])
+    return true
+  }
+
   static func text(_ lines: [VNRecognizedTextObservation], alternatives: Int = 1) -> String {
     lines.flatMap { $0.topCandidates(alternatives).map { $0.string } }.joined(separator: "\n")
   }

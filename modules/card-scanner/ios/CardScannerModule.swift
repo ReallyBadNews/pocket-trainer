@@ -14,6 +14,11 @@ public class CardScannerModule: Module {
       guard let url = URL(string: uri) else { throw CardVision.failure("The card photo could not be opened.") }
       return try CardVision.refine(CardVision.open(url), language: language, words: words)
     }.runOnQueue(.global(qos: .userInitiated))
+    // Call as the camera opens: loads Vision's models so the first frame isn't seconds slow. Resolves
+    // false instead of rejecting when it can't.
+    AsyncFunction("warmUp") { (language: String?) -> Bool in
+      CardVision.warmUp(language: language ?? "en")
+    }.runOnQueue(.global(qos: .userInitiated))
     // expo-camera uses this default back lens; the viewfinder zooms so cards stay within its focus range.
     Function("backCameraOptics") { () -> [String: Double] in
       guard let device = AVCaptureDevice.default(.builtInWideAngleCamera, for: .video, position: .back) else { return [:] }
