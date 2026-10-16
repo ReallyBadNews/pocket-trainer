@@ -413,18 +413,18 @@ function ScanSession({
     }
   }
 
-  const intro = (
+  // "Is this your card?" asks one question, so the scan controls step aside until it's answered; "No, it's not"
+  // brings them back. Its number line already shows the card's language.
+  const intro = sure ? null : (
     <>
-      {!sure && (
-        <View>
-          <Txt accessibilityRole="header" variant="title">
-            Scan cards
-          </Txt>
-          <Txt muted variant="caption">
-            Capture a card or find it by name.
-          </Txt>
-        </View>
-      )}
+      <View>
+        <Txt accessibilityRole="header" variant="title">
+          Scan cards
+        </Txt>
+        <Txt muted variant="caption">
+          Capture a card or find it by name.
+        </Txt>
+      </View>
       <Segmented
         label="What are you scanning?"
         options={SCAN_MODES}
