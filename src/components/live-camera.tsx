@@ -22,7 +22,7 @@ import {
 } from '@/lib/live-capture';
 import type { Language } from '@/lib/model';
 import { PAGE_LAYOUTS, type PageLayout } from '@/lib/page-scan';
-import { backCameraOptics, canRecognize, recognizeCard } from '@/lib/scanner';
+import { backCameraOptics, canRecognize, recognizeCard, warmUpRecognition } from '@/lib/scanner';
 import type { Crop, ScanResult } from '@/lib/scan-types';
 
 /** `page` is set for binder page photos; `region` is the part of the photo inside the page guide. */
@@ -107,6 +107,11 @@ export function LiveCamera({
     askForCamera();
   }, [permission?.granted]);
 
+  // Text recognition loads its models on first use; start that while the camera opens, not on the first frame.
+  useEffect(() => {
+    warmUpRecognition(language);
+  }, [language]);
+
   const captured = useEffectEvent(onCapture);
   const auto = mode === 'card' && canRecognize && ready && !failed && !found && !shooting;
   useEffect(() => {
@@ -132,7 +137,7 @@ export function LiveCamera({
         uri = frame.uri;
 
         if (stopped) return;
-        const scan = await recognizeCard(frame.uri, language);
+        const scan = await recognizeCard(frame.uri, language, undefined, true);
         const cardLanguage = language === 'auto' ? detectCardLanguage(scan) : language;
         const matches = scanCandidates(scan, cardLanguage, 12, 'all');
 

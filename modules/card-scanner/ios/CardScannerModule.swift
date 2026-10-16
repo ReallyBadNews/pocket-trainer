@@ -6,13 +6,18 @@ import Foundation
 public class CardScannerModule: Module {
   public func definition() -> ModuleDefinition {
     Name("CardScanner")
-    AsyncFunction("recognize") { (uri: String, language: String, words: [String], crop: [Double]) -> [String: Any] in
+    AsyncFunction("recognize") { (uri: String, language: String, words: [String], crop: [Double], fromCamera: Bool) -> [String: Any] in
       guard let url = URL(string: uri) else { throw CardVision.failure("The card photo could not be opened.") }
-      return try CardVision.recognize(url, language: language, words: words, crop: crop)
+      return try CardVision.recognize(url, language: language, words: words, crop: crop, fromCamera: fromCamera)
     }.runOnQueue(.global(qos: .userInitiated))
     AsyncFunction("refine") { (uri: String, language: String, words: [String]) -> [String: String] in
       guard let url = URL(string: uri) else { throw CardVision.failure("The card photo could not be opened.") }
       return try CardVision.refine(CardVision.open(url), language: language, words: words)
+    }.runOnQueue(.global(qos: .userInitiated))
+    // Call as the camera opens: loads Vision's models so the first frame isn't seconds slow. Resolves
+    // false instead of rejecting when it can't.
+    AsyncFunction("warmUp") { (language: String?) -> Bool in
+      CardVision.warmUp(language: language ?? "en")
     }.runOnQueue(.global(qos: .userInitiated))
     // expo-camera uses this default back lens; the viewfinder zooms so cards stay within its focus range.
     Function("backCameraOptics") { () -> [String: Double] in

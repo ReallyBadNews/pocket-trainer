@@ -15,7 +15,8 @@ import type { CameraOptics } from './live-capture';
 
 const module = requireOptionalNativeModule<{
   backCameraOptics(): Record<string, number>;
-  recognize(uri: string, language: string, words: string[], crop: number[]): Promise<ScanResult>;
+  recognize(uri: string, language: string, words: string[], crop: number[], fromCamera: boolean): Promise<ScanResult>;
+  warmUp(language: string): Promise<boolean>;
   refine(uri: string, language: string, words: string[]): Promise<ScanText>;
   compare(uri: string, urls: string[]): Promise<number[]>;
 }>('CardScanner');
@@ -41,14 +42,28 @@ export function backCameraOptics(): CameraOptics | null {
   }
 }
 
-export async function recognizeCard(uri: string, language: ScanLanguage, crop?: Crop): Promise<ScanResult> {
+/**
+ * `fromCamera` marks a live-camera photo. When no card outline is found, it reads the middle of the frame around the
+ * guide instead of the whole frame and its binder neighbours; a chosen photo is still read whole.
+ */
+export async function recognizeCard(
+  uri: string,
+  language: ScanLanguage,
+  crop?: Crop,
+  fromCamera = false,
+): Promise<ScanResult> {
   if (!module)
     throw new Error(
       'Automatic matching is available in the installed iPhone/iPad app. You can still find this card by name or number.',
     );
 
   // Auto-detect reads without a vocabulary; the follow-up pass uses the detected language's names.
-  return module.recognize(uri, language, language === 'auto' ? [] : recognitionWords(language), crop ?? []);
+  return module.recognize(uri, language, language === 'auto' ? [] : recognitionWords(language), crop ?? [], fromCamera);
+}
+
+/** Load text recognition while the camera opens, so the first frame isn't seconds slow. Never fails. */
+export function warmUpRecognition(language: ScanLanguage) {
+  module?.warmUp(language).catch(() => {});
 }
 
 export async function compareCardArtwork(uri: string, candidates: ScanCandidate[]): Promise<ScanCandidate[]> {

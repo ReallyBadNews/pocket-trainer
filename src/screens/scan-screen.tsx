@@ -72,6 +72,9 @@ type ScanScreenProps = {
   sessionId: number;
 };
 
+/** The photo being read. `fromCamera` marks the live camera's photos, whose card sits in the middle guide. */
+type ScanPhoto = { uri: string; width: number; height: number; fromCamera?: boolean };
+
 type LanguageChoice = {
   autoLanguage: boolean;
   setAutoLanguage: (auto: boolean) => void;
@@ -130,7 +133,7 @@ function ScanSession({
   const [query, setQuery] = useState(initialQuery);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoSize, setPhotoSize] = useState<{ uri: string; aspectRatio: number } | null>(null);
-  const [original, setOriginal] = useState<{ uri: string; width: number; height: number } | null>(null);
+  const [original, setOriginal] = useState<ScanPhoto | null>(null);
   const [crop, setCrop] = useState<Crop>(fullCrop);
   const [manualCrop, setManualCrop] = useState<Crop | undefined>();
   const [editing, setEditing] = useState(false);
@@ -174,7 +177,13 @@ function ScanSession({
     [query, language, autoLanguage, detected, suggested, typeFilter, browsing],
   );
 
-  async function readPhoto(uri: string, selectedLanguage: ScanLanguage, selection: Crop | undefined, id: number) {
+  async function readPhoto(
+    uri: string,
+    selectedLanguage: ScanLanguage,
+    selection: Crop | undefined,
+    id: number,
+    fromCamera = false,
+  ) {
     setError(null);
     setNote(null);
     setQuery('');
@@ -194,7 +203,7 @@ function ScanSession({
 
     await identifyProgressively(
       { recognize: recognizeCard, refine: refineCard, compare: compareCardArtwork },
-      { uri, language: selectedLanguage, crop: selection, filter: typeFilter },
+      { uri, language: selectedLanguage, crop: selection, filter: typeFilter, fromCamera },
       (scan, matches, phase, cardLanguage) => {
         lastScan.current = scan;
         setLanguage(cardLanguage);
@@ -218,14 +227,14 @@ function ScanSession({
     );
   }
 
-  async function runScan(uri: string, selectedLanguage: ScanLanguage, selection?: Crop) {
+  async function runScan(uri: string, selectedLanguage: ScanLanguage, selection?: Crop, fromCamera = false) {
     if (busyRef.current) return;
     const id = ++generation.current;
     busyRef.current = true;
     setBusy(true);
 
     try {
-      await readPhoto(uri, selectedLanguage, selection, id);
+      await readPhoto(uri, selectedLanguage, selection, id, fromCamera);
     } catch (e) {
       console.warn('Card scan failed', e);
 
@@ -265,7 +274,7 @@ function ScanSession({
     setSuggested([]);
     setNote(null);
 
-    if (original) void runScan(original.uri, next, manualCrop);
+    if (original) void runScan(original.uri, next, manualCrop, original.fromCamera);
   }
 
   async function takePhoto(library = false, system = false) {
@@ -349,13 +358,13 @@ function ScanSession({
       return;
     }
 
-    setOriginal(next);
+    setOriginal({ ...next, fromCamera: true });
     setPhoto(next.uri);
     setManualCrop(undefined);
     setCrop(fullCrop);
 
     if (!match) {
-      void runScan(next.uri, scanLanguage);
+      void runScan(next.uri, scanLanguage, undefined, true);
 
       return;
     }
@@ -629,7 +638,7 @@ function ScanSession({
                         <LinkButton
                           title="Read again"
                           icon="search"
-                          onPress={() => runScan(original.uri, scanLanguage, manualCrop)}
+                          onPress={() => runScan(original.uri, scanLanguage, manualCrop, original.fromCamera)}
                         />
                       </View>
                     )}

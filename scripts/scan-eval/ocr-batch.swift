@@ -118,7 +118,7 @@ import Foundation
       if modes.contains("auto") { languages.formUnion(["auto", "en"]) }
       for language in languages.sorted() {
         let started = Date()
-        _ = try? CardVision.recognize(url, language: language, words: try words(language, repo: repo))
+        _ = try? CardVision.recognize(url, language: language, words: try words(language, repo: repo), fromCamera: true)
         FileHandle.standardError.write(Data("warm-up \(language): \(Int(Date().timeIntervalSince(started) * 1000)) ms\n".utf8))
       }
     }
@@ -135,7 +135,8 @@ import Foundation
         var row: [String: Any] = ["id": id, "file": file, "mode": mode, "language": language]
         do {
           let started = Date()
-          var scan = try CardVision.recognize(URL(fileURLWithPath: file), language: language, words: try words(language, repo: repo))
+          // The bench photos stand in for live-camera frames of a binder page.
+          var scan = try CardVision.recognize(URL(fileURLWithPath: file), language: language, words: try words(language, repo: repo), fromCamera: true)
           scan["wallMs"] = Date().timeIntervalSince(started) * 1000
           // recognize keeps only the newest few previews, so keep a copy for refine, artwork checks and review.
           let photoUri = URL(string: scan["photoUri"] as! String)!
