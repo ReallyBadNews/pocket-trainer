@@ -54,7 +54,14 @@ struct CardVision {
         return (zeroOrigin(corrected), bounds, true)
       }
     }
-    return (image, bounds, false)
+    // No card found. A picture already cropped to a card is read whole. Otherwise read a card-shaped
+    // area in the middle, where the camera guide puts the card, rather than the whole frame and its
+    // neighbours. autoCropped stays false, so the camera still asks to move closer.
+    guard abs(e.width / e.height - 0.716) > 0.03 else { return (image, bounds, false) }
+    let width = min(e.width * 0.8, e.height * 0.9 * 0.716), height = width / 0.716
+    let middle = CGRect(x: (e.width - width) / 2, y: (e.height - height) / 2, width: width, height: height)
+    bounds = [Double(middle.minX / e.width), Double(middle.minY / e.height), Double(width / e.width), Double(height / e.height)]
+    return (zeroOrigin(image.cropped(to: middle)), bounds, false)
   }
 
   /// Corners in Vision's normalized, bottom-left-origin space: top left, top right, bottom right, bottom left.
