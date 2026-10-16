@@ -177,7 +177,7 @@ export function searchCards(query: string, language: Language, limit = 80, filte
   );
 
   // SVP 85 finds SVP 085 first, not SVP 185.
-  const printedPromo = promoKey(query);
+  const printedPromo = promoKey(query.normalize('NFKC'));
 
   return searchable
     .filter(

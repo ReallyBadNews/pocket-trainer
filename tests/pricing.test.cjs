@@ -671,6 +671,8 @@ test('an unpriced regular printing never borrows the stamp as its low end or wro
   const stampOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'pokemonCenter') };
   assert.equal(quotePrice(stampOnly, 'unsure', fx, now), null);
   assert.equal(missingPriceReason(stampOnly, 'holo', fx, { pending: false, failed: false }), 'unlisted');
+  // Without an exchange rate, a stamp's euro price still can't make a "Not sure yet" quote.
+  assert.equal(missingPriceReason(stampOnly, 'unsure', undefined, { pending: false, failed: false }), 'unlisted');
   // A stamped copy with no price while the regular holo has one is still worth a second look.
   const holoOnly = { ...alakazam, prices: alakazam.prices.filter((p) => p.finish === 'holo') };
   assert.equal(missingPriceReason(holoOnly, 'pokemonCenter', fx, { pending: false, failed: false }), 'printing');

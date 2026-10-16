@@ -369,7 +369,8 @@ export function missingPriceReason(
   if (status.pending) return 'loading';
 
   if (!snapshot) return status.failed ? 'failed' : 'loading';
-  const wanted = (p: MarketPrice) => finish === 'unsure' || p.finish === finish;
+  // "Not sure yet" never quotes a stamp on its own, so a stamp's euro price can't be what an exchange rate unlocks.
+  const wanted = (p: MarketPrice) => (finish === 'unsure' ? p.finish !== 'pokemonCenter' : p.finish === finish);
 
   if (!fx && snapshot.prices.some((p) => wanted(p) && p.currency === 'EUR')) return 'exchange';
 
