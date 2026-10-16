@@ -153,6 +153,11 @@ const searchable = allCards.map((card) => {
   };
 });
 
+/** The codes English promos print (svp, mep, swsh, sm…), so a stray footer word never pairs with a number. */
+const englishPromoCodes = new Set(
+  searchable.flatMap((c) => (c.card.language === 'en' && c.promo ? [c.promo.replace(/\d+$/, '')] : [])),
+);
+
 export function searchCards(query: string, language: Language, limit = 80, filter: CardFilter = 'all'): CardBrief[] {
   const term = normalize(query);
 
@@ -344,13 +349,21 @@ export function scanCandidates(
   for (const m of bottom.matchAll(/(?:^|[^A-Za-z0-9])([A-Z]{2,4}) ?(?:EN)? ?([0-9OIlSBZ]{2,3})(?![A-Za-z0-9])/g))
     if (/\d/.test(m[2])) promos.add(`${m[1].toLowerCase()}${numberFromOCR(m[2])}`);
 
-  // Vision often reads the code, language box, regulation mark and number as separate lines (MEP / J / EN / 080), in
-  // no fixed order, so every footer code also pairs with every footer number.
-  const footerTokens = bottom.split(/[\s•·]+/);
-  const footerCodes = footerTokens.flatMap((t) => /^([A-Z]{2,4}?)(?:EN)?$/.exec(t)?.[1] ?? []);
-  const footerNumbers = footerTokens.filter((t) => /^[0-9OIlSBZ]{2,3}$/.test(t) && /\d/.test(t)).map(numberFromOCR);
+  // Vision often reads an English promo's code, language box, regulation mark and number as separate lines
+  // (MEP / J / EN / 080), in no fixed order, so each printed promo code also pairs with every footer number.
+  if (language === 'en') {
+    const footerTokens = bottom.split(/[\s•·]+/);
 
-  for (const code of footerCodes) for (const n of footerNumbers) promos.add(`${code.toLowerCase()}${n}`);
+    const footerCodes = footerTokens.flatMap((t) => {
+      const code = /^([A-Z]{2,4}?)(?:EN)?$/.exec(t)?.[1].toLowerCase();
+
+      return code && englishPromoCodes.has(code) ? [code] : [];
+    });
+
+    const footerNumbers = footerTokens.filter((t) => /^[0-9OIlSBZ]{2,3}$/.test(t) && /\d/.test(t)).map(numberFromOCR);
+
+    for (const code of footerCodes) for (const n of footerNumbers) promos.add(`${code}${n}`);
+  }
 
   for (const m of bottom.matchAll(/([0-9OIlSBZ]{1,3})\s*[/／]\s*([A-Z]{1,3})\s*[-‐ー−]?\s*P(?![A-Za-z0-9])/g))
     if (/\d/.test(m[1])) promos.add(`${m[2].toLowerCase()}p${numberFromOCR(m[1])}`);

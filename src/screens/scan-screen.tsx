@@ -723,7 +723,10 @@ function ScanSession({
             accessibilityRole="button"
             accessibilityLabel={`Review ${item.name} ${item.id}`}
             onPress={() => {
+              // Picking a card replaces any read still running, so the reader must be free again afterwards.
               ++generation.current;
+              busyRef.current = false;
+              setBusy(false);
               setImproving('done');
               onCard(withPhoto(item));
             }}

@@ -66,6 +66,8 @@ export function PokedexShell() {
   const [quizOpen, setQuizOpen] = useState(false);
   const [scanQuery, setScanQuery] = useState('');
   const [scanSession, setScanSession] = useState(0);
+  // Each trip to the Scan tab starts back on Auto-detect; a language picked for one stack of cards doesn't linger.
+  const [scanVisit, setScanVisit] = useState(0);
   const [headerHeight, setHeaderHeight] = useState(84);
   const [navHeight, setNavHeight] = useState(83);
   const chrome = useScrollChromeController(headerHeight, navHeight + BOTTOM_FRAME_HEIGHT);
@@ -141,6 +143,8 @@ export function PokedexShell() {
 
   const openScan = (query = '') => {
     startScan(query);
+
+    if (tab !== 'scan') setScanVisit((visit) => visit + 1);
     setSpeciesId(null);
     goToTab('scan');
   };
@@ -158,7 +162,7 @@ export function PokedexShell() {
       showOnlyNeedsPrinting(trainer.id);
       goToTab('binder');
     },
-    scan: { query: scanQuery, session: scanSession, captureRequest },
+    scan: { query: scanQuery, session: scanSession, visit: scanVisit, captureRequest },
     onScanAdded: celebrate,
   };
 
@@ -368,7 +372,9 @@ export function PokedexShell() {
                     progress.set(0);
                   }}
                   onSwitch={() => {
-                    if (item.name === 'scan') startScan();
+                    if (item.name !== 'scan') return;
+                    startScan();
+                    setScanVisit((visit) => visit + 1);
                   }}
                 />
               ))}
