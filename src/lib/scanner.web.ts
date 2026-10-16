@@ -5,7 +5,14 @@ export const canRecognize = false;
 
 export const backCameraOptics = () => null;
 
-export async function recognizeCard(_uri: string, _language: Language, _crop?: Crop): Promise<ScanResult> {
+export const warmUpRecognition = (_language: string) => {};
+
+export async function recognizeCard(
+  _uri: string,
+  _language: Language,
+  _crop?: Crop,
+  _fromCamera?: boolean,
+): Promise<ScanResult> {
   throw new Error('Automatic matching is available in the installed iPhone/iPad app. Search by name or number below.');
 }
 

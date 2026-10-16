@@ -7,7 +7,7 @@ import { detectCardLanguage, type ScanLanguage } from './language-detect';
 export type ScanStage = 'refining' | 'comparing' | 'done';
 
 type Engine = {
-  recognize(uri: string, language: ScanLanguage, crop?: Crop): Promise<ScanResult>;
+  recognize(uri: string, language: ScanLanguage, crop?: Crop, fromCamera?: boolean): Promise<ScanResult>;
   refine(uri: string, language: Language): Promise<ScanText>;
   compare(uri: string, candidates: ScanCandidate[]): Promise<ScanCandidate[]>;
 };
@@ -18,11 +18,11 @@ type Engine = {
  */
 export async function identifyProgressively(
   engine: Engine,
-  input: { uri: string; language: ScanLanguage; crop?: Crop; filter: CardFilter },
+  input: { uri: string; language: ScanLanguage; crop?: Crop; filter: CardFilter; fromCamera?: boolean },
   publish: (scan: ScanResult, matches: ScanCandidate[], stage: ScanStage, language: Language) => void,
   isCurrent: () => boolean,
 ) {
-  let scan = await engine.recognize(input.uri, input.language, input.crop);
+  let scan = await engine.recognize(input.uri, input.language, input.crop, input.fromCamera);
 
   if (!isCurrent()) return;
   const language = input.language === 'auto' ? detectCardLanguage(scan) : input.language;

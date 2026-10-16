@@ -26,7 +26,8 @@ struct CardVision {
   }
 
   // Normalized coordinates use a top-left origin, like the crop UI.
-  static func prepare(_ url: URL, crop: [Double]) throws -> (CIImage, [Double], Bool) {
+  // `fromCamera` marks a live-camera photo: the card sits in the centred guide, often among binder neighbours.
+  static func prepare(_ url: URL, crop: [Double], fromCamera: Bool = false) throws -> (CIImage, [Double], Bool) {
     let original = try open(url)
     var image = original
     var bounds: [Double] = [0, 0, 1, 1]
@@ -54,10 +55,11 @@ struct CardVision {
         return (zeroOrigin(corrected), bounds, true)
       }
     }
-    // No card found. A picture already cropped to a card is read whole. Otherwise read a card-shaped
-    // area in the middle, where the camera guide puts the card, rather than the whole frame and its
-    // neighbours. autoCropped stays false, so the camera still asks to move closer.
-    guard abs(e.width / e.height - 0.716) > 0.03 else { return (image, bounds, false) }
+    // No card found. A chosen photo is read whole: it is often a close-up whose card fills the frame, and
+    // its edges are cut off by a smaller area. A live-camera photo reads a card-shaped area in the middle,
+    // around the guide, rather than the whole frame and its neighbours. autoCropped stays false either
+    // way, so the camera still asks to move closer.
+    guard fromCamera, abs(e.width / e.height - 0.716) > 0.03 else { return (image, bounds, false) }
     let width = min(e.width * 0.8, e.height * 0.9 * 0.716), height = width / 0.716
     let middle = CGRect(x: (e.width - width) / 2, y: (e.height - height) / 2, width: width, height: height)
     bounds = [Double(middle.minX / e.width), Double(middle.minY / e.height), Double(width / e.width), Double(height / e.height)]
@@ -213,9 +215,9 @@ struct CardVision {
     return result
   }
 
-  static func recognize(_ url: URL, language: String, words: [String], crop: [Double] = [], detailed: Bool = false) throws -> [String: Any] {
+  static func recognize(_ url: URL, language: String, words: [String], crop: [Double] = [], detailed: Bool = false, fromCamera: Bool = false) throws -> [String: Any] {
     let started = Date()
-    let (image, bounds, detected) = try prepare(url, crop: crop)
+    let (image, bounds, detected) = try prepare(url, crop: crop, fromCamera: fromCamera)
     let prepared = Date()
     // Read the whole card at a useful text resolution; preserve the original
     // crop for the small footer and any optional detailed pass.
