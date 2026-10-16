@@ -115,7 +115,15 @@ export function LiveCamera({
     let stopped = false;
 
     async function readFrame() {
-      if (stopped || busy.current || !camera.current) return;
+      if (stopped || !camera.current) return;
+
+      // A frame from the previous loop is still being read; try again rather than ending this loop.
+      if (busy.current) {
+        timer = setTimeout(readFrame, LIVE_FRAME_GAP_MS);
+
+        return;
+      }
+
       busy.current = true;
       let uri: string | undefined;
 
