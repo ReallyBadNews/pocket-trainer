@@ -344,7 +344,8 @@ const s = StyleSheet.create({
     ...tabular,
     flexShrink: 1,
   },
-  tagDash: { color: '#7A8C73', fontSize: 16, lineHeight: 22, fontWeight: '400' },
+  // The amount's size, so the baseline-aligned range row is exactly as tall as one amount (and the loading strut).
+  tagDash: { color: '#7A8C73', fontSize: 17, lineHeight: 22, fontWeight: '400' },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
   hero: { flexDirection: 'column', alignItems: 'stretch', gap: 2, paddingVertical: S.lg },
   heroTotal: { color: C.ink, fontSize: 42, lineHeight: 50, fontWeight: '800', letterSpacing: -1, ...tabular },
