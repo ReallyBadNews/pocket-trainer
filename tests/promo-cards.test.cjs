@@ -41,6 +41,7 @@ test('promos show their printed code instead of a set size', () => {
 test('promos are found by their printed code', () => {
   assert.equal(searchCards('MEP 009', 'en')[0].id, 'mep-009');
   assert.equal(searchCards('SVP 85', 'en')[0].id, 'svp-085');
+  assert.equal(searchCards('ＳＶＰ ８５', 'en')[0].id, 'svp-085', 'full-width input');
   assert.equal(searchCards('SWSH050', 'en')[0].id, 'swshp-SWSH050');
   assert.ok(searchCards('Alakazam MEP', 'en').some((c) => c.id === 'mep-009'));
   assert.equal(searchCards('001/SV-P', 'ja')[0].id, 'SV-P-001');
