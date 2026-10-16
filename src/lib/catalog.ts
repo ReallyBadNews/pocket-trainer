@@ -207,7 +207,17 @@ export function searchCards(query: string, language: Language, limit = 80, filte
 
 export type ScanText = { text: string; topText: string; bottomText: string };
 
-export type ScanCandidate = { card: CardBrief; score: number; evidence: string; exactPrinting: boolean };
+/**
+ * `nameScore` is how clearly the card's own name was read: 60 and up in the header, 25 anywhere on the card. A set
+ * code and number from a neighbouring card can't fake it.
+ */
+export type ScanCandidate = {
+  card: CardBrief;
+  score: number;
+  evidence: string;
+  exactPrinting: boolean;
+  nameScore: number;
+};
 
 const scanWords = new Map(
   LANGUAGES.map((language) => [
@@ -224,6 +234,29 @@ const canonicalNumber = (s: string) =>
     .replace(/\s+/g, '')
     .replace(/^0+(?=\d)/, '');
 
+const LATIN: Record<string, string> = Object.fromEntries(
+  [...'АВЕКМНОРСТХУ']
+    .map((c, i) => [c, 'ABEKMHOPCTXY'[i]])
+    .concat([...'ΑΒΕΖΗΙΚΜΝΟΡΤΥΧ'].map((c, i) => [c, 'ABEZHIKMNOPTYX'[i]])),
+);
+
+const sizesByLanguage = new Map<Language, Set<number>>();
+
+/** Every printed set size in a catalog, so a joined 077132 only counts when 132 is a real set's size. */
+const setSizes = (language: Language) => {
+  if (!sizesByLanguage.has(language))
+    sizesByLanguage.set(
+      language,
+      new Set(
+        [...setMaps[language].values()].flatMap((set) =>
+          set.cardCount.official >= 10 ? [set.cardCount.official] : [],
+        ),
+      ),
+    );
+
+  return sizesByLanguage.get(language)!;
+};
+
 const codePatterns = new Map<string, RegExp>();
 
 const printedCode = (code: string, flags: string, suffix = '') => {
@@ -235,7 +268,8 @@ const printedCode = (code: string, flags: string, suffix = '') => {
       code.length < 3
         ? /(?!)/
         : new RegExp(
-            `(?:^|[^A-Za-z0-9])${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}${suffix}(?:$|[^A-Za-z0-9])`,
+            // OCR can split a code where letters meet digits: SV 10, 30 C.
+            `(?:^|[^A-Za-z0-9])${code.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/(?<=[A-Za-z])(?=\d)|(?<=\d)(?=[A-Za-z])/g, ' ?')}${suffix}(?:$|[^A-Za-z0-9])`,
             flags,
           ),
     );
@@ -275,11 +309,27 @@ function editDistance(a: string, b: string, max: number): number {
   return row[b.length];
 }
 
-function fuzzyHeader(name: string, lines: string[], language: Language): boolean {
+type HeaderLine = { line: string; pairs: Set<string> };
+
+const letterPairs = (s: string) =>
+  new Set(Array.from({ length: Math.max(0, s.length - 1) }, (_, i) => s.slice(i, i + 2)));
+
+function fuzzyHeader(name: string, lines: HeaderLine[], language: Language): boolean {
   if (name.length < (language === 'en' ? 5 : 4) || name.length > 35) return false;
   const max = name.length >= 9 ? 2 : 1;
+  // Each edit breaks at most two of the name's letter pairs, so a near match keeps the rest. Checking that first
+  // skips almost every name cheaply when a photo reads several cards' worth of text.
+  const needed = name.length - 1 - 2 * max;
 
-  return lines.some((line) => {
+  return lines.some(({ line, pairs }) => {
+    if (needed > 0) {
+      let kept = 0;
+
+      for (let i = 0; i < name.length - 1; i++) if (pairs.has(name.slice(i, i + 2))) kept++;
+
+      if (kept < needed) return false;
+    }
+
     if ([...name].filter((c) => !line.includes(c)).length > max) return false;
 
     for (let length = name.length - max; length <= name.length + max; length++) {
@@ -313,7 +363,11 @@ export function scanCandidates(
     );
 
   const top = meaningfulLines.join('');
-  const headerLines = [...new Set(meaningfulLines.filter((l) => l.length > 0 && l.length <= 45))].slice(0, 30);
+
+  const headerLines = [...new Set(meaningfulLines.filter((l) => l.length > 0 && l.length <= 45))]
+    .slice(0, 30)
+    .map((line) => ({ line, pairs: letterPairs(line) }));
+
   const fuzzyCache = new Map<string, boolean>();
 
   const fuzzy = (name: string) => {
@@ -322,7 +376,8 @@ export function scanCandidates(
     return fuzzyCache.get(name)!;
   };
 
-  const bottom = scan.bottomText.normalize('NFKC');
+  // Glare can turn footer letters into Cyrillic or Greek look-alikes (MΕΡ); read them as the Latin letters printed.
+  const bottom = scan.bottomText.normalize('NFKC').replace(/[АВЕКМНОРСТХУΑΒΕΖΗΙΚΜΝΟΡΤΥΧ]/g, (c) => LATIN[c] ?? c);
   // Hangul and Chinese names can be two characters long (伊布, 뮤츠).
   const minNameLength = language === 'ko' || language.startsWith('zh-') ? 2 : 3;
 
@@ -331,6 +386,13 @@ export function scanCandidates(
       /([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})\s*[/／]\s*([A-Za-z]{0,3}[0-9OIlSBZ]{1,4})/gi,
     ),
   ].map((f) => [numberFromOCR(f[1]), numberFromOCR(f[2])]);
+
+  // A dropped slash joins the number and set size (077132), or reads as a digit (0770132). Only a real set size counts.
+  for (const token of bottom.split(/\s+/)) {
+    const joined = /^(\d{3})[017]?(\d{3})$/.exec(token);
+
+    if (joined && setSizes(language).has(Number(joined[2]))) fractions.push([canonicalNumber(joined[1]), joined[2]]);
+  }
 
   // Gem Packs print a card group followed by a variant fraction: 17 07/07.
   // OCR can join the group and variant (1707/07), which the normal parser retains.
@@ -352,12 +414,17 @@ export function scanCandidates(
   // Vision often reads an English promo's code, language box, regulation mark and number as separate lines
   // (MEP / J / EN / 080), in no fixed order, so each printed promo code also pairs with every footer number.
   if (language === 'en') {
-    const footerTokens = bottom.split(/[\s•·]+/);
+    const footerTokens = bottom.split(/[\s•·]+/).map((t) => t.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, ''));
 
     const footerCodes = footerTokens.flatMap((t) => {
       const code = /^([A-Z]{2,4}?)(?:EN)?$/.exec(t)?.[1].toLowerCase();
 
-      return code && englishPromoCodes.has(code) ? [code] : [];
+      if (code && englishPromoCodes.has(code)) return [code];
+
+      // Glare adds a stray letter or two to a longer code: SVPO, SVPON.
+      return [...englishPromoCodes].filter(
+        (known) => known.length >= 3 && t.length <= known.length + 2 && t.toLowerCase().startsWith(known),
+      );
     });
 
     const footerNumbers = footerTokens.filter((t) => /^[0-9OIlSBZ]{2,3}$/.test(t) && /\d/.test(t)).map(numberFromOCR);
@@ -368,6 +435,7 @@ export function scanCandidates(
   for (const m of bottom.matchAll(/([0-9OIlSBZ]{1,3})\s*[/／]\s*([A-Z]{1,3})\s*[-‐ー−]?\s*P(?![A-Za-z0-9])/g))
     if (/\d/.test(m[1])) promos.add(`${m[2].toLowerCase()}p${numberFromOCR(m[1])}`);
 
+  const totals = new Set(fractions.map((f) => Number(f[1])));
   const nameScores = new Map<string, number>();
 
   for (const name of recognitionWords(language)) {
@@ -381,9 +449,12 @@ export function scanCandidates(
 
     if (!score && partners.length > 1 && partners.every((part) => part.length >= 2 && top.includes(part))) score = 130;
 
-    if (!score && fuzzy(n)) score = 70;
+    // Some Asian catalog entries carry English names (xatu); garbled text shouldn't nearly match them.
+    const spelledOut = language === 'en' || !/^[\x20-\x7E]+$/.test(name);
 
-    if (!score && base !== n && fuzzy(base)) score = 60;
+    if (!score && spelledOut && fuzzy(n)) score = 70;
+
+    if (!score && spelledOut && base !== n && fuzzy(base)) score = 60;
 
     if (!score && n.length >= minNameLength && full.includes(n)) score = 25;
 
@@ -410,7 +481,17 @@ export function scanCandidates(
       // A promo code is short, so it pins the printing only beside a name that agrees.
       const exactPrinting = (promoMatch && nameScore >= 60) || (codeMatch && matchingNumbers.length > 0);
       const categoryBonus = hint !== 'all' ? (matchesCardFilter(c.card, hint) ? 45 : -70) : 0;
-      let score = categoryBonus + nameScore + (numberMatch ? (totalMatch ? 150 : 65) : 0) + (exactPrinting ? 160 : 0);
+
+      // A set size read anywhere, even beside a misread number (039/192 and 029/198), favors that set's printing.
+      const sizeHint =
+        nameScore >= 60 && !totalMatch && !!set?.cardCount.official && totals.has(set.cardCount.official);
+
+      let score =
+        categoryBonus +
+        nameScore +
+        (numberMatch ? (totalMatch ? 150 : 65) : 0) +
+        (exactPrinting ? 160 : 0) +
+        (sizeHint ? 20 : 0);
 
       // Bare ENERGY is a category clue, not an exact card name.
       if (hint === 'energy' && !numberMatch && nameScore < 60) score = 0;
@@ -428,7 +509,7 @@ export function scanCandidates(
               ? 'Name match · check the number'
               : 'Card number · check the picture';
 
-      return score >= 60 ? [{ card: c.card, score, evidence, exactPrinting }] : [];
+      return score >= 60 ? [{ card: c.card, score, evidence, exactPrinting, nameScore }] : [];
     })
     .sort((a, b) => b.score - a.score || Number(!!b.card.image) - Number(!!a.card.image));
 
@@ -490,15 +571,15 @@ export const ENERGY_SEARCHES = [
 ];
 
 export function needsScanRefinement(candidates: ScanCandidate[]): boolean {
-  const best = candidates[0];
+  const [best, next] = candidates;
 
-  return (
-    !best ||
-    !(
-      best.exactPrinting ||
-      (best.evidence === 'Name + card number' && best.score >= 230 && best.score - (candidates[1]?.score ?? 0) >= 60)
-    )
-  );
+  if (!best) return true;
+
+  // An exact printing still needs its own name somewhere on the card: when the crop misses, this card's set code
+  // can pair with a neighbour's number. Two exact printings that tie mean the footer named both.
+  if (best.exactPrinting) return best.nameScore < 25 || (!!next?.exactPrinting && next.score >= best.score - 30);
+
+  return !(best.evidence === 'Name + card number' && best.score >= 230 && best.score - (next?.score ?? 0) >= 60);
 }
 
 const detailCache = new Map<string, { card: Card; at: number }>();
