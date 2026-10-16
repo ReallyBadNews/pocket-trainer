@@ -45,11 +45,24 @@ The 30th Celebration (`30th`, 128 + 30 secret) and 30th Classic Collection (`30t
 
 ## Promo cards
 
-Black Star promos print a code where other cards print a fraction: the set code and number (`SVP EN 085`, `MEP EN 009`), a prefixed number (`SWSH050`, `SM01`), or `001/SV-P` on Japanese and Traditional Chinese promos. Ranking reads each form, including OCR's joined `MEPEN009` and letter-shaped digits (`SWSHO5O`), and treats a match as exact-printing evidence. Binder and card details show the same code instead of a set size, and search accepts it (`SVP 85`, `MEP 009`). Wizards and Nintendo promos print only a number in the star, so they rank by name and number like other cards.
+Black Star promos print a code where other cards print a fraction: the set code and number (`SVP EN 085`, `MEP EN 009`), a prefixed number (`SWSH050`, `SM01`), or `001/SV-P` on Japanese and Traditional Chinese promos. Ranking reads each form, including OCR's joined `MEPEN009` and letter-shaped digits (`SWSHO5O`), and treats a match beside the card's name as exact-printing evidence. Apple Vision often reads an English promo footer as separate lines in no fixed order (`MEPEN` / `022`, or `MEP` / `J` / `EN` / `080` on the user's sleeved Charcadet and Fennekin), so each code English promos print pairs with every footer number. The production OCR of both photos is kept in `tests/fixtures/scan-promo-text.json`. Binder and card details show the same code instead of a set size, and search accepts it (`SVP 85`, `MEP 009`). Wizards and Nintendo promos print only a number in the star, so they rank by name and number like other cards.
 
 TCGdex's card list omits artwork for many recent promos even though its asset server has the images. `src/data/image-overrides.json` fills in the ones that exist (40 MEP and 19 SVP as of October 2026); the rest show the scan photo until TCGdex publishes them.
 
 Collector totals are shown and searched zero-padded to the number's width (`001/066`), as printed.
+
+## Binder photos and auto-capture
+
+`scripts/scan-eval/` measures recognition on synthetic phone photos of sleeved binder cards (neighbours, glare, tilt, blur) built from TCGdex art, read by the production `CardVision` core on macOS. On its October 2026 corpus of 100 photos plus the two real promo photos, the top suggestion after the detailed read was right for 92% of photos read in the card's language and 89% with Auto-detect (previously 88% and 77%), with no wrong automatic captures (previously 1 and 2).
+
+- When auto-crop misses the card, the read includes neighbouring cards. An exact set code and number is therefore only taken automatically when the card's own name was read somewhere, and not when two exact printings tie.
+- Auto-detect keeps English when this card's English name and number were read, even with a Japanese or Chinese neighbour in the frame.
+- Footer reading repairs a dropped slash (`077132`, `0770132`) when the second part is a real set size, a code split from its digits (`SV 10`), stray letters on promo codes (`SVPON`), and Cyrillic or Greek look-alike letters.
+- A set size read anywhere (`029/198` beside a misread `039/192`) breaks name ties toward that set's printing.
+- English-named entries in the Asian catalogs (`xatu`) don't fuzzy-match garbled text.
+- A letter-pair check skips most names before fuzzy matching, so ranking a multi-card read takes about 0.07 s instead of 1.3 s on a Mac.
+
+Representative bench reads are kept in `tests/fixtures/scan-binder-text.json`. The bench's art-based photos are cleaner than real ones (no holo texture or motion blur), so physical testing still decides.
 
 ## Images
 

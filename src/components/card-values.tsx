@@ -123,15 +123,27 @@ export function CardPriceTag({
           <PriceAmount value={quote} />
         </View>
       ) : (
-        <Txt muted variant="caption">
-          {waiting
-            ? 'Looking up value…'
-            : snapshot || client.errors.has(key)
-              ? 'Price unavailable'
-              : enabled
-                ? 'Value pending'
-                : 'Value after matching'}
-        </Txt>
+        // An invisible amount-sized strut keeps the line as tall as the price that replaces it, so nothing below moves.
+        <View style={s.statusRow}>
+          <Txt
+            variant="readout"
+            style={[s.tagAmount, s.strut]}
+            accessibilityElementsHidden
+            importantForAccessibility="no"
+          >
+            {' '}
+          </Txt>
+          <Txt muted variant="caption">
+            {/* Before its request starts, an enabled tag is already looking up its value rather than "pending". */}
+            {waiting
+              ? 'Looking up value…'
+              : snapshot || client.errors.has(key)
+                ? 'Price unavailable'
+                : enabled
+                  ? 'Looking up value…'
+                  : 'Value after matching'}
+          </Txt>
+        </View>
       )}
       {printingHint && finish === 'unsure' && (
         <Txt variant="caption" style={s.attentionCaption}>
@@ -318,6 +330,8 @@ const s = StyleSheet.create({
   readoutText: { flex: 1, minWidth: 0, gap: 2 },
   readoutLabel: { color: C.muted, fontWeight: '700', letterSpacing: 1, textTransform: 'uppercase' },
   amountRow: { flexDirection: 'row', flexWrap: 'wrap', alignItems: 'baseline', columnGap: 4, rowGap: 0 },
+  statusRow: { flexDirection: 'row', alignItems: 'center' },
+  strut: { width: 0, opacity: 0 },
   rangeEnd: { flexDirection: 'row', alignItems: 'baseline', gap: 4, maxWidth: '100%' },
   amount: { color: C.ink, fontSize: 28, lineHeight: 34, fontWeight: '700', letterSpacing: -0.5, ...tabular },
   total: { color: C.ink, fontSize: 32, lineHeight: 38, fontWeight: '700', letterSpacing: -0.6, ...tabular },
@@ -330,7 +344,8 @@ const s = StyleSheet.create({
     ...tabular,
     flexShrink: 1,
   },
-  tagDash: { color: '#7A8C73', fontSize: 16, lineHeight: 22, fontWeight: '400' },
+  // The amount's size, so the baseline-aligned range row is exactly as tall as one amount (and the loading strut).
+  tagDash: { color: '#7A8C73', fontSize: 17, lineHeight: 22, fontWeight: '400' },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
   hero: { flexDirection: 'column', alignItems: 'stretch', gap: 2, paddingVertical: S.lg },
   heroTotal: { color: C.ink, fontSize: 42, lineHeight: 50, fontWeight: '800', letterSpacing: -1, ...tabular },

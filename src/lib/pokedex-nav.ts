@@ -28,7 +28,8 @@ export type PokedexNav = {
   openScan: (query?: string) => void;
   /** The Binder, showing only cards whose printing still needs choosing. */
   confirmPrintings: () => void;
-  scan: { query: string; session: number; captureRequest: number };
+  /** `visit` counts trips to the Scan tab; `session` also restarts after each saved card. */
+  scan: { query: string; session: number; visit: number; captureRequest: number };
   onScanAdded: (added: AddedCards, source: 'card' | 'page') => void;
 };
 

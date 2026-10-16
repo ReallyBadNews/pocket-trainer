@@ -1,0 +1,46 @@
+[
+  {
+    "label": "User photo: Charcadet MEP EN 022 promo in a binder sleeve beside a gold card; footer read as MEPEN / 022 (English pass); production CardVision on macOS",
+    "language": "en",
+    "expected": "mep-022",
+    "scan": {
+      "text": "BASIG\nCharcadet\nH7O\nGather Strength\nSearch your deck for up to 2 Basic Energy cards, reveal\nthem, and put them into your hand. Then, shuffle your deck.\n10\nChop\nretreat\nresistance\nweakness\n*2\nAat ahamericame to lifend becamea\nPolsimon. Rossessinga tary lighing spinit,\nMEP EN\nCharadatall battia axen tough amponents.\n022\naZUS rokernan / Nintendo / Creatures / GAME HIENK,",
+      "topText": "BASIG\nBASI\nBASG\nCharcadet\nCharcadet\nCharcade\nH7O\nH7O\nH7O\n",
+      "bottomText": "x2\nresistance\nretreat\nweakness\nAataameillcame to lifaand hacamea\nfuio Taaatto\nPokimon, Rnssossinga fery Rghing spintt,\nMEPEN\n022\nCharmdatayill baldla ayan toush apponents.\ne2las rokéman/ Ninzendo / Creatures/GAME FRENK\nretreat\nresistance\nweakness\n*2\nAat ahamericame to lifend becamea\nPolsimon. Rossessinga tary lighing spinit,\nMEP EN\nCharadatall battia axen tough amponents.\n022\naZUS rokernan / Nintendo / Creatures / GAME HIENK,\n",
+      "autoCropped": true
+    }
+  },
+  {
+    "label": "User photo: Charcadet MEP EN 022 promo in a binder sleeve beside a gold card; footer read as MEPEN / 022 (auto-detect pass); production CardVision on macOS",
+    "language": "auto",
+    "expected": "mep-022",
+    "scan": {
+      "text": "BASIG\nCharcadet\nGather Strength\nSearch your deck for up to 2 Basic Energy cards, reveal\nthem, and put them into your hand. Then, shuffle your deck.\n10\nChop\nretreat\nresistance\nweakness\n*2\nForan chanconlcametolifoand beeamnga\nПо Пераіо\nPolimen Possesingniarylighing pinit,\nMEP EN\nCharadatall battia axen tough amponents.\n022\naZUS rokernan / Nintendo / Creatures / GAME HIENK,",
+      "topText": "BASIG\nBASI\nBASG\nCharcadet\nCharadet\nCharcade\n",
+      "bottomText": "x2\nresistance\nretreat\nweakness\nAataameillcame to lifaand hacamea\nfuio Taaatto\nPokimon, Rnssossinga fery Rghing spintt,\nMEPEN\n022\nCharmdatayill baldla ayan toush apponents.\ne2las rokéman/ Ninzendo / Creatures/GAME FRENK\nretreat\nresistance\nweakness\n*2\nForan chanconlcametolifoand beeamnga\nПо Пераіо\nPolimen Possesingniarylighing pinit,\nMEP EN\nCharadatall battia axen tough amponents.\n022\naZUS rokernan / Nintendo / Creatures / GAME HIENK,\n",
+      "autoCropped": true
+    }
+  },
+  {
+    "label": "User photo: Fennekin MEP EN 080 promo in a binder sleeve; footer read as MEP / J / EN / 080 (English pass); production CardVision on macOS",
+    "language": "en",
+    "expected": "mep-080",
+    "scan": {
+      "text": "BASIG\nFennekin\nHP70\nCall for Family\nSearch your deck for up to 2 Basic Pokémon and put them\nonto your Bench. Then, shuffle your deck.\n10\nSteady Firebreathing\nweakness\nresistance\n× 2\nretreat\nIlluss satoma\nGating atoigülisit with enersy andüe roomyears\ngiverenttonihorter than 800 degrees lahrenhei:\nJ\n080\n62026 Pokemon / Montentio/ Creatures / GAME FREAX",
+      "topText": "BASIG\nBASI\nBASG\nFennekin\nFennein\nFenneki\nHP70\nHP70\nHP70\n",
+      "bottomText": "weakness\nresistance\nx2\nretreat\nllluss satoma\nEaling aoigüillsit with enersy and i's roomyear\ngivewink teaihoker than 200 degrcesUahrenheie\nMEP\nJ\nEN\n080\n*2026 Pokemon / Ninteritio/ Creatures/ GAME FREAK\nweakness\nresistance\n× 2\nretreat\nIlluss satoma\nGating atoigülisit with enersy andüe roomyears\ngiverenttonihorter than 800 degrees lahrenhei:\nJ\n080\n62026 Pokemon / Montentio/ Creatures / GAME FREAX\n",
+      "autoCropped": true
+    }
+  },
+  {
+    "label": "User photo: Fennekin MEP EN 080 promo in a binder sleeve; footer read as MEP / J / EN / 080 (auto-detect pass); production CardVision on macOS",
+    "language": "auto",
+    "expected": "mep-080",
+    "scan": {
+      "text": "BASIG\nFennekin\nHP70\nCall for Family\nSearch your deck for up to 2 Basic Pokémon and put them\nonto your Bench. Then, shuffle your deck.\n10\nSteady Firebreathing\nweakness\nresistance\n× 2\nretreat\nIlluss satoma\nGating atoigülisit with enersy andüe roomyears\ngiverenttonihorter than 800 degrees lahrenhei:\n080\n62026 Pokemon / Montentio/ Creatures / GAME FREAX",
+      "topText": "BASIG\nBASI\nBASG\nFennekin\nFennein\nFenekin\nHP70\nHP70\nHP70\n",
+      "bottomText": "weakness\nresistance\nx2\nretreat\nllluss satoma\nEaling aoigüillsit with enersy and i's roomyear\ngivewink teaihoker than 200 degrcesUahrenheie\nMEP\nJ\nEN\n080\n*2026 Pokemon / Ninteritio/ Creatures/ GAME FREAK\nweakness\nresistance\n× 2\nretreat\nIlluss satoma\nGating atoigülisit with enersy andüe roomyears\ngiverenttonihorter than 800 degrees lahrenhei:\n080\n62026 Pokemon / Montentio/ Creatures / GAME FREAX\n",
+      "autoCropped": true
+    }
+  }
+]

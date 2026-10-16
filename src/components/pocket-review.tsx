@@ -243,7 +243,7 @@ export function PocketReview({
                     <Pressable
                       key={`${card.language}:${card.id}`}
                       accessibilityRole="button"
-                      accessibilityLabel={`Choose ${card.name} ${card.localId}`}
+                      accessibilityLabel={`Choose ${card.name} ${printedNumber(card)}`}
                       accessibilityState={{ selected: current }}
                       onPress={() => pick(card)}
                       style={(press) => [s.option, { width: tile }, current && s.optionCurrent, pressFx(press)]}
