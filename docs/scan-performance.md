@@ -31,3 +31,16 @@ Measured on Kenny Mini using the same production Swift core, with each sample pr
 First results were 28–48% faster in these checks. Eight of these nine first-pass results met the rule for skipping all optional processing. Basic Grass Energy still needed closer review because only its generic ENERGY heading and collector number were readable. Eleven native-output fixtures, including Japanese Stadium and Special Energy cards, ranked their expected exact printing first. Unit tests also verify early result publication, skipping unnecessary work, handling failed optional work, and suppressing stale results.
 
 The user should test camera timing with the same physical cards after installing build 4. Sleeves, glare, blur, and dense binder pages can still require refinement or a manual crop.
+
+## Auto-crop and warm-up (October 2026)
+
+Measured with `scripts/scan-eval/` on an M4 Mac: 204 reads (100 synthetic binder photos and 2 real ones, each read in the card's language and with Auto-detect), with the old and new `CardVision` run one after the other on an otherwise idle machine.
+
+| Native step | Before median (p90) | After median (p90) |
+|---|---:|---:|
+| Open and auto-crop (`prepareMs`) | 23 ms (27 ms) | 31 ms (57 ms) |
+| First results (`totalMs`) | 327 ms (550 ms) | 319 ms (507 ms) |
+
+Auto-crop costs about 8 ms more in the median case. Photos where the photo and its negative agree stop after two looks (about 16 ms); the rest add up to four more looks. First results don't get slower, because a cropped card is a smaller image to read than a whole binder frame.
+
+Vision loads its models on a process's first read. That took 6–20 s in earlier bench runs on a cold system and still costs about 0.6 s instead of 0.3 s once the system has cached them. The native `warmUp(language)` function runs card finding and both text reads on a small rendered sample, once per language per launch. In fresh Mac processes it took 0.22–0.35 s, and the first read afterwards took 0.29–0.40 s instead of 0.49–0.67 s. The camera should call it as it opens. iPhone timings still need checking on a device.
