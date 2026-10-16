@@ -6,6 +6,12 @@ const { allCards, cardImage, printedNumber, searchCards, scanCandidates } = requ
 
 const { collectorNumber, promoNumber } = require('../.test-build/lib/model');
 
+const { needsScanRefinement } = require('../.test-build/lib/catalog');
+
+const { detectCardLanguage } = require('../.test-build/lib/language-detect');
+
+const photos = require('./fixtures/scan-promo-text.json');
+
 const scan = (topText, bottomText) => ({ text: `${topText}\n${bottomText}`, topText, bottomText });
 
 const promo = (language, id, name, localId) => ({ language, set: { id, name, total: 0 }, localId });
@@ -79,6 +85,17 @@ test('scanned promo codes are exact-printing evidence', () => {
   const regular = scanCandidates(scan('Pikachu HP60', '58/102'), 'en');
   assert.equal(regular[0].card.id, 'base1-58');
   assert.ok(regular.every((c) => !c.exactPrinting));
+});
+
+test('actual promo photos in binder sleeves are exact matches the live camera takes', () => {
+  for (const photo of photos) {
+    const language = photo.language === 'auto' ? detectCardLanguage(photo.scan) : photo.language;
+    const matches = scanCandidates(photo.scan, language);
+    assert.equal(language, 'en', photo.label);
+    assert.equal(matches[0].card.id, photo.expected, photo.label);
+    assert.equal(matches[0].exactPrinting, true, photo.label);
+    assert.equal(needsScanRefinement(matches), false, photo.label);
+  }
 });
 
 test('recent promos have artwork the catalog API leaves out', () => {
