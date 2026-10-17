@@ -8,6 +8,7 @@ const {
   entryKey,
   discoveredIds,
   totalCards,
+  cardQuantity,
   duplicateCards,
   updateQuantity,
   parseCollection,
@@ -57,6 +58,28 @@ test('languages and finishes remain separate identities', () => {
     ),
     2,
   );
+});
+
+test('card ownership totals finishes for the exact card, language, and trainer', () => {
+  const original = freshCollection().trainers[0];
+  let trainer = addCard(original, card, 'normal', 2);
+  trainer = addCard(trainer, card, 'reverse', 3);
+  trainer = addCard(trainer, { ...card, language: 'ja' }, 'normal', 4);
+  trainer = addCard(trainer, { ...card, id: 'base2-87' }, 'normal', 5);
+
+  const brief = { id: card.id, language: card.language };
+  assert.equal(cardQuantity(trainer, brief), 5);
+  assert.equal(cardQuantity(trainer, { ...brief, language: 'ja' }), 4);
+  assert.equal(cardQuantity(trainer, { ...brief, id: 'base2-87' }), 5);
+  assert.equal(cardQuantity(trainer, { ...brief, id: 'base1-1' }), 0);
+  assert.equal(cardQuantity(original, brief), 0);
+
+  trainer = addCard(trainer, card, 'normal', 1);
+  assert.equal(cardQuantity(trainer, brief), 6);
+  trainer = updateQuantity(trainer, entryKey(card, 'normal'), 0);
+  assert.equal(cardQuantity(trainer, brief), 3);
+  trainer = updateQuantity(trainer, entryKey(card, 'reverse'), 0);
+  assert.equal(cardQuantity(trainer, brief), 0);
 });
 
 test('removing last species copy relocks entry; Trainer/Energy never unlock', () => {

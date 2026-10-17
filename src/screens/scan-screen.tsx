@@ -20,7 +20,6 @@ import {
   ButtonRow,
   C,
   CardArt,
-  CardCaption,
   Chip,
   ChoiceMenu,
   ErrorNotice,
@@ -47,7 +46,7 @@ import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/l
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
-import { defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
+import { cardQuantity, defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
 import { useCollection } from '@/lib/collection-context';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardCrop } from '@/components/card-crop';
@@ -166,6 +165,8 @@ function ScanSession({
     !needsScanRefinement(suggested)
       ? suggested[0].card
       : null;
+
+  const sureQuantity = sure ? cardQuantity(trainer, sure) : 0;
 
   const results = useMemo(
     () =>
@@ -542,7 +543,9 @@ function ScanSession({
             {intro}
             {sure && (
               <View accessibilityLiveRegion="polite" style={s.quick}>
-                <Txt style={[ui.subtitle, { textAlign: 'center' }]}>Is this your card?</Txt>
+                <Txt muted style={{ textAlign: 'center' }}>
+                  Is this your card?
+                </Txt>
                 <View>
                   <CardArt card={sure} high style={[s.quickArt, fontScale > 1.15 && { width: 150 }]} />
                   {photo && (
@@ -558,18 +561,21 @@ function ScanSession({
                   )}
                 </View>
                 <View style={{ alignItems: 'center', gap: S.xs }}>
-                  <Txt variant="subtitle" style={{ textAlign: 'center' }}>
+                  <Txt accessibilityRole="header" variant="title" style={{ textAlign: 'center' }}>
                     {sure.name}
                   </Txt>
                   <Txt muted variant="caption" style={{ textAlign: 'center' }}>
-                    {setForCard(sure)?.name ?? sure.id}
+                    {scanCardMetadata(sure)}
                   </Txt>
-                  <Txt muted variant="readout">
-                    #{printedNumber(sure)} · {LANGUAGE_CODES[sure.language]}
-                  </Txt>
-                  <CardPriceTag card={sure} printingHint={false} />
+                  <ScanCollectionStatus quantity={sureQuantity} />
+                  <CardPriceTag card={sure} printingHint={false} subdued />
                 </View>
-                <Button title="Yes! Add it" icon="check" busy={quickBusy} onPress={() => quickAdd(sure)} />
+                <Button
+                  title={sureQuantity > 0 ? 'Yes! Add another' : 'Yes! Add it'}
+                  icon="check"
+                  busy={quickBusy}
+                  onPress={() => quickAdd(sure)}
+                />
                 <ButtonRow>
                   <Button
                     size="medium"
@@ -742,7 +748,7 @@ function ScanSession({
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Review ${item.name} ${item.id}`}
+            accessibilityLabel={`Review ${item.name} ${item.id}. ${scanCollectionLabel(cardQuantity(trainer, item))}`}
             onPress={() => {
               // Picking a card replaces any read still running, so the reader must be free again afterwards.
               ++generation.current;
@@ -756,20 +762,20 @@ function ScanSession({
             <CardArt card={item} high style={s.resultArt} />
             <View style={s.resultDetails}>
               <View style={{ flex: 1, minWidth: 0, gap: S.xs }}>
-                <CardCaption
-                  name={item.name}
-                  setName={setForCard(item)?.name ?? item.id}
-                  detail={`#${printedNumber(item)} · ${LANGUAGE_CODES[item.language]}`}
-                />
+                <Txt variant="subtitle">{item.name}</Txt>
+                <Txt muted variant="caption">
+                  {scanCardMetadata(item)}
+                </Txt>
                 <Txt muted variant="caption">
                   {cardKindLabel(item)}
                 </Txt>
+                <ScanCollectionStatus quantity={cardQuantity(trainer, item)} />
                 {!query && (
                   <Txt muted variant="caption">
                     {suggested.find((s) => s.card.id === item.id)?.evidence}
                   </Txt>
                 )}
-                <CardPriceTag card={item} enabled={!busy && improving === 'done'} />
+                <CardPriceTag card={item} enabled={!busy && improving === 'done'} printingHint={false} subdued />
               </View>
               <Icon name="chevron" size={16} color={C.muted} />
             </View>
@@ -831,10 +837,39 @@ function ScanSession({
   );
 }
 
+const scanCardMetadata = (card: CardBrief) =>
+  `${setForCard(card)?.name ?? card.id} · #${printedNumber(card)} · ${LANGUAGE_CODES[card.language]}`.replaceAll(
+    ' · ',
+    '\u00A0· ',
+  );
+
+const scanCollectionLabel = (quantity: number) =>
+  quantity > 0
+    ? `Already in your Pokédex · ${quantity}\u00A0${quantity === 1 ? 'copy' : 'copies'}`
+    : 'Not in your Pokédex yet';
+
+function ScanCollectionStatus({ quantity }: { quantity: number }) {
+  const owned = quantity > 0;
+
+  return (
+    <View style={s.collectionStatus}>
+      {owned && <Icon name="check" size={14} color={C.muted} />}
+      <Txt variant="caption" muted style={{ flexShrink: 1 }}>
+        {scanCollectionLabel(quantity)}
+      </Txt>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 40 },
   quick: { gap: S.md },
   quickArt: { width: 180, maxWidth: '70%', alignSelf: 'center' },
+  collectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.xs,
+  },
   yours: {
     position: 'absolute',
     left: 8,

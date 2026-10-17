@@ -186,6 +186,13 @@ export const discoveredIds = (trainer: Trainer) => new Set(trainer.entries.flatM
 
 export const totalCards = (trainer: Trainer) => trainer.entries.reduce((n, e) => n + e.quantity, 0);
 
+/** Copies of this exact card and language, across all finishes, for one trainer. */
+export const cardQuantity = (trainer: Trainer, card: CardBrief) =>
+  trainer.entries.reduce(
+    (n, e) => n + (e.card.id === card.id && e.card.language === card.language ? e.quantity : 0),
+    0,
+  );
+
 export const duplicateCards = (trainer: Trainer) =>
   trainer.entries.reduce((n, e) => n + Math.max(0, e.quantity - 1), 0);
 
