@@ -20,7 +20,6 @@ import {
   ButtonRow,
   C,
   CardArt,
-  CardCaption,
   Chip,
   ChoiceMenu,
   ErrorNotice,
@@ -544,7 +543,9 @@ function ScanSession({
             {intro}
             {sure && (
               <View accessibilityLiveRegion="polite" style={s.quick}>
-                <Txt style={[ui.subtitle, { textAlign: 'center' }]}>Is this your card?</Txt>
+                <Txt muted style={{ textAlign: 'center' }}>
+                  Is this your card?
+                </Txt>
                 <View>
                   <CardArt card={sure} high style={[s.quickArt, fontScale > 1.15 && { width: 150 }]} />
                   {photo && (
@@ -560,17 +561,14 @@ function ScanSession({
                   )}
                 </View>
                 <View style={{ alignItems: 'center', gap: S.xs }}>
-                  <Txt variant="subtitle" style={{ textAlign: 'center' }}>
+                  <Txt accessibilityRole="header" variant="title" style={{ textAlign: 'center' }}>
                     {sure.name}
                   </Txt>
                   <Txt muted variant="caption" style={{ textAlign: 'center' }}>
-                    {setForCard(sure)?.name ?? sure.id}
-                  </Txt>
-                  <Txt muted variant="readout">
-                    #{printedNumber(sure)} · {LANGUAGE_CODES[sure.language]}
+                    {scanCardMetadata(sure)}
                   </Txt>
                   <ScanCollectionStatus quantity={sureQuantity} />
-                  <CardPriceTag card={sure} printingHint={false} />
+                  <CardPriceTag card={sure} printingHint={false} subdued />
                 </View>
                 <Button
                   title={sureQuantity > 0 ? 'Yes! Add another' : 'Yes! Add it'}
@@ -764,11 +762,10 @@ function ScanSession({
             <CardArt card={item} high style={s.resultArt} />
             <View style={s.resultDetails}>
               <View style={{ flex: 1, minWidth: 0, gap: S.xs }}>
-                <CardCaption
-                  name={item.name}
-                  setName={setForCard(item)?.name ?? item.id}
-                  detail={`#${printedNumber(item)} · ${LANGUAGE_CODES[item.language]}`}
-                />
+                <Txt variant="subtitle">{item.name}</Txt>
+                <Txt muted variant="caption">
+                  {scanCardMetadata(item)}
+                </Txt>
                 <Txt muted variant="caption">
                   {cardKindLabel(item)}
                 </Txt>
@@ -778,7 +775,7 @@ function ScanSession({
                     {suggested.find((s) => s.card.id === item.id)?.evidence}
                   </Txt>
                 )}
-                <CardPriceTag card={item} enabled={!busy && improving === 'done'} />
+                <CardPriceTag card={item} enabled={!busy && improving === 'done'} printingHint={false} subdued />
               </View>
               <Icon name="chevron" size={16} color={C.muted} />
             </View>
@@ -840,18 +837,24 @@ function ScanSession({
   );
 }
 
+const scanCardMetadata = (card: CardBrief) =>
+  `${setForCard(card)?.name ?? card.id} · #${printedNumber(card)} · ${LANGUAGE_CODES[card.language]}`.replaceAll(
+    ' · ',
+    '\u00A0· ',
+  );
+
 const scanCollectionLabel = (quantity: number) =>
   quantity > 0
-    ? `Already in your Pokédex · ${quantity} ${quantity === 1 ? 'copy' : 'copies'}`
+    ? `Already in your Pokédex · ${quantity}\u00A0${quantity === 1 ? 'copy' : 'copies'}`
     : 'Not in your Pokédex yet';
 
 function ScanCollectionStatus({ quantity }: { quantity: number }) {
   const owned = quantity > 0;
 
   return (
-    <View style={[s.collectionStatus, owned && s.collected]}>
-      <Icon name={owned ? 'check' : 'plus'} size={16} color={owned ? C.ink : C.muted} />
-      <Txt variant="caption" muted={!owned} style={{ flexShrink: 1, fontWeight: '600' }}>
+    <View style={s.collectionStatus}>
+      {owned && <Icon name="check" size={14} color={C.muted} />}
+      <Txt variant="caption" muted style={{ flexShrink: 1 }}>
         {scanCollectionLabel(quantity)}
       </Txt>
     </View>
@@ -866,11 +869,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: S.xs,
-    paddingHorizontal: S.sm,
-    paddingVertical: S.xs,
-    borderRadius: R.sm,
   },
-  collected: { backgroundColor: '#DEE8D1' },
   yours: {
     position: 'absolute',
     left: 8,

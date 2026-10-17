@@ -9,16 +9,16 @@ export const dateLabel = (value: string) =>
   new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
 
 /** A tile's price. Ranges wrap between whole amounts, never inside one. */
-function PriceAmount({ value }: { value: { low: number; high: number } }) {
+function PriceAmount({ value, subdued }: { value: { low: number; high: number }; subdued: boolean }) {
   return (
     <View style={s.amountRow}>
-      <Txt variant="readout" style={s.tagAmount}>
+      <Txt variant="readout" style={[s.tagAmount, subdued && s.subduedAmount]}>
         {usd(value.low)}
       </Txt>
       {value.high !== value.low && (
         <View style={s.rangeEnd}>
-          <Txt style={s.tagDash}>–</Txt>
-          <Txt variant="readout" style={s.tagAmount}>
+          <Txt style={[s.tagDash, subdued && s.subduedAmount]}>–</Txt>
+          <Txt variant="readout" style={[s.tagAmount, subdued && s.subduedAmount]}>
             {usd(value.high)}
           </Txt>
         </View>
@@ -94,11 +94,13 @@ export function CardPriceTag({
   finish = 'unsure',
   enabled = true,
   printingHint = true,
+  subdued = false,
 }: {
   card: CardBrief;
   finish?: Finish;
   enabled?: boolean;
   printingHint?: boolean;
+  subdued?: boolean;
 }) {
   const client = usePricing([card], 10, enabled);
 
@@ -113,21 +115,21 @@ export function CardPriceTag({
     (!client.fx && client.pending.has('fx') && !!snapshot?.prices.some((p) => p.currency === 'EUR'));
 
   return (
-    <View style={s.tag}>
+    <View style={[s.tag, subdued && s.subduedTag]}>
       {quote ? (
         <View
           accessible
           accessibilityRole="text"
           accessibilityLabel={`Worth about ${quoteLabel(quote)}${quote.converted ? ', converted from euros' : ''}${quote.stale ? ', saved price' : ''}`}
         >
-          <PriceAmount value={quote} />
+          <PriceAmount value={quote} subdued={subdued} />
         </View>
       ) : (
         // An invisible amount-sized strut keeps the line as tall as the price that replaces it, so nothing below moves.
         <View style={s.statusRow}>
           <Txt
             variant="readout"
-            style={[s.tagAmount, s.strut]}
+            style={[s.tagAmount, subdued && s.subduedAmount, s.strut]}
             accessibilityElementsHidden
             importantForAccessibility="no"
           >
@@ -315,6 +317,7 @@ const tabular: TextStyle = { fontVariant: ['tabular-nums'] };
 
 const s = StyleSheet.create({
   tag: { marginTop: S.xs, gap: 2 },
+  subduedTag: { marginTop: 0 },
   readout: {
     minHeight: 44,
     flexDirection: 'row',
@@ -344,6 +347,7 @@ const s = StyleSheet.create({
     ...tabular,
     flexShrink: 1,
   },
+  subduedAmount: { color: C.muted, fontSize: 13, lineHeight: 18, fontWeight: '400', letterSpacing: 0 },
   // The amount's size, so the baseline-aligned range row is exactly as tall as one amount (and the loading strut).
   tagDash: { color: '#7A8C73', fontSize: 17, lineHeight: 22, fontWeight: '400' },
   emptyAmount: { fontSize: 18, lineHeight: 27, paddingVertical: 3 },
