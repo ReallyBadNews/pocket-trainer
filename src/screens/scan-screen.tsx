@@ -47,7 +47,7 @@ import { canRecognize, recognizeCard, compareCardArtwork, refineCard } from '@/l
 import { LANGUAGES, LANGUAGE_CODES, LANGUAGE_LABELS, PARTIAL_CATALOGS } from '@/lib/languages';
 import { searchAnyLanguage, type ScanLanguage } from '@/lib/language-detect';
 import { ManualCardForm } from '@/components/manual-card-form';
-import { defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
+import { cardQuantity, defaultFinish, withScanPhoto, type Card, type CardBrief, type Language } from '@/lib/model';
 import { useCollection } from '@/lib/collection-context';
 import { useAddCards, type AddedCards } from '@/lib/use-add-cards';
 import { CardCrop } from '@/components/card-crop';
@@ -166,6 +166,8 @@ function ScanSession({
     !needsScanRefinement(suggested)
       ? suggested[0].card
       : null;
+
+  const sureQuantity = sure ? cardQuantity(trainer, sure) : 0;
 
   const results = useMemo(
     () =>
@@ -567,9 +569,15 @@ function ScanSession({
                   <Txt muted variant="readout">
                     #{printedNumber(sure)} · {LANGUAGE_CODES[sure.language]}
                   </Txt>
+                  <ScanCollectionStatus quantity={sureQuantity} />
                   <CardPriceTag card={sure} printingHint={false} />
                 </View>
-                <Button title="Yes! Add it" icon="check" busy={quickBusy} onPress={() => quickAdd(sure)} />
+                <Button
+                  title={sureQuantity > 0 ? 'Yes! Add another' : 'Yes! Add it'}
+                  icon="check"
+                  busy={quickBusy}
+                  onPress={() => quickAdd(sure)}
+                />
                 <ButtonRow>
                   <Button
                     size="medium"
@@ -742,7 +750,7 @@ function ScanSession({
         renderItem={({ item }) => (
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel={`Review ${item.name} ${item.id}`}
+            accessibilityLabel={`Review ${item.name} ${item.id}. ${scanCollectionLabel(cardQuantity(trainer, item))}`}
             onPress={() => {
               // Picking a card replaces any read still running, so the reader must be free again afterwards.
               ++generation.current;
@@ -764,6 +772,7 @@ function ScanSession({
                 <Txt muted variant="caption">
                   {cardKindLabel(item)}
                 </Txt>
+                <ScanCollectionStatus quantity={cardQuantity(trainer, item)} />
                 {!query && (
                   <Txt muted variant="caption">
                     {suggested.find((s) => s.card.id === item.id)?.evidence}
@@ -831,10 +840,37 @@ function ScanSession({
   );
 }
 
+const scanCollectionLabel = (quantity: number) =>
+  quantity > 0
+    ? `Already in your Pokédex · ${quantity} ${quantity === 1 ? 'copy' : 'copies'}`
+    : 'Not in your Pokédex yet';
+
+function ScanCollectionStatus({ quantity }: { quantity: number }) {
+  const owned = quantity > 0;
+
+  return (
+    <View style={[s.collectionStatus, owned && s.collected]}>
+      <Icon name={owned ? 'check' : 'plus'} size={16} color={owned ? C.ink : C.muted} />
+      <Txt variant="caption" muted={!owned} style={{ flexShrink: 1, fontWeight: '600' }}>
+        {scanCollectionLabel(quantity)}
+      </Txt>
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
   list: { padding: S.xl, paddingBottom: 40 },
   quick: { gap: S.md },
   quickArt: { width: 180, maxWidth: '70%', alignSelf: 'center' },
+  collectionStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: S.xs,
+    paddingHorizontal: S.sm,
+    paddingVertical: S.xs,
+    borderRadius: R.sm,
+  },
+  collected: { backgroundColor: '#DEE8D1' },
   yours: {
     position: 'absolute',
     left: 8,
